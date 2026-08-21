@@ -6,7 +6,7 @@ import React, {
 
 import "./App.css";
 
-const API = "https://tradenex-backend-qpp9.onrender.com/api";
+const API = const API = "https://tradenex-backend-app9.onrender.com";
 
 async function api(path, options = {}) {
   const token =
