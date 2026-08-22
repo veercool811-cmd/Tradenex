@@ -399,6 +399,50 @@ function createTransaction(
   return transaction;
 }
 
+
+function updateTransaction(
+  referenceId,
+  status,
+  extra = {}
+) {
+  const transactions =
+    read(TRANSACTIONS_FILE);
+
+  const index =
+    transactions.findIndex(
+      (t) =>
+        t.referenceId ===
+        referenceId
+    );
+
+  if (index === -1) {
+    return null;
+  }
+
+  transactions[index] = {
+    ...transactions[index],
+    ...extra,
+    status,
+  };
+
+  if (status === "Approved") {
+    transactions[index].approvedAt = now();
+    delete transactions[index].rejectedAt;
+  }
+
+  if (status === "Rejected") {
+    transactions[index].rejectedAt = now();
+    delete transactions[index].approvedAt;
+  }
+
+  write(
+    TRANSACTIONS_FILE,
+    transactions
+  );
+
+  return transactions[index];
+}
+
 /* =====================================================
    UPLOAD
 ===================================================== */
@@ -2685,14 +2729,9 @@ app.post(
       deposits
     );
 
-    createTransaction(
-      deposit.userId,
-      "Deposit",
-      deposit.method,
-      deposit.network,
-      amount,
-      "Approved",
-      deposit.id
+    updateTransaction(
+      deposit.id,
+      "Approved"
     );
 
     res.json({
@@ -2795,16 +2834,9 @@ app.post(
       deposits
     );
 
-    createTransaction(
-      deposit.userId,
-      "Deposit",
-      deposit.method,
-      deposit.network,
-      number(
-        deposit.amount
-      ),
-      "Rejected",
-      deposit.id
+    updateTransaction(
+      deposit.id,
+      "Rejected"
     );
 
     res.json({
@@ -3006,15 +3038,9 @@ app.post(
       withdrawals
     );
 
-    createTransaction(
-      withdrawal.userId,
-      "Withdrawal",
-      "USDT",
-      withdrawal.network,
-      amount,
-      "Approved",
+    updateTransaction(
       withdrawal.id,
-      source
+      "Approved"
     );
 
     res.json({
@@ -3084,30 +3110,9 @@ app.post(
       withdrawals
     );
 
-    createTransaction(
-      withdrawals[index]
-        .userId,
-
-      "Withdrawal",
-
-      "USDT",
-
-      withdrawals[index]
-        .network,
-
-      number(
-        withdrawals[index]
-          .amount
-      ),
-
-      "Rejected",
-
-      withdrawals[index]
-        .id,
-
-      withdrawals[index]
-        .source ||
-        "balance"
+    updateTransaction(
+      withdrawals[index].id,
+      "Rejected"
     );
 
     res.json({
