@@ -9,14 +9,53 @@ const app = express();
 
 const PORT = Number(process.env.PORT || 5000);
 
-const DATA_DIR = path.join(__dirname, "data");
-const UPLOAD_DIR = path.join(DATA_DIR, "uploads");
+/*
+  Render पर यह automatically सही live URL से काम करेगा।
+  चाहो तो Render Environment में:
+  PUBLIC_BASE_URL=https://tradenex-api.onrender.com
+  भी लगा सकते हो।
+*/
 
-const USERS_FILE = path.join(DATA_DIR, "users.json");
-const DEPOSITS_FILE = path.join(DATA_DIR, "deposits.json");
-const WITHDRAWALS_FILE = path.join(DATA_DIR, "withdrawals.json");
-const TRANSACTIONS_FILE = path.join(DATA_DIR, "transactions.json");
-const SUPPORT_FILE = path.join(DATA_DIR, "support.json");
+const PUBLIC_BASE_URL =
+  String(
+    process.env.PUBLIC_BASE_URL ||
+      "https://tradenex-api.onrender.com"
+  ).replace(/\/$/, "");
+
+const DATA_DIR = path.join(
+  __dirname,
+  "data"
+);
+
+const UPLOAD_DIR = path.join(
+  DATA_DIR,
+  "uploads"
+);
+
+const USERS_FILE = path.join(
+  DATA_DIR,
+  "users.json"
+);
+
+const DEPOSITS_FILE = path.join(
+  DATA_DIR,
+  "deposits.json"
+);
+
+const WITHDRAWALS_FILE = path.join(
+  DATA_DIR,
+  "withdrawals.json"
+);
+
+const TRANSACTIONS_FILE = path.join(
+  DATA_DIR,
+  "transactions.json"
+);
+
+const SUPPORT_FILE = path.join(
+  DATA_DIR,
+  "support.json"
+);
 
 const REFERRAL_REWARD = 10;
 
@@ -24,10 +63,23 @@ const REFERRAL_REWARD = 10;
    MIDDLEWARE
 ===================================================== */
 
+app.set("trust proxy", 1);
+
 app.use(
   cors({
     origin: true,
     credentials: true,
+    methods: [
+      "GET",
+      "POST",
+      "PUT",
+      "DELETE",
+      "OPTIONS",
+    ],
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+    ],
   })
 );
 
@@ -69,22 +121,30 @@ function read(file, fallback = []) {
     if (!fs.existsSync(file)) {
       fs.writeFileSync(
         file,
-        JSON.stringify(fallback, null, 2)
+        JSON.stringify(
+          fallback,
+          null,
+          2
+        )
       );
 
       return fallback;
     }
 
-    const text = fs.readFileSync(
-      file,
-      "utf8"
-    );
+    const text =
+      fs.readFileSync(
+        file,
+        "utf8"
+      );
 
     if (!text.trim()) {
       return fallback;
     }
 
-    return JSON.parse(text);
+    const parsed =
+      JSON.parse(text);
+
+    return parsed;
   } catch (error) {
     console.error(
       "READ ERROR:",
@@ -99,7 +159,11 @@ function read(file, fallback = []) {
 function write(file, data) {
   fs.writeFileSync(
     file,
-    JSON.stringify(data, null, 2)
+    JSON.stringify(
+      data,
+      null,
+      2
+    )
   );
 }
 
@@ -127,7 +191,16 @@ function now() {
 }
 
 function clean(value) {
-  return String(value || "").trim();
+  return String(
+    value == null ? "" : value
+  ).trim();
+}
+
+function number(value) {
+  const n = Number(value);
+  return Number.isFinite(n)
+    ? n
+    : 0;
 }
 
 /* =====================================================
@@ -138,7 +211,8 @@ function publicUser(user) {
   return {
     id: user.id,
 
-    name: user.name || "",
+    name:
+      user.name || "",
 
     firstName:
       user.firstName || "",
@@ -162,30 +236,46 @@ function publicUser(user) {
       user.country || "",
 
     balance:
-      Number(user.balance || 0),
+      number(user.balance),
 
     totalDeposit:
-      Number(user.totalDeposit || 0),
+      number(user.totalDeposit),
 
     pendingDeposit:
-      Number(user.pendingDeposit || 0),
+      number(
+        user.pendingDeposit
+      ),
 
     profit:
-      Number(user.profit || 0),
+      number(user.profit),
 
     referralReward:
-      Number(user.referralReward || 0),
+      number(
+        user.referralReward
+      ),
 
     referralCode:
       user.referralCode || "",
 
     referrals:
-      Array.isArray(user.referrals)
+      Array.isArray(
+        user.referrals
+      )
         ? user.referrals
         : [],
 
     createdAt:
       user.createdAt || "",
+
+    /*
+      Frontend needs this to know
+      whether transaction password
+      has been created.
+    */
+    transactionPasswordHash:
+      user.transactionPasswordHash
+        ? "exists"
+        : "",
   };
 }
 
@@ -195,9 +285,14 @@ function publicUser(user) {
 
 function getToken(req) {
   const header =
-    req.headers.authorization || "";
+    req.headers.authorization ||
+    "";
 
-  if (!header.startsWith("Bearer ")) {
+  if (
+    !header.startsWith(
+      "Bearer "
+    )
+  ) {
     return "";
   }
 
@@ -205,7 +300,8 @@ function getToken(req) {
 }
 
 function getUserFromRequest(req) {
-  const token = getToken(req);
+  const token =
+    getToken(req);
 
   if (!token) {
     return null;
@@ -217,7 +313,8 @@ function getUserFromRequest(req) {
   return (
     users.find(
       (u) =>
-        u.sessionToken === token
+        u.sessionToken ===
+        token
     ) || null
   );
 }
@@ -227,11 +324,13 @@ function auth(req, res, next) {
     getUserFromRequest(req);
 
   if (!user) {
-    return res.status(401).json({
-      success: false,
-      message:
-        "Please login first.",
-    });
+    return res
+      .status(401)
+      .json({
+        success: false,
+        message:
+          "Please login first.",
+      });
   }
 
   req.user = user;
@@ -254,7 +353,9 @@ function createTransaction(
   source = ""
 ) {
   const transactions =
-    read(TRANSACTIONS_FILE);
+    read(
+      TRANSACTIONS_FILE
+    );
 
   const transaction = {
     id: makeId("TX"),
@@ -272,7 +373,7 @@ function createTransaction(
       network || "",
 
     amount:
-      Number(amount || 0),
+      number(amount),
 
     status,
 
@@ -299,7 +400,7 @@ function createTransaction(
 }
 
 /* =====================================================
-   MULTER / UPLOAD
+   UPLOAD
 ===================================================== */
 
 const storage =
@@ -378,11 +479,6 @@ const upload =
     },
   });
 
-/*
-  Uploaded files are publicly accessible
-  through /uploads/filename
-*/
-
 app.use(
   "/uploads",
   express.static(
@@ -401,10 +497,16 @@ app.get(
       success: true,
 
       message:
-        "Tradenex Backend is running",
+        "Tradenex Backend is running.",
+
+      service:
+        "tradenex-api",
 
       port:
         PORT,
+
+      baseUrl:
+        PUBLIC_BASE_URL,
     });
   }
 );
@@ -414,9 +516,10 @@ app.get(
   (req, res) => {
     res.json({
       success: true,
-
-      status:
-        "ok",
+      status: "ok",
+      service:
+        "tradenex-api",
+      time: now(),
     });
   }
 );
@@ -468,9 +571,7 @@ app.post(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "First name required.",
           });
@@ -484,9 +585,7 @@ app.post(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Valid email required.",
           });
@@ -500,9 +599,7 @@ app.post(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Password minimum 6 characters.",
           });
@@ -512,9 +609,7 @@ app.post(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Mobile number required.",
           });
@@ -536,17 +631,48 @@ app.post(
         return res
           .status(409)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Email already registered.",
           });
       }
 
-      /* ==========================================
-         CREATE UNIQUE REFERRAL CODE
-      ========================================== */
+      /*
+        Referral code
+      */
+
+      const enteredReferral =
+        clean(
+          referralCode
+        ).toUpperCase();
+
+      let referrer = null;
+
+      if (enteredReferral) {
+        referrer =
+          users.find(
+            (u) =>
+              String(
+                u.referralCode ||
+                  ""
+              ).toUpperCase() ===
+              enteredReferral
+          );
+
+        if (!referrer) {
+          return res
+            .status(400)
+            .json({
+              success: false,
+              message:
+                "Invalid referral code.",
+            });
+        }
+      }
+
+      /*
+        Unique referral code
+      */
 
       let generatedReferralCode =
         "";
@@ -568,9 +694,9 @@ app.post(
         )
       );
 
-      /* ==========================================
-         NEW USER
-      ========================================== */
+      /*
+        New user
+      */
 
       const user = {
         id:
@@ -603,74 +729,35 @@ app.post(
         passwordHash:
           hash(password),
 
-        /*
-          New users do not have
-          a transaction password.
-          They create it from Settings.
-        */
         transactionPasswordHash:
           "",
 
-        balance:
-          0,
+        balance: 0,
 
-        totalDeposit:
-          0,
+        totalDeposit: 0,
 
-        pendingDeposit:
-          0,
+        pendingDeposit: 0,
 
-        profit:
-          0,
+        profit: 0,
 
         referralCode:
           generatedReferralCode,
 
-        referralReward:
-          0,
+        referralReward: 0,
 
-        referrals:
-          [],
+        referrals: [],
 
-        sessionToken:
-          "",
+        sessionToken: "",
 
         createdAt:
           now(),
       };
 
-      /* ==========================================
-         REFERRAL
-      ========================================== */
+      /*
+        Add referral
+      */
 
-      const enteredReferral =
-        clean(
-          referralCode
-        ).toUpperCase();
-
-      if (enteredReferral) {
-        const referrer =
-          users.find(
-            (u) =>
-              String(
-                u.referralCode ||
-                  ""
-              ).toUpperCase() ===
-              enteredReferral
-          );
-
-        if (!referrer) {
-          return res
-            .status(400)
-            .json({
-              success:
-                false,
-
-              message:
-                "Invalid referral code.",
-            });
-        }
-
+      if (referrer) {
         if (
           !Array.isArray(
             referrer.referrals
@@ -698,9 +785,8 @@ app.post(
         });
 
         referrer.referralReward =
-          Number(
-            referrer.referralReward ||
-              0
+          number(
+            referrer.referralReward
           ) +
           REFERRAL_REWARD;
       }
@@ -715,8 +801,7 @@ app.post(
       res
         .status(201)
         .json({
-          success:
-            true,
+          success: true,
 
           message:
             "Registration successful.",
@@ -735,9 +820,7 @@ app.post(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Registration failed.",
         });
@@ -782,22 +865,19 @@ app.post(
         return res
           .status(401)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Invalid email or password.",
           });
       }
 
       const token =
-        crypto.randomBytes(
-          32
-        ).toString(
-          "hex"
-        );
+        crypto
+          .randomBytes(32)
+          .toString("hex");
 
-      users[index].sessionToken =
+      users[index]
+        .sessionToken =
         token;
 
       write(
@@ -806,8 +886,7 @@ app.post(
       );
 
       res.json({
-        success:
-          true,
+        success: true,
 
         message:
           "Login successful.",
@@ -828,9 +907,7 @@ app.post(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Login failed.",
         });
@@ -857,7 +934,8 @@ app.post(
       );
 
     if (index !== -1) {
-      users[index].sessionToken =
+      users[index]
+        .sessionToken =
         "";
 
       write(
@@ -867,8 +945,7 @@ app.post(
     }
 
     res.json({
-      success:
-        true,
+      success: true,
 
       message:
         "Logged out successfully.",
@@ -923,6 +1000,16 @@ app.get(
             new Date(
               a.createdAt
             )
+        )
+        .map(
+          (d) => ({
+            ...d,
+
+            proofUrl:
+              d.proof
+                ? `${PUBLIC_BASE_URL}${d.proof}`
+                : "",
+          })
         );
 
     const withdrawals =
@@ -945,8 +1032,7 @@ app.get(
         );
 
     res.json({
-      success:
-        true,
+      success: true,
 
       user:
         publicUser(
@@ -955,33 +1041,24 @@ app.get(
 
       stats: {
         balance:
-          Number(
-            user.balance ||
-              0
-          ),
+          number(user.balance),
 
         deposits:
-          Number(
-            user.totalDeposit ||
-              0
+          number(
+            user.totalDeposit
           ),
 
         pendingDeposits:
-          Number(
-            user.pendingDeposit ||
-              0
+          number(
+            user.pendingDeposit
           ),
 
         profit:
-          Number(
-            user.profit ||
-              0
-          ),
+          number(user.profit),
 
         referralReward:
-          Number(
-            user.referralReward ||
-              0
+          number(
+            user.referralReward
           ),
       },
 
@@ -992,14 +1069,17 @@ app.get(
       withdrawals,
 
       referrals:
-        user.referrals ||
-        [],
+        Array.isArray(
+          user.referrals
+        )
+          ? user.referrals
+          : [],
     });
   }
 );
 
 /* =====================================================
-   COMPATIBLE USER ROUTE
+   USER BY ID
 ===================================================== */
 
 app.get(
@@ -1013,9 +1093,7 @@ app.get(
       return res
         .status(403)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Access denied.",
         });
@@ -1044,8 +1122,7 @@ app.get(
         );
 
     res.json({
-      success:
-        true,
+      success: true,
 
       user:
         publicUser(
@@ -1054,33 +1131,24 @@ app.get(
 
       stats: {
         balance:
-          Number(
-            user.balance ||
-              0
-          ),
+          number(user.balance),
 
         deposits:
-          Number(
-            user.totalDeposit ||
-              0
+          number(
+            user.totalDeposit
           ),
 
         pendingDeposits:
-          Number(
-            user.pendingDeposit ||
-              0
+          number(
+            user.pendingDeposit
           ),
 
         profit:
-          Number(
-            user.profit ||
-              0
-          ),
+          number(user.profit),
 
         referralReward:
-          Number(
-            user.referralReward ||
-              0
+          number(
+            user.referralReward
           ),
       },
 
@@ -1115,9 +1183,7 @@ function profileHandler(
     return res
       .status(404)
       .json({
-        success:
-          false,
-
+        success: false,
         message:
           "User not found.",
       });
@@ -1140,7 +1206,8 @@ function profileHandler(
     body.firstName !==
     undefined
   ) {
-    users[index].firstName =
+    users[index]
+      .firstName =
       clean(
         body.firstName
       );
@@ -1150,7 +1217,8 @@ function profileHandler(
     body.lastName !==
     undefined
   ) {
-    users[index].lastName =
+    users[index]
+      .lastName =
       clean(
         body.lastName
       );
@@ -1206,14 +1274,18 @@ function profileHandler(
       );
   }
 
+  users[index].name =
+    `${users[index].firstName || ""} ${
+      users[index].lastName || ""
+    }`.trim();
+
   write(
     USERS_FILE,
     users
   );
 
   res.json({
-    success:
-      true,
+    success: true,
 
     message:
       "Profile updated successfully.",
@@ -1242,9 +1314,7 @@ app.put(
       return res
         .status(403)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Access denied.",
         });
@@ -1279,9 +1349,7 @@ function passwordHandler(
     return res
       .status(404)
       .json({
-        success:
-          false,
-
+        success: false,
         message:
           "User not found.",
       });
@@ -1290,86 +1358,62 @@ function passwordHandler(
   const user =
     users[index];
 
-  const {
-    oldPassword,
-    newPassword,
-
-    oldTransactionPassword,
-    newTransactionPassword,
-
-    loginPassword,
-    newLoginPassword,
-
-    transactionPassword,
-    newTransactionPassword: newTP,
-
-    confirmNewPassword,
-    confirmTransactionPassword,
-  } = req.body;
+  const body =
+    req.body || {};
 
   const finalOldLogin =
-    oldPassword ||
-    loginPassword;
+    body.oldPassword ||
+    body.loginPassword ||
+    "";
 
   const finalNewLogin =
-    newPassword ||
-    newLoginPassword;
+    body.newPassword ||
+    body.newLoginPassword ||
+    "";
 
   const finalOldTransaction =
-    oldTransactionPassword ||
-    transactionPassword;
+    body.oldTransactionPassword ||
+    body.transactionPassword ||
+    "";
 
   const finalNewTransaction =
-    newTransactionPassword ||
-    newTP;
-
-  /* ==========================================
-     CONFIRM LOGIN PASSWORD
-  ========================================== */
+    body.newTransactionPassword ||
+    body.newTP ||
+    "";
 
   if (
     finalNewLogin &&
-    confirmNewPassword &&
+    body.confirmNewPassword &&
     finalNewLogin !==
-      confirmNewPassword
+      body.confirmNewPassword
   ) {
     return res
       .status(400)
       .json({
-        success:
-          false,
-
+        success: false,
         message:
           "New login passwords do not match.",
       });
   }
 
-  /* ==========================================
-     CONFIRM TRANSACTION PASSWORD
-  ========================================== */
-
   if (
     finalNewTransaction &&
-    confirmTransactionPassword &&
+    body.confirmTransactionPassword &&
     finalNewTransaction !==
-      confirmTransactionPassword
+      body.confirmTransactionPassword
   ) {
     return res
       .status(400)
       .json({
-        success:
-          false,
-
+        success: false,
         message:
           "Transaction passwords do not match.",
       });
   }
 
-  /* ==========================================
-     LOGIN PASSWORD
-  ========================================== */
-
-  if (finalNewLogin) {
+  if (
+    finalNewLogin
+  ) {
     if (
       !finalOldLogin ||
       user.passwordHash !==
@@ -1380,25 +1424,20 @@ function passwordHandler(
       return res
         .status(400)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Current login password is incorrect.",
         });
     }
 
     if (
-      String(
-        finalNewLogin
-      ).length < 6
+      finalNewLogin.length <
+      6
     ) {
       return res
         .status(400)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "New login password minimum 6 characters.",
         });
@@ -1410,10 +1449,6 @@ function passwordHandler(
       );
   }
 
-  /* ==========================================
-     TRANSACTION PASSWORD
-  ========================================== */
-
   if (
     finalNewTransaction
   ) {
@@ -1421,14 +1456,6 @@ function passwordHandler(
       Boolean(
         user.transactionPasswordHash
       );
-
-    /*
-      If no transaction password
-      exists, user can CREATE one.
-
-      If it already exists,
-      old password is required.
-    */
 
     if (alreadyExists) {
       if (
@@ -1441,9 +1468,7 @@ function passwordHandler(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Current transaction password is incorrect.",
           });
@@ -1451,16 +1476,13 @@ function passwordHandler(
     }
 
     if (
-      String(
-        finalNewTransaction
-      ).length < 6
+      finalNewTransaction.length <
+      6
     ) {
       return res
         .status(400)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Transaction password minimum 6 characters.",
         });
@@ -1479,9 +1501,7 @@ function passwordHandler(
     return res
       .status(400)
       .json({
-        success:
-          false,
-
+        success: false,
         message:
           "Enter a new password.",
       });
@@ -1493,8 +1513,7 @@ function passwordHandler(
   );
 
   res.json({
-    success:
-      true,
+    success: true,
 
     message:
       "Password settings updated successfully.",
@@ -1523,9 +1542,7 @@ app.put(
       return res
         .status(403)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Access denied.",
         });
@@ -1572,9 +1589,7 @@ app.post(
         return res
           .status(404)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Account not found.",
           });
@@ -1582,16 +1597,13 @@ app.post(
 
       if (
         String(
-          newPassword ||
-            ""
+          newPassword || ""
         ).length < 6
       ) {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Password minimum 6 characters.",
           });
@@ -1624,8 +1636,7 @@ app.post(
       );
 
       res.json({
-        success:
-          true,
+        success: true,
 
         message:
           type ===
@@ -1642,9 +1653,7 @@ app.post(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Password reset failed.",
         });
@@ -1654,9 +1663,6 @@ app.post(
 
 /* =====================================================
    DEPOSIT
-   IMPORTANT:
-   proof file is physically saved
-   in data/uploads
 ===================================================== */
 
 app.post(
@@ -1680,23 +1686,20 @@ app.post(
         !Number.isFinite(
           numericAmount
         ) ||
-        numericAmount <=
-          0
+        numericAmount <= 0
       ) {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Valid amount required.",
           });
       }
 
       const cleanMethod =
-        String(
-          method || ""
+        clean(
+          method
         ).toUpperCase();
 
       if (
@@ -1710,9 +1713,7 @@ app.post(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Invalid deposit method.",
           });
@@ -1731,40 +1732,28 @@ app.post(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Invalid USDT network.",
           });
       }
 
-      /* ==========================================
-         FILE REQUIRED
-      ========================================== */
-
       if (!req.file) {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Payment proof required.",
           });
       }
-
-      /* ==========================================
-         SAVE FILE URL
-      ========================================== */
 
       const proofPath =
         "/uploads/" +
         req.file.filename;
 
       const proofUrl =
-        `http://localhost:${PORT}` +
+        PUBLIC_BASE_URL +
         proofPath;
 
       const deposits =
@@ -1795,19 +1784,17 @@ app.post(
           numericAmount,
 
         walletAddress:
-          walletAddress ||
-          "",
+          clean(
+            walletAddress
+          ),
 
         txid:
-          txid || "",
-
-        /* FILE INFORMATION */
+          clean(txid),
 
         proof:
           proofPath,
 
-        proofUrl:
-          proofUrl,
+        proofUrl,
 
         proofFileName:
           req.file
@@ -1840,10 +1827,6 @@ app.post(
         deposits
       );
 
-      /* ==========================================
-         UPDATE USER PENDING DEPOSIT
-      ========================================== */
-
       const users =
         read(
           USERS_FILE
@@ -1857,15 +1840,13 @@ app.post(
         );
 
       if (
-        userIndex !==
-        -1
+        userIndex !== -1
       ) {
         users[userIndex]
           .pendingDeposit =
-          Number(
+          number(
             users[userIndex]
-              .pendingDeposit ||
-              0
+              .pendingDeposit
           ) +
           numericAmount;
 
@@ -1875,31 +1856,20 @@ app.post(
         );
       }
 
-      /* ==========================================
-         TRANSACTION
-      ========================================== */
-
       createTransaction(
         req.user.id,
-
         "Deposit",
-
         cleanMethod,
-
         network,
-
         numericAmount,
-
         "Pending",
-
         deposit.id
       );
 
       res
         .status(201)
         .json({
-          success:
-            true,
+          success: true,
 
           message:
             "Deposit request submitted.",
@@ -1915,9 +1885,7 @@ app.post(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             error.message ||
             "Deposit failed.",
@@ -1957,19 +1925,15 @@ app.get(
             ...deposit,
 
             proofUrl:
-              deposit.proofUrl ||
-              (
-                deposit.proof
-                  ? `http://localhost:${PORT}${deposit.proof}`
-                  : ""
-              ),
+              deposit.proof
+                ? PUBLIC_BASE_URL +
+                  deposit.proof
+                : "",
           })
         );
 
     res.json({
-      success:
-        true,
-
+      success: true,
       deposits,
     });
   }
@@ -2003,15 +1967,12 @@ app.post(
         !Number.isFinite(
           numericAmount
         ) ||
-        numericAmount <=
-          0
+        numericAmount <= 0
       ) {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Valid amount required.",
           });
@@ -2028,21 +1989,21 @@ app.post(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Invalid network.",
           });
       }
 
-      if (!walletAddress) {
+      if (
+        !clean(
+          walletAddress
+        )
+      ) {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Wallet address required.",
           });
@@ -2054,9 +2015,7 @@ app.post(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Create your transaction password first from Settings.",
           });
@@ -2069,9 +2028,7 @@ app.post(
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Transaction password not created. Go to Settings and create one first.",
           });
@@ -2087,9 +2044,7 @@ app.post(
         return res
           .status(401)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Incorrect transaction password.",
           });
@@ -2108,15 +2063,12 @@ app.post(
         );
 
       if (
-        userIndex ===
-        -1
+        userIndex === -1
       ) {
         return res
           .status(404)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "User not found.",
           });
@@ -2125,59 +2077,43 @@ app.post(
       const user =
         users[userIndex];
 
-      /* BALANCE */
-
       if (
         withdrawalSource ===
         "balance"
       ) {
         if (
           numericAmount >
-          Number(
-            user.balance ||
-              0
+          number(
+            user.balance
           )
         ) {
           return res
             .status(400)
             .json({
-              success:
-                false,
-
+              success: false,
               message:
                 "Insufficient wallet balance.",
             });
         }
-      }
-
-      /* PROFIT */
-
-      else if (
+      } else if (
         withdrawalSource ===
         "profit"
       ) {
         if (
           numericAmount >
-          Number(
-            user.profit ||
-              0
+          number(
+            user.profit
           )
         ) {
           return res
             .status(400)
             .json({
-              success:
-                false,
-
+              success: false,
               message:
                 "Insufficient profit balance.",
             });
         }
-      }
-
-      /* REFERRAL */
-
-      else if (
+      } else if (
         withdrawalSource ===
         "referralReward"
       ) {
@@ -2185,17 +2121,14 @@ app.post(
           Array.isArray(
             user.referrals
           )
-            ? user.referrals
-                .length
+            ? user.referrals.length
             : 0;
 
         if (count < 3) {
           return res
             .status(400)
             .json({
-              success:
-                false,
-
+              success: false,
               message:
                 "Minimum 3 referrals required.",
             });
@@ -2203,30 +2136,23 @@ app.post(
 
         if (
           numericAmount >
-          Number(
-            user.referralReward ||
-              0
+          number(
+            user.referralReward
           )
         ) {
           return res
             .status(400)
             .json({
-              success:
-                false,
-
+              success: false,
               message:
                 "Insufficient referral reward.",
             });
         }
-      }
-
-      else {
+      } else {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Invalid withdrawal source.",
           });
@@ -2255,7 +2181,10 @@ app.post(
         amount:
           numericAmount,
 
-        walletAddress,
+        walletAddress:
+          clean(
+            walletAddress
+          ),
 
         status:
           "Pending",
@@ -2275,27 +2204,19 @@ app.post(
 
       createTransaction(
         req.user.id,
-
         "Withdrawal",
-
         "USDT",
-
         network,
-
         numericAmount,
-
         "Pending",
-
         withdrawal.id,
-
         withdrawalSource
       );
 
       res
         .status(201)
         .json({
-          success:
-            true,
+          success: true,
 
           message:
             "Withdrawal request submitted.",
@@ -2311,9 +2232,7 @@ app.post(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Withdrawal failed.",
         });
@@ -2336,15 +2255,13 @@ app.post(
     } = req.body;
 
     if (
-      !subject ||
-      !message
+      !clean(subject) ||
+      !clean(message)
     ) {
       return res
         .status(400)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Subject and message required.",
         });
@@ -2363,12 +2280,14 @@ app.post(
         req.user.id,
 
       category:
-        category ||
+        clean(category) ||
         "General",
 
-      subject,
+      subject:
+        clean(subject),
 
-      message,
+      message:
+        clean(message),
 
       status:
         "Open",
@@ -2389,8 +2308,7 @@ app.post(
     res
       .status(201)
       .json({
-        success:
-          true,
+        success: true,
 
         message:
           "Support request submitted.",
@@ -2413,31 +2331,34 @@ app.get(
           USERS_FILE
         );
 
+      const result =
+        users.map(
+          (u) => ({
+            ...publicUser(
+              u
+            ),
+
+            referralCount:
+              Array.isArray(
+                u.referrals
+              )
+                ? u.referrals.length
+                : 0,
+
+            referrals:
+              Array.isArray(
+                u.referrals
+              )
+                ? u.referrals
+                : [],
+          })
+        );
+
       res.json({
-        success:
-          true,
+        success: true,
 
         users:
-          users.map(
-            (u) => ({
-              ...publicUser(
-                u
-              ),
-
-              referralCount:
-                Array.isArray(
-                  u.referrals
-                )
-                  ? u
-                      .referrals
-                      .length
-                  : 0,
-
-              referrals:
-                u.referrals ||
-                [],
-            })
-          ),
+          result,
       });
     } catch (error) {
       console.error(
@@ -2448,9 +2369,7 @@ app.get(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Unable to load users.",
         });
@@ -2460,8 +2379,6 @@ app.get(
 
 /* =====================================================
    ADMIN DEPOSITS
-   IMPORTANT:
-   proofUrl is returned here
 ===================================================== */
 
 app.get(
@@ -2473,44 +2390,38 @@ app.get(
           DEPOSITS_FILE
         );
 
-      const depositsWithProof =
-        deposits.map(
-          (deposit) => {
-            let proofUrl =
-              "";
-
-            if (
-              deposit.proofUrl
-            ) {
-              proofUrl =
-                deposit.proofUrl;
-            } else if (
-              deposit.proof
-            ) {
-              proofUrl =
-                `http://localhost:${PORT}` +
-                deposit.proof;
-            }
-
-            return {
+      const result =
+        deposits
+          .map(
+            (deposit) => ({
               ...deposit,
 
-              proofUrl,
+              proofUrl:
+                deposit.proof
+                  ? PUBLIC_BASE_URL +
+                    deposit.proof
+                  : "",
 
               proofAvailable:
                 Boolean(
-                  proofUrl
+                  deposit.proof
                 ),
-            };
-          }
-        );
+            })
+          )
+          .sort(
+            (a, b) =>
+              new Date(
+                b.createdAt
+              ) -
+              new Date(
+                a.createdAt
+              )
+          );
 
       res.json({
-        success:
-          true,
-
+        success: true,
         deposits:
-          depositsWithProof,
+          result,
       });
     } catch (error) {
       console.error(
@@ -2521,9 +2432,7 @@ app.get(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Unable to load deposits.",
         });
@@ -2555,9 +2464,7 @@ app.get(
       );
 
       res.json({
-        success:
-          true,
-
+        success: true,
         withdrawals,
       });
     } catch (error) {
@@ -2569,9 +2476,7 @@ app.get(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Unable to load withdrawals.",
         });
@@ -2603,9 +2508,7 @@ app.get(
       );
 
       res.json({
-        success:
-          true,
-
+        success: true,
         transactions,
       });
     } catch (error) {
@@ -2617,9 +2520,7 @@ app.get(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Unable to load transactions.",
         });
@@ -2651,9 +2552,7 @@ app.get(
       );
 
       res.json({
-        success:
-          true,
-
+        success: true,
         support,
       });
     } catch (error) {
@@ -2665,9 +2564,7 @@ app.get(
       res
         .status(500)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Unable to load support tickets.",
         });
@@ -2698,9 +2595,7 @@ app.post(
       return res
         .status(404)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Deposit not found.",
         });
@@ -2716,9 +2611,7 @@ app.post(
       return res
         .status(400)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Deposit already processed.",
         });
@@ -2736,56 +2629,44 @@ app.post(
           deposit.userId
       );
 
-    if (
-      userIndex ===
-      -1
-    ) {
+    if (userIndex === -1) {
       return res
         .status(404)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "User not found.",
         });
     }
 
     const amount =
-      Number(
-        deposit.amount ||
-          0
+      number(
+        deposit.amount
       );
 
     users[userIndex]
       .balance =
-      Number(
+      number(
         users[userIndex]
-          .balance ||
-          0
-      ) +
-      amount;
+          .balance
+      ) + amount;
 
     users[userIndex]
       .totalDeposit =
-      Number(
+      number(
         users[userIndex]
-          .totalDeposit ||
-          0
-      ) +
-      amount;
+          .totalDeposit
+      ) + amount;
 
     users[userIndex]
       .pendingDeposit =
       Math.max(
         0,
 
-        Number(
+        number(
           users[userIndex]
-            .pendingDeposit ||
-            0
-        ) -
-          amount
+            .pendingDeposit
+        ) - amount
       );
 
     deposit.status =
@@ -2806,23 +2687,16 @@ app.post(
 
     createTransaction(
       deposit.userId,
-
       "Deposit",
-
       deposit.method,
-
       deposit.network,
-
       amount,
-
       "Approved",
-
       deposit.id
     );
 
     res.json({
-      success:
-        true,
+      success: true,
 
       message:
         "Deposit approved.",
@@ -2855,9 +2729,7 @@ app.post(
       return res
         .status(404)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Deposit not found.",
         });
@@ -2873,9 +2745,7 @@ app.post(
       return res
         .status(400)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Deposit already processed.",
         });
@@ -2893,23 +2763,18 @@ app.post(
           deposit.userId
       );
 
-    if (
-      userIndex !==
-      -1
-    ) {
+    if (userIndex !== -1) {
       users[userIndex]
         .pendingDeposit =
         Math.max(
           0,
 
-          Number(
+          number(
             users[userIndex]
-              .pendingDeposit ||
-              0
+              .pendingDeposit
           ) -
-            Number(
-              deposit.amount ||
-                0
+            number(
+              deposit.amount
             )
         );
 
@@ -2932,26 +2797,18 @@ app.post(
 
     createTransaction(
       deposit.userId,
-
       "Deposit",
-
       deposit.method,
-
       deposit.network,
-
-      Number(
-        deposit.amount ||
-          0
+      number(
+        deposit.amount
       ),
-
       "Rejected",
-
       deposit.id
     );
 
     res.json({
-      success:
-        true,
+      success: true,
 
       message:
         "Deposit rejected.",
@@ -2984,9 +2841,7 @@ app.post(
       return res
         .status(404)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Withdrawal not found.",
         });
@@ -3002,9 +2857,7 @@ app.post(
       return res
         .status(400)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Withdrawal already processed.",
         });
@@ -3022,16 +2875,11 @@ app.post(
           withdrawal.userId
       );
 
-    if (
-      userIndex ===
-      -1
-    ) {
+    if (userIndex === -1) {
       return res
         .status(404)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "User not found.",
         });
@@ -3041,82 +2889,59 @@ app.post(
       users[userIndex];
 
     const amount =
-      Number(
-        withdrawal.amount ||
-          0
+      number(
+        withdrawal.amount
       );
 
     const source =
       withdrawal.source ||
       "balance";
 
-    /* BALANCE */
-
     if (
       source ===
       "balance"
     ) {
       if (
-        Number(
-          user.balance ||
-            0
-        ) <
-        amount
+        number(
+          user.balance
+        ) < amount
       ) {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Insufficient balance.",
           });
       }
 
       user.balance =
-        Number(
-          user.balance ||
-            0
-        ) -
-        amount;
-    }
-
-    /* PROFIT */
-
-    else if (
+        number(
+          user.balance
+        ) - amount;
+    } else if (
       source ===
       "profit"
     ) {
       if (
-        Number(
-          user.profit ||
-            0
-        ) <
-        amount
+        number(
+          user.profit
+        ) < amount
       ) {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Insufficient profit.",
           });
       }
 
       user.profit =
-        Number(
-          user.profit ||
-            0
-        ) -
-        amount;
-    }
-
-    /* REFERRAL */
-
-    else if (
+        number(
+          user.profit
+        ) - amount;
+    } else if (
       source ===
       "referralReward"
     ) {
@@ -3124,58 +2949,42 @@ app.post(
         Array.isArray(
           user.referrals
         )
-          ? user
-              .referrals
-              .length
+          ? user.referrals.length
           : 0;
 
-      if (
-        count < 3
-      ) {
+      if (count < 3) {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Minimum 3 referrals required.",
           });
       }
 
       if (
-        Number(
-          user.referralReward ||
-            0
-        ) <
-        amount
+        number(
+          user.referralReward
+        ) < amount
       ) {
         return res
           .status(400)
           .json({
-            success:
-              false,
-
+            success: false,
             message:
               "Insufficient referral reward.",
           });
       }
 
       user.referralReward =
-        Number(
-          user.referralReward ||
-            0
-        ) -
-        amount;
-    }
-
-    else {
+        number(
+          user.referralReward
+        ) - amount;
+    } else {
       return res
         .status(400)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Invalid withdrawal source.",
         });
@@ -3199,25 +3008,17 @@ app.post(
 
     createTransaction(
       withdrawal.userId,
-
       "Withdrawal",
-
       "USDT",
-
       withdrawal.network,
-
       amount,
-
       "Approved",
-
       withdrawal.id,
-
       source
     );
 
     res.json({
-      success:
-        true,
+      success: true,
 
       message:
         "Withdrawal approved.",
@@ -3250,9 +3051,7 @@ app.post(
       return res
         .status(404)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Withdrawal not found.",
         });
@@ -3266,9 +3065,7 @@ app.post(
       return res
         .status(400)
         .json({
-          success:
-            false,
-
+          success: false,
           message:
             "Withdrawal already processed.",
         });
@@ -3298,10 +3095,9 @@ app.post(
       withdrawals[index]
         .network,
 
-      Number(
+      number(
         withdrawals[index]
-          .amount ||
-          0
+          .amount
       ),
 
       "Rejected",
@@ -3315,8 +3111,7 @@ app.post(
     );
 
     res.json({
-      success:
-        true,
+      success: true,
 
       message:
         "Withdrawal rejected.",
@@ -3324,6 +3119,108 @@ app.post(
       withdrawal:
         withdrawals[index],
     });
+  }
+);
+
+/* =====================================================
+   ADMIN DASHBOARD SUMMARY
+===================================================== */
+
+app.get(
+  "/api/admin/dashboard",
+  (req, res) => {
+    try {
+      const users =
+        read(
+          USERS_FILE
+        );
+
+      const deposits =
+        read(
+          DEPOSITS_FILE
+        );
+
+      const withdrawals =
+        read(
+          WITHDRAWALS_FILE
+        );
+
+      const transactions =
+        read(
+          TRANSACTIONS_FILE
+        );
+
+      const support =
+        read(
+          SUPPORT_FILE
+        );
+
+      const totalBalance =
+        users.reduce(
+          (sum, user) =>
+            sum +
+            number(
+              user.balance
+            ),
+          0
+        );
+
+      const referralRewards =
+        users.reduce(
+          (sum, user) =>
+            sum +
+            number(
+              user.referralReward
+            ),
+          0
+        );
+
+      res.json({
+        success: true,
+
+        stats: {
+          users:
+            users.length,
+
+          totalBalance,
+
+          pendingDeposits:
+            deposits.filter(
+              (x) =>
+                x.status ===
+                "Pending"
+            ).length,
+
+          pendingWithdrawals:
+            withdrawals.filter(
+              (x) =>
+                x.status ===
+                "Pending"
+            ).length,
+
+          transactions:
+            transactions.length,
+
+          support:
+            support.length,
+
+          referralRewards,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "ADMIN DASHBOARD ERROR:",
+        error
+      );
+
+      res
+        .status(500)
+        .json({
+          success: false,
+          message:
+            "Unable to load dashboard.",
+        });
+    }
   }
 );
 
@@ -3336,8 +3233,7 @@ app.use(
     res
       .status(404)
       .json({
-        success:
-          false,
+        success: false,
 
         message:
           "API route not found",
@@ -3367,10 +3263,12 @@ app.use(
     );
 
     res
-      .status(500)
+      .status(
+        error.statusCode ||
+          500
+      )
       .json({
-        success:
-          false,
+        success: false,
 
         message:
           error.message ||
@@ -3402,19 +3300,23 @@ app.listen(
     );
 
     console.log(
-      `Local: http://localhost:${PORT}`
+      `Port: ${PORT}`
     );
 
     console.log(
-      `Health: http://localhost:${PORT}/api/health`
+      `Public API: ${PUBLIC_BASE_URL}`
     );
 
     console.log(
-      `Admin API: http://localhost:${PORT}/api/admin`
+      `Health: ${PUBLIC_BASE_URL}/api/health`
     );
 
     console.log(
-      `Uploads: http://localhost:${PORT}/uploads/`
+      `Admin API: ${PUBLIC_BASE_URL}/api/admin`
+    );
+
+    console.log(
+      `Uploads: ${PUBLIC_BASE_URL}/uploads/`
     );
 
     console.log(
