@@ -2942,6 +2942,262 @@ function FAQ() {
   );
 }
 
+
+/* =====================================================
+   LANDING PAGE
+===================================================== */
+
+function LandingPage({ onLogin }) {
+  return (
+    <div className="landing-page">
+
+      <nav className="landing-nav">
+        <div className="landing-logo">
+          <div className="landing-logo-mark">
+            <span>₮</span>
+          </div>
+
+          <div>
+            <strong>TRADENEX</strong>
+            <small>SMART TRADING PLATFORM</small>
+          </div>
+        </div>
+
+        <div className="landing-nav-buttons">
+          <button
+            className="landing-login-btn"
+            onClick={onLogin}
+          >
+            Login
+          </button>
+
+          <button
+            className="landing-register-btn"
+            onClick={onLogin}
+          >
+            Create Account
+          </button>
+        </div>
+      </nav>
+
+      <section className="landing-hero">
+
+        <div className="hero-glow hero-glow-one"></div>
+        <div className="hero-glow hero-glow-two"></div>
+
+        <div className="hero-content">
+
+          <div className="hero-badge">
+            <span></span>
+            NEXT GENERATION TRADING
+          </div>
+
+          <h1>
+            Trade Smarter.
+            <br />
+            <span>Grow With Confidence.</span>
+          </h1>
+
+          <p>
+            Experience a simple, powerful and modern
+            platform designed to help you manage your
+            trading journey with confidence.
+          </p>
+
+          <div className="hero-buttons">
+            <button
+              className="hero-primary-btn"
+              onClick={onLogin}
+            >
+              Get Started
+              <span>→</span>
+            </button>
+
+            <button
+              className="hero-secondary-btn"
+              onClick={onLogin}
+            >
+              Login to Account
+            </button>
+          </div>
+
+          <div className="hero-trust">
+            <div>
+              <strong>Secure</strong>
+              <small>Account Protection</small>
+            </div>
+
+            <div>
+              <strong>Fast</strong>
+              <small>Easy Transactions</small>
+            </div>
+
+            <div>
+              <strong>24/7</strong>
+              <small>Support</small>
+            </div>
+          </div>
+        </div>
+
+        <div className="hero-visual">
+
+          <div className="floating-orbit orbit-one"></div>
+          <div className="floating-orbit orbit-two"></div>
+
+          <div className="hero-logo-card">
+            <div className="big-tradenex-logo">
+              <span>₮</span>
+            </div>
+
+            <strong>TRADENEX</strong>
+            <small>SMART • SECURE • SIMPLE</small>
+
+            <div className="mini-chart">
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <section className="landing-stats">
+
+        <div>
+          <span>⚡</span>
+          <strong>Fast</strong>
+          <small>Easy Platform</small>
+        </div>
+
+        <div>
+          <span>🔐</span>
+          <strong>Secure</strong>
+          <small>Protected Account</small>
+        </div>
+
+        <div>
+          <span>💳</span>
+          <strong>Simple</strong>
+          <small>Deposit & Withdraw</small>
+        </div>
+
+        <div>
+          <span>🎧</span>
+          <strong>Support</strong>
+          <small>We're Here To Help</small>
+        </div>
+
+      </section>
+
+      <section className="landing-why">
+
+        <div className="landing-section-title">
+          <small>WHY TRADENEX</small>
+
+          <h2>
+            Everything You Need
+            <br />
+            In One Platform
+          </h2>
+
+          <p>
+            Manage your account, wallet and transactions
+            from one simple dashboard.
+          </p>
+        </div>
+
+        <div className="why-grid">
+
+          <div className="why-card">
+            <div>◈</div>
+            <h3>Modern Platform</h3>
+            <p>
+              A clean and easy-to-use experience
+              designed for modern users.
+            </p>
+          </div>
+
+          <div className="why-card">
+            <div>🔒</div>
+            <h3>Account Security</h3>
+            <p>
+              Your account and transaction access
+              are protected with secure controls.
+            </p>
+          </div>
+
+          <div className="why-card">
+            <div>↗</div>
+            <h3>Easy Transactions</h3>
+            <p>
+              Manage deposits, withdrawals and
+              transaction history with ease.
+            </p>
+          </div>
+
+          <div className="why-card">
+            <div>♧</div>
+            <h3>Referral Program</h3>
+            <p>
+              Invite friends and manage your
+              referral activity from your dashboard.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <section className="landing-cta">
+
+        <div className="cta-inner">
+
+          <div>
+            <small>START YOUR JOURNEY</small>
+
+            <h2>
+              Ready to get started?
+            </h2>
+
+            <p>
+              Create your Tradenex account and
+              explore your personal trading dashboard.
+            </p>
+          </div>
+
+          <button
+            onClick={onLogin}
+            className="cta-button"
+          >
+            Enter Tradenex
+            <span>→</span>
+          </button>
+
+        </div>
+      </section>
+
+      <footer className="landing-footer">
+        <div className="footer-logo">
+          <span>₮</span>
+          <strong>TRADENEX</strong>
+        </div>
+
+        <small>
+          © {new Date().getFullYear()} Tradenex.
+          All rights reserved.
+        </small>
+      </footer>
+
+    </div>
+  );
+}
+
+
 /* =====================================================
    APP
 ===================================================== */
@@ -2949,6 +3205,9 @@ function FAQ() {
 export default function App() {
   const [user, setUser] =
     useState(null);
+
+  const [showLanding, setShowLanding] =
+    useState(true);
 
   const [data, setData] =
     useState({
@@ -3088,6 +3347,14 @@ export default function App() {
   }
 
   if (!user) {
+    if (showLanding) {
+      return (
+        <LandingPage
+          onLogin={() => setShowLanding(false)}
+        />
+      );
+    }
+
     return (
       <LoginPage
         onLogin={(loggedUser) => {
