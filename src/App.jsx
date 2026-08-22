@@ -1074,6 +1074,51 @@ function Deposit({ onDone }) {
   const [message, setMessage] =
     useState("");
 
+  const depositWallets = {
+    TRC20: {
+      address:
+        "TUuGwbzorVauCkhsmCUw6gCmvCAMcQaUZZ",
+      label: "USDT - TRC20",
+    },
+
+    BEP20: {
+      address:
+        "0x22B72f2dAeDeB450333D9FA0Fc8E5C274E0a85f9",
+      label: "USDT - BEP20",
+    },
+  };
+
+  const selectedWallet =
+    depositWallets[form.network];
+
+  const qrCodeUrl =
+    "https://api.qrserver.com/v1/create-qr-code/" +
+    `?size=300x300&margin=10&data=${encodeURIComponent(
+      selectedWallet.address
+    )}`;
+
+  async function copyAddress() {
+    try {
+      await navigator.clipboard.writeText(
+        selectedWallet.address
+      );
+
+      setError("");
+
+      setMessage(
+        `${selectedWallet.label} wallet address copied.`
+      );
+
+      setTimeout(() => {
+        setMessage("");
+      }, 2500);
+    } catch (err) {
+      setError(
+        "Address copy नहीं हो पाया. Address को manually copy करें."
+      );
+    }
+  }
+
   async function submit(e) {
     e.preventDefault();
 
@@ -1171,7 +1216,9 @@ function Deposit({ onDone }) {
         </h2>
 
         <p>
-          Submit your deposit request.
+          Send USDT to the wallet address
+          below and submit your payment
+          details.
         </p>
       </div>
 
@@ -1187,6 +1234,72 @@ function Deposit({ onDone }) {
         </div>
       )}
 
+      <div className="panel-card deposit-wallet-card">
+        <div className="panel-head">
+          <div>
+            <h3>
+              Deposit Wallet
+            </h3>
+
+            <span>
+              Send USDT only to the selected
+              network address.
+            </span>
+          </div>
+        </div>
+
+        {form.method === "USDT" && (
+          <div className="deposit-wallet-box">
+            <div className="deposit-wallet-info">
+              <div className="deposit-network-badge">
+                {selectedWallet.label}
+              </div>
+
+              <h4>
+                Payment Address
+              </h4>
+
+              <div className="deposit-address-row">
+                <div className="deposit-address">
+                  {selectedWallet.address}
+                </div>
+
+                <button
+                  type="button"
+                  className="copy-address-btn"
+                  onClick={copyAddress}
+                >
+                  📋 Copy
+                </button>
+              </div>
+
+              <div className="deposit-warning">
+                ⚠️ Send USDT on{" "}
+                <strong>
+                  {form.network}
+                </strong>{" "}
+                network only.
+              </div>
+            </div>
+
+            <div className="deposit-qr-box">
+              <img
+                src={qrCodeUrl}
+                alt={`${selectedWallet.label} QR Code`}
+              />
+
+              <strong>
+                Scan to Pay
+              </strong>
+
+              <small>
+                {form.network} Network
+              </small>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="panel-card">
         <form onSubmit={submit}>
           <label>
@@ -1198,8 +1311,7 @@ function Deposit({ onDone }) {
             onChange={(e) =>
               setForm({
                 ...form,
-                method:
-                  e.target.value,
+                method: e.target.value,
               })
             }
           >
@@ -1212,8 +1324,7 @@ function Deposit({ onDone }) {
             </option>
           </select>
 
-          {form.method ===
-            "USDT" && (
+          {form.method === "USDT" && (
             <>
               <label>
                 Network
@@ -1224,8 +1335,7 @@ function Deposit({ onDone }) {
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    network:
-                      e.target.value,
+                    network: e.target.value,
                   })
                 }
               >
@@ -1240,7 +1350,9 @@ function Deposit({ onDone }) {
             </>
           )}
 
-          <label>Amount</label>
+          <label>
+            Amount
+          </label>
 
           <input
             type="number"
@@ -1250,27 +1362,23 @@ function Deposit({ onDone }) {
             onChange={(e) =>
               setForm({
                 ...form,
-                amount:
-                  e.target.value,
+                amount: e.target.value,
               })
             }
             required
           />
 
           <label>
-            Wallet Address
+            Your Wallet Address
           </label>
 
           <input
-            placeholder="Your wallet address"
-            value={
-              form.walletAddress
-            }
+            placeholder="Enter your sending wallet address"
+            value={form.walletAddress}
             onChange={(e) =>
               setForm({
                 ...form,
-                walletAddress:
-                  e.target.value,
+                walletAddress: e.target.value,
               })
             }
           />
@@ -1285,8 +1393,7 @@ function Deposit({ onDone }) {
             onChange={(e) =>
               setForm({
                 ...form,
-                txid:
-                  e.target.value,
+                txid: e.target.value,
               })
             }
           />
@@ -1301,8 +1408,7 @@ function Deposit({ onDone }) {
             accept="image/*,.pdf"
             onChange={(e) =>
               setProof(
-                e.target.files?.[0] ||
-                  null
+                e.target.files?.[0] || null
               )
             }
             required
