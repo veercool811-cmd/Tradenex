@@ -272,8 +272,45 @@ function queuePersist(fileName, data) {
   persistQueue =
     persistQueue
       .then(async () => {
+
+        /* =================================================
+           USERS
+           PostgreSQL is the permanent source of truth.
+           NEVER delete/replace the users table from a
+           local or stale array.
+        ================================================== */
+
         if (fileName === USERS_FILE) {
+
+          if (!Array.isArray(data)) {
+            console.error(
+              "USERS PERSIST BLOCKED: data is not an array."
+            );
+            return;
+          }
+
+          /*
+            An empty users array must NEVER be allowed to
+            affect PostgreSQL. This protects all existing
+            users from accidental empty-cache writes.
+          */
+          if (data.length === 0) {
+            console.warn(
+              "USERS PERSIST SKIPPED: empty users array."
+            );
+            return;
+          }
+
           for (const user of data) {
+
+            if (!user || !user.id) {
+              console.warn(
+                "USERS PERSIST SKIPPED: invalid user.",
+                user
+              );
+              continue;
+            }
+
             await pool.query(
               `
               INSERT INTO users
@@ -292,8 +329,40 @@ function queuePersist(fileName, data) {
             );
           }
 
+          /*
+            Refresh the local cache from PostgreSQL after
+            every successful users persistence operation.
+          */
+          const dbUsers =
+            await pool.query(
+              "SELECT data FROM users ORDER BY created_at ASC"
+            );
+
+          persistentCache[USERS_FILE] =
+            dbUsers.rows.map(
+              (row) => row.data
+            );
+
+          fs.writeFileSync(
+            USERS_FILE,
+            JSON.stringify(
+              persistentCache[USERS_FILE],
+              null,
+              2
+            )
+          );
+
+          console.log(
+            "USERS PERSISTED:",
+            persistentCache[USERS_FILE].length
+          );
+
           return;
         }
+
+        /* =================================================
+           ALL OTHER DATA
+        ================================================== */
 
         const key =
           path.basename(fileName);
@@ -321,6 +390,7 @@ function queuePersist(fileName, data) {
           error
         );
       });
+  return persistQueue;
 }
 
 
