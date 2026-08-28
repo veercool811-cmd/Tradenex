@@ -1,4 +1,13 @@
 const express = require("express");
+const { Pool } = require("pg");
+require("dotenv").config();
+
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
@@ -59,6 +68,262 @@ const SUPPORT_FILE = path.join(
 
 const REFERRAL_REWARD = 10;
 
+const DB_DATA_TABLE = "app_data";
+
+const persistentCache = {};
+let persistentReady = false;
+let persistQueue = Promise.resolve();
+
+const PERSIST_FILES = [
+  USERS_FILE,
+  DEPOSITS_FILE,
+  WITHDRAWALS_FILE,
+  TRANSACTIONS_FILE,
+  SUPPORT_FILE,
+];
+
+async function initPersistentStorage() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_data (
+      key TEXT PRIMARY KEY,
+      data JSONB NOT NULL,
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+
+  /* USERS -> PostgreSQL users table */
+  const userRows = await pool.query(
+    "SELECT data FROM users ORDER BY created_at ASC"
+  );
+
+  if (userRows.rows.length > 0) {
+    persistentCache[USERS_FILE] =
+      userRows.rows.map((r) => r.data);
+
+    fs.writeFileSync(
+      USERS_FILE,
+      JSON.stringify(
+        persistentCache[USERS_FILE],
+        null,
+        2
+      )
+    );
+  } else {
+    let localUsers = [];
+
+    try {
+      if (fs.existsSync(USERS_FILE)) {
+        const text =
+          fs.readFileSync(
+            USERS_FILE,
+            "utf8"
+          );
+
+        if (text.trim()) {
+          localUsers = JSON.parse(text);
+        }
+      }
+    } catch (e) {
+      console.error(
+        "LOCAL USERS READ ERROR:",
+        e
+      );
+    }
+
+    if (!Array.isArray(localUsers)) {
+      localUsers = [];
+    }
+
+    persistentCache[USERS_FILE] =
+      localUsers;
+
+    if (localUsers.length > 0) {
+      await pool.query(
+        "SELECT 1"
+      );
+
+      for (const user of localUsers) {
+        await pool.query(
+          `
+          INSERT INTO users
+            (id, data, created_at)
+          VALUES
+            ($1, $2::jsonb, COALESCE($3::timestamptz, NOW()))
+          ON CONFLICT (id)
+          DO UPDATE SET
+            data = EXCLUDED.data
+          `,
+          [
+            String(user.id),
+            JSON.stringify(user),
+            user.createdAt || null,
+          ]
+        );
+      }
+
+      console.log(
+        `Migrated ${localUsers.length} users to PostgreSQL.`
+      );
+    }
+  }
+
+  /* ALL OTHER DATA -> PostgreSQL */
+  for (const dataFile of PERSIST_FILES) {
+    if (dataFile === USERS_FILE) {
+      continue;
+    }
+
+    const key =
+      path.basename(dataFile);
+
+    const result =
+      await pool.query(
+        "SELECT data FROM app_data WHERE key = $1",
+        [key]
+      );
+
+    if (result.rows.length > 0) {
+      persistentCache[dataFile] =
+        result.rows[0].data;
+
+      fs.writeFileSync(
+        dataFile,
+        JSON.stringify(
+          persistentCache[dataFile],
+          null,
+          2
+        )
+      );
+    } else {
+      let localData = [];
+
+      try {
+        if (fs.existsSync(dataFile)) {
+          const text =
+            fs.readFileSync(
+              dataFile,
+              "utf8"
+            );
+
+          if (text.trim()) {
+            localData =
+              JSON.parse(text);
+          }
+        }
+      } catch (e) {
+        console.error(
+          "LOCAL DATA READ ERROR:",
+          dataFile,
+          e
+        );
+      }
+
+      if (!Array.isArray(localData)) {
+        localData = [];
+      }
+
+      persistentCache[dataFile] =
+        localData;
+
+      await pool.query(
+        `
+        INSERT INTO app_data
+          (key, data, updated_at)
+        VALUES
+          ($1, $2::jsonb, NOW())
+        ON CONFLICT (key)
+        DO UPDATE SET
+          data = EXCLUDED.data,
+          updated_at = NOW()
+        `,
+        [
+          key,
+          JSON.stringify(localData),
+        ]
+      );
+    }
+  }
+
+  persistentReady = true;
+
+  console.log(
+    "PostgreSQL persistent storage ready."
+  );
+
+  console.log(
+    "Permanent users:",
+    Array.isArray(
+      persistentCache[USERS_FILE]
+    )
+      ? persistentCache[USERS_FILE].length
+      : 0
+  );
+}
+
+function queuePersist(fileName, data) {
+  persistQueue =
+    persistQueue
+      .then(async () => {
+        if (fileName === USERS_FILE) {
+          for (const user of data) {
+            await pool.query(
+              `
+              INSERT INTO users
+                (id, data, created_at)
+              VALUES
+                ($1, $2::jsonb, COALESCE($3::timestamptz, NOW()))
+              ON CONFLICT (id)
+              DO UPDATE SET
+                data = EXCLUDED.data
+              `,
+              [
+                String(user.id),
+                JSON.stringify(user),
+                user.createdAt || null,
+              ]
+            );
+          }
+
+          return;
+        }
+
+        const key =
+          path.basename(fileName);
+
+        await pool.query(
+          `
+          INSERT INTO app_data
+            (key, data, updated_at)
+          VALUES
+            ($1, $2::jsonb, NOW())
+          ON CONFLICT (key)
+          DO UPDATE SET
+            data = EXCLUDED.data,
+            updated_at = NOW()
+          `,
+          [
+            key,
+            JSON.stringify(data),
+          ]
+        );
+      })
+      .catch((error) => {
+        console.error(
+          "POSTGRES PERSIST ERROR:",
+          error
+        );
+      });
+}
+
+
 /* =====================================================
    MIDDLEWARE
 ===================================================== */
@@ -116,7 +381,18 @@ if (!fs.existsSync(UPLOAD_DIR)) {
    FILE HELPERS
 ===================================================== */
 
+
 function read(file, fallback = []) {
+  if (
+    persistentReady &&
+    Object.prototype.hasOwnProperty.call(
+      persistentCache,
+      file
+    )
+  ) {
+    return persistentCache[file];
+  }
+
   try {
     if (!fs.existsSync(file)) {
       fs.writeFileSync(
@@ -141,10 +417,7 @@ function read(file, fallback = []) {
       return fallback;
     }
 
-    const parsed =
-      JSON.parse(text);
-
-    return parsed;
+    return JSON.parse(text);
   } catch (error) {
     console.error(
       "READ ERROR:",
@@ -156,7 +429,10 @@ function read(file, fallback = []) {
   }
 }
 
+
 function write(file, data) {
+  persistentCache[file] = data;
+
   fs.writeFileSync(
     file,
     JSON.stringify(
@@ -164,6 +440,11 @@ function write(file, data) {
       null,
       2
     )
+  );
+
+  queuePersist(
+    file,
+    data
   );
 }
 
@@ -3286,52 +3567,73 @@ app.use(
    START
 ===================================================== */
 
-app.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
-    console.log("");
 
-    console.log(
-      "======================================"
+initPersistentStorage()
+  .then(() => {
+    app.listen(
+      PORT,
+      "0.0.0.0",
+      () => {
+        console.log("");
+
+        console.log(
+          "======================================"
+        );
+
+        console.log(
+          "       TRADENEX BACKEND RUNNING"
+        );
+
+        console.log(
+          "======================================"
+        );
+
+        console.log(
+          `Port: ${PORT}`
+        );
+
+        console.log(
+          `Public API: ${PUBLIC_BASE_URL}`
+        );
+
+        console.log(
+          `Health: ${PUBLIC_BASE_URL}/api/health`
+        );
+
+        console.log(
+          `Admin API: ${PUBLIC_BASE_URL}/api/admin`
+        );
+
+        console.log(
+          `Uploads: ${PUBLIC_BASE_URL}/uploads/`
+        );
+
+        console.log(
+          `Referral Reward: $${REFERRAL_REWARD}`
+        );
+
+        console.log(
+          "PostgreSQL: CONNECTED"
+        );
+
+        console.log(
+          "Permanent Storage: ENABLED"
+        );
+
+        console.log(
+          "======================================"
+        );
+
+        console.log("");
+      }
+    );
+  })
+  .catch((error) => {
+    console.error(
+      "DATABASE INITIALIZATION FAILED:",
+      error
     );
 
-    console.log(
-      "       TRADENEX BACKEND RUNNING"
-    );
+    process.exit(1);
+  });
 
-    console.log(
-      "======================================"
-    );
-
-    console.log(
-      `Port: ${PORT}`
-    );
-
-    console.log(
-      `Public API: ${PUBLIC_BASE_URL}`
-    );
-
-    console.log(
-      `Health: ${PUBLIC_BASE_URL}/api/health`
-    );
-
-    console.log(
-      `Admin API: ${PUBLIC_BASE_URL}/api/admin`
-    );
-
-    console.log(
-      `Uploads: ${PUBLIC_BASE_URL}/uploads/`
-    );
-
-    console.log(
-      `Referral Reward: $${REFERRAL_REWARD}`
-    );
-
-    console.log(
-      "======================================"
-    );
-
-    console.log("");
-  }
-);
