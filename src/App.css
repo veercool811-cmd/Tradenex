@@ -2762,3 +2762,66 @@ tbody tr:hover {
   }
 }
 
+
+/* ===== FINAL HERO LOGO FIX ===== */
+.landing-hero{
+  position:relative;
+  overflow:hidden;
+}
+
+.hero-logo-watermark{
+  position:absolute !important;
+  left:-120px !important;
+  top:70px !important;
+  width:430px !important;
+  height:430px !important;
+  opacity:.10 !important;
+  filter:blur(7px) !important;
+  pointer-events:none !important;
+  z-index:0 !important;
+  overflow:hidden !important;
+}
+
+.hero-logo-watermark img{
+  width:100% !important;
+  height:100% !important;
+  object-fit:contain !important;
+  display:block !important;
+  opacity:1 !important;
+}
+
+.landing-hero .hero-content,
+.landing-hero .hero-visual{
+  position:relative !important;
+  z-index:2 !important;
+}
+
+.hero-logo-card{
+  position:relative !important;
+  z-index:3 !important;
+}
+
+.hero-logo-card .tradenex-mark-img{
+  width:205px !important;
+  height:205px !important;
+  object-fit:contain !important;
+  margin:0 auto 12px !important;
+  display:block !important;
+}
+
+@media (max-width:700px){
+  .hero-logo-watermark{
+    left:-155px !important;
+    top:55px !important;
+    width:390px !important;
+    height:390px !important;
+    opacity:.08 !important;
+    filter:blur(7px) !important;
+  }
+
+  .hero-logo-card .tradenex-mark-img{
+    width:125px !important;
+    height:125px !important;
+    margin-bottom:8px !important;
+  }
+}
