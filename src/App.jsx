@@ -800,8 +800,8 @@ function Dashboard({
 
           <strong>
             $
-            {Number(
-              user.profit || 0
+            {(
+              Number(user.totalDeposit || 0) * 0.004
             ).toFixed(2)}
           </strong>
         </div>
