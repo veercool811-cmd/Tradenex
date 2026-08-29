@@ -2895,3 +2895,41 @@ tbody tr:hover {
     margin-bottom:8px !important;
   }
 }
+
+/* FINAL HERO FIX - remove oversized watermark from content */
+.landing-hero .hero-logo-watermark{
+  display:none !important;
+}
+
+.landing-hero .hero-content{
+  position:relative !important;
+  z-index:5 !important;
+}
+
+.landing-hero .hero-visual{
+  position:relative !important;
+  z-index:5 !important;
+}
+
+.hero-logo-card{
+  position:relative !important;
+  z-index:6 !important;
+}
+
+.hero-logo-card .tradenex-mark-img{
+  position:relative !important;
+  z-index:7 !important;
+  width:205px !important;
+  height:205px !important;
+  object-fit:contain !important;
+  display:block !important;
+  margin:0 auto 12px !important;
+}
+
+@media (max-width:700px){
+  .hero-logo-card .tradenex-mark-img{
+    width:125px !important;
+    height:125px !important;
+  }
+}
+
