@@ -2936,3 +2936,38 @@ tbody tr:hover {
     width: 100%;
   }
 }
+
+/* ===== REMOVE LARGE HERO IMAGE / LOGO ===== */
+.landing-page .hero-visual,
+.landing-page .hero-logo-card,
+.landing-page .big-tradenex-logo,
+.landing-page .tradenex-logo-img,
+.landing-page .tradenex-mark-img,
+.landing-page .hero-logo-card img,
+.landing-page .hero-visual img,
+.landing-page .floating-orbit,
+.landing-page .hero-glow {
+  display: none !important;
+}
+
+.landing-page .landing-hero {
+  display: flex !important;
+  align-items: center !important;
+}
+
+.landing-page .hero-content {
+  width: 100% !important;
+  max-width: 900px !important;
+}
+
+@media (max-width: 800px) {
+  .landing-page .landing-hero {
+    display: block !important;
+  }
+
+  .landing-page .hero-content {
+    width: 100% !important;
+    max-width: 100% !important;
+  }
+}
+
