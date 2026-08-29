@@ -2331,3 +2331,19 @@ tbody tr:hover {
   }
 }
 
+
+/* Tradenex official logo */
+.tradenex-logo-img{
+  display:block;
+  width:180px;
+  max-width:100%;
+  height:auto;
+  object-fit:contain;
+}
+.landing-logo .tradenex-logo-img,
+.hero-logo-card .tradenex-logo-img,
+.big-tradenex-logo .tradenex-logo-img,
+.footer-logo .tradenex-logo-img{
+  width:240px;
+  max-width:100%;
+}
