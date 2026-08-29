@@ -1829,8 +1829,14 @@ function Performance({
       clearInterval(timer);
   }, []);
 
-  const profit =
-    Number(user.profit || 0);
+  // 0.4% daily projected return (display only)
+  const deposit =
+    Number(user.totalDeposit || 0);
+
+  const dailyRate = 0.004;
+
+  const dailyProjectedReturn =
+    deposit * dailyRate;
 
   return (
     <>
@@ -1844,19 +1850,18 @@ function Performance({
         </h2>
 
         <p>
-          Live updating performance
-          chart.
+          Daily return projection based on total deposit.
         </p>
       </div>
 
       <div className="performance-summary">
         <div className="performance-value">
           <span>
-            Current Profit
+            Projected Daily Return (0.4%)
           </span>
 
           <strong>
-            ${profit.toFixed(2)}
+            ${dailyProjectedReturn.toFixed(2)}
           </strong>
         </div>
 
