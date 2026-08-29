@@ -2954,7 +2954,7 @@ function LandingPage({ onLogin }) {
       <nav className="landing-nav">
         <div className="landing-logo">
           <div className="landing-logo-mark">
-            <span>₮</span>
+            <img src="/tradenex-logo.png" alt="Tradenex" className="tradenex-logo-img" />
           </div>
 
           <div>
@@ -3046,7 +3046,7 @@ function LandingPage({ onLogin }) {
 
           <div className="hero-logo-card">
             <div className="big-tradenex-logo">
-              <span>₮</span>
+              <img src="/tradenex-logo.png" alt="Tradenex" className="tradenex-logo-img" />
             </div>
 
             <strong>TRADENEX</strong>
