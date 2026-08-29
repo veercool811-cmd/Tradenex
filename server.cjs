@@ -1193,11 +1193,6 @@ app.post(
         users
       );
 
-      queuePersist(
-        USERS_FILE,
-        users
-      );
-
       res
         .status(201)
         .json({
