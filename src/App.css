@@ -2825,3 +2825,73 @@ tbody tr:hover {
     margin-bottom:8px !important;
   }
 }
+
+/* ===== FINAL WATERMARK FIX — DO NOT OVERLAP CONTENT ===== */
+
+/* Old oversized watermark completely disabled */
+.landing-hero .hero-logo-watermark{
+  display:none !important;
+}
+
+/* Hero becomes the background layer */
+.landing-hero{
+  position:relative !important;
+  overflow:hidden !important;
+  isolation:isolate !important;
+}
+
+/* Beautiful blurred Tradenex logo in background */
+.landing-hero::before{
+  content:"" !important;
+  position:absolute !important;
+  left:-110px !important;
+  top:55px !important;
+  width:430px !important;
+  height:430px !important;
+  background-image:url("/tradenex-mark.png") !important;
+  background-repeat:no-repeat !important;
+  background-position:center !important;
+  background-size:contain !important;
+  opacity:.075 !important;
+  filter:blur(8px) !important;
+  pointer-events:none !important;
+  z-index:0 !important;
+}
+
+/* ALL real hero content stays above the logo */
+.landing-hero > *,
+.landing-hero .hero-content,
+.landing-hero .hero-visual,
+.landing-hero .hero-logo-card{
+  position:relative !important;
+  z-index:2 !important;
+}
+
+/* Keep the logo inside the right card clean */
+.hero-logo-card .tradenex-mark-img{
+  width:205px !important;
+  height:205px !important;
+  object-fit:contain !important;
+  display:block !important;
+  margin:0 auto 12px !important;
+  filter:drop-shadow(0 0 12px rgba(40,90,255,.9))
+          drop-shadow(0 0 35px rgba(50,70,255,.55)) !important;
+}
+
+/* Mobile */
+@media (max-width:700px){
+  .landing-hero::before{
+    left:-145px !important;
+    top:65px !important;
+    width:350px !important;
+    height:350px !important;
+    opacity:.065 !important;
+    filter:blur(8px) !important;
+  }
+
+  .hero-logo-card .tradenex-mark-img{
+    width:125px !important;
+    height:125px !important;
+    margin-bottom:8px !important;
+  }
+}
