@@ -2954,7 +2954,7 @@ function LandingPage({ onLogin }) {
       <nav className="landing-nav">
         <div className="landing-logo">
           <div className="landing-logo-mark">
-            <img src="/tradenex-logo.png" alt="Tradenex" className="tradenex-logo-img" />
+            <img src="/tradenex-mark.png" alt="Tradenex" className="tradenex-mark-img" />
           </div>
 
           <div>
@@ -2981,6 +2981,9 @@ function LandingPage({ onLogin }) {
       </nav>
 
       <section className="landing-hero">
+        <div className="hero-logo-watermark">
+          <img src="/tradenex-mark.png" alt="" />
+        </div>
 
         <div className="hero-glow hero-glow-one"></div>
         <div className="hero-glow hero-glow-two"></div>

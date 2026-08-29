@@ -2678,3 +2678,87 @@ tbody tr:hover {
 
 }
 
+
+/* =====================================================
+   PREMIUM TRADENEX LOGO INTEGRATION
+===================================================== */
+
+.landing-hero{
+  position:relative;
+  overflow:hidden;
+}
+
+/* Large blurred logo behind hero */
+.hero-logo-watermark{
+  position:absolute;
+  left:-95px;
+  top:30px;
+  width:520px;
+  height:520px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+  z-index:0;
+  opacity:.16;
+  filter:blur(7px);
+}
+
+.hero-logo-watermark::after{
+  content:"";
+  position:absolute;
+  width:360px;
+  height:360px;
+  border-radius:50%;
+  background:rgba(45,70,255,.28);
+  filter:blur(80px);
+}
+
+.hero-logo-watermark img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  position:relative;
+  z-index:1;
+}
+
+/* Keep hero content above watermark */
+.landing-hero .hero-content,
+.landing-hero .hero-visual{
+  position:relative;
+  z-index:2;
+}
+
+/* Actual logo mark inside hero card */
+.hero-logo-card .tradenex-mark-img{
+  width:205px;
+  height:205px;
+  object-fit:contain;
+  display:block;
+  margin:0 auto 12px;
+  filter:
+    drop-shadow(0 0 12px rgba(40,90,255,.9))
+    drop-shadow(0 0 35px rgba(50,70,255,.55));
+  position:relative;
+  z-index:2;
+}
+
+/* Mobile */
+@media (max-width:700px){
+
+  .hero-logo-watermark{
+    left:-125px;
+    top:55px;
+    width:390px;
+    height:390px;
+    opacity:.10;
+    filter:blur(6px);
+  }
+
+  .hero-logo-card .tradenex-mark-img{
+    width:125px;
+    height:125px;
+    margin-bottom:8px;
+  }
+}
+
