@@ -2379,3 +2379,302 @@ tbody tr:hover {
   max-width:100%;
   height:auto;
 }
+
+/* =====================================================
+   TRADENEX PREMIUM LOGO DESIGN
+===================================================== */
+
+.landing-page{
+  position:relative;
+  overflow:hidden;
+}
+
+/* Header logo */
+.landing-brand{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  min-width:0;
+}
+
+.landing-brand-image{
+  position:relative;
+  width:52px;
+  height:52px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  border-radius:14px;
+  background:rgba(25,55,180,.16);
+  box-shadow:
+    0 0 18px rgba(55,80,255,.45),
+    inset 0 0 18px rgba(80,100,255,.12);
+}
+
+.landing-brand-image img{
+  width:48px;
+  height:48px;
+  object-fit:contain;
+  mix-blend-mode:screen;
+  filter:
+    drop-shadow(0 0 8px rgba(55,90,255,.65));
+}
+
+.landing-brand-text{
+  display:flex;
+  flex-direction:column;
+  line-height:1.05;
+}
+
+.landing-brand-text strong{
+  font-size:15px;
+  letter-spacing:2px;
+  color:#fff;
+}
+
+.landing-brand-text small{
+  margin-top:5px;
+  font-size:6px;
+  letter-spacing:1.5px;
+  color:rgba(150,165,205,.65);
+}
+
+
+/* =====================================================
+   HERO BACKGROUND LOGO
+===================================================== */
+
+.landing-hero{
+  position:relative;
+  overflow:hidden;
+}
+
+.hero-watermark{
+  position:absolute;
+  left:50%;
+  top:46%;
+  transform:translate(-50%,-50%);
+  width:min(620px,95vw);
+  height:620px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  pointer-events:none;
+  z-index:0;
+  opacity:.085;
+  filter:
+    blur(5px)
+    drop-shadow(0 0 45px rgba(55,75,255,.8));
+}
+
+.hero-watermark img{
+  width:100%;
+  height:100%;
+  object-fit:contain;
+  mix-blend-mode:screen;
+}
+
+
+/* Glowing blue atmosphere */
+.hero-bg-orb{
+  position:absolute;
+  border-radius:50%;
+  pointer-events:none;
+  filter:blur(70px);
+  opacity:.35;
+  z-index:0;
+}
+
+.hero-bg-orb-one{
+  width:300px;
+  height:300px;
+  top:100px;
+  left:-130px;
+  background:rgba(30,70,255,.5);
+}
+
+.hero-bg-orb-two{
+  width:360px;
+  height:360px;
+  right:-170px;
+  top:260px;
+  background:rgba(75,35,255,.42);
+}
+
+.hero-content,
+.hero-visual{
+  position:relative;
+  z-index:2;
+}
+
+
+/* =====================================================
+   HERO LOGO CARD
+===================================================== */
+
+.hero-logo-card{
+  position:relative;
+  overflow:hidden;
+  isolation:isolate;
+}
+
+.hero-logo-glow{
+  position:absolute;
+  width:190px;
+  height:190px;
+  left:50%;
+  top:36%;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:rgba(50,75,255,.38);
+  filter:blur(45px);
+  z-index:-1;
+}
+
+.hero-logo-image-wrap{
+  position:relative;
+  width:150px;
+  height:105px;
+  margin:0 auto 18px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  border-radius:18px;
+  background:rgba(30,45,130,.12);
+  box-shadow:
+    0 0 30px rgba(50,70,255,.30),
+    inset 0 0 25px rgba(90,100,255,.10);
+}
+
+.hero-logo-image{
+  width:145px;
+  height:100px;
+  object-fit:contain;
+  mix-blend-mode:screen;
+  filter:
+    drop-shadow(0 0 13px rgba(55,90,255,.75));
+  transform:scale(.92);
+}
+
+.hero-card-name{
+  position:relative;
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:5px;
+  text-align:center;
+  color:#fff;
+  text-shadow:0 0 18px rgba(100,110,255,.4);
+}
+
+.hero-card-subtitle{
+  margin-top:7px;
+  text-align:center;
+  font-size:7px;
+  letter-spacing:2px;
+  color:rgba(160,175,220,.7);
+}
+
+
+/* =====================================================
+   LOGIN PAGE LOGO
+===================================================== */
+
+.auth-page .brand{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:12px;
+}
+
+.auth-page .brand .auth-logo-img{
+  width:58px;
+  height:58px;
+  object-fit:contain;
+  border-radius:15px;
+  mix-blend-mode:screen;
+  filter:
+    drop-shadow(0 0 12px rgba(50,85,255,.8));
+}
+
+.auth-page .brand b{
+  font-size:22px;
+  letter-spacing:.5px;
+  color:#fff;
+}
+
+
+/* =====================================================
+   MOBILE
+===================================================== */
+
+@media (max-width:700px){
+
+  .landing-nav{
+    padding:12px 14px;
+  }
+
+  .landing-brand-image{
+    width:46px;
+    height:46px;
+    border-radius:12px;
+  }
+
+  .landing-brand-image img{
+    width:43px;
+    height:43px;
+  }
+
+  .landing-brand-text strong{
+    font-size:13px;
+  }
+
+  .landing-brand-text small{
+    font-size:5px;
+  }
+
+  .landing-nav-links{
+    display:none;
+  }
+
+  .landing-nav-buttons{
+    gap:7px;
+  }
+
+  .landing-login-btn,
+  .landing-register-btn{
+    padding:9px 12px;
+    font-size:11px;
+  }
+
+  .hero-watermark{
+    width:470px;
+    height:470px;
+    top:42%;
+    opacity:.075;
+    filter:blur(7px);
+  }
+
+  .hero-logo-image-wrap{
+    width:125px;
+    height:88px;
+  }
+
+  .hero-logo-image{
+    width:120px;
+    height:83px;
+  }
+
+  .hero-logo-glow{
+    width:160px;
+    height:160px;
+  }
+
+  .hero-card-name{
+    font-size:17px;
+    letter-spacing:4px;
+  }
+
+}
+
