@@ -2840,23 +2840,6 @@ tbody tr:hover {
   isolation:isolate !important;
 }
 
-/* Beautiful blurred Tradenex logo in background */
-.landing-hero::before{
-  content:"" !important;
-  position:absolute !important;
-  left:-110px !important;
-  top:55px !important;
-  width:430px !important;
-  height:430px !important;
-  background-image:url("/tradenex-mark.png") !important;
-  background-repeat:no-repeat !important;
-  background-position:center !important;
-  background-size:contain !important;
-  opacity:.075 !important;
-  filter:blur(8px) !important;
-  pointer-events:none !important;
-  z-index:0 !important;
-}
 
 /* ALL real hero content stays above the logo */
 .landing-hero > *,
