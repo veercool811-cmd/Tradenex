@@ -2916,3 +2916,23 @@ tbody tr:hover {
   }
 }
 
+
+/* REMOVE LARGE HERO LOGO */
+.landing-page .hero-visual {
+  display: none !important;
+}
+
+.landing-page .hero-content {
+  width: 100%;
+  max-width: 900px;
+}
+
+@media (max-width: 800px) {
+  .landing-page .hero-visual {
+    display: none !important;
+  }
+
+  .landing-page .hero-content {
+    width: 100%;
+  }
+}
