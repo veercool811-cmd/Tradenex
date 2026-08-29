@@ -2347,3 +2347,35 @@ tbody tr:hover {
   width:240px;
   max-width:100%;
 }
+
+/* ===== Tradenex logo final sizing ===== */
+
+.auth-logo-img{
+  display:block;
+  width:52px;
+  height:52px;
+  object-fit:contain;
+  flex-shrink:0;
+}
+
+/* Landing navbar logo */
+.landing-logo .tradenex-logo-img{
+  width:280px;
+  max-width:280px;
+  height:auto;
+}
+
+/* Hero logo */
+.hero-logo-card .tradenex-logo-img,
+.big-tradenex-logo .tradenex-logo-img{
+  width:320px;
+  max-width:100%;
+  height:auto;
+}
+
+/* Footer logo */
+.footer-logo .tradenex-logo-img{
+  width:240px;
+  max-width:100%;
+  height:auto;
+}

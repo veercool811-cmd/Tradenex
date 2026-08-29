@@ -259,7 +259,7 @@ function LoginPage({ onLogin }) {
     <div className="auth-page">
       <div className="auth-card">
         <div className="brand">
-          <span>₮</span>
+          <img src="/tradenex-logo.png" alt="Tradenex" className="auth-logo-img" />
           <b>Tradenex</b>
         </div>
 
