@@ -1790,238 +1790,38 @@ function Transactions({
    PERFORMANCE
 ===================================================== */
 
-function Performance({
-  user,
-}) {
-  const [points, setPoints] =
-    useState([
-      32, 43, 37, 58, 51,
-      67, 62, 74, 69, 84,
-      78, 91,
-    ]);
-
-  useEffect(() => {
-    const timer =
-      setInterval(() => {
-        setPoints((old) => {
-          const last =
-            old[old.length - 1];
-
-          const next = Math.max(
-            20,
-            Math.min(
-              95,
-              last +
-                (Math.random() *
-                  16 -
-                  8)
-            )
-          );
-
-          return [
-            ...old.slice(1),
-            next,
-          ];
-        });
-      }, 1800);
-
-    return () =>
-      clearInterval(timer);
-  }, []);
-
-  // 0.4% daily projected return (display only)
-  const deposit =
-    Number(user.totalDeposit || 0);
-
-  const dailyRate = 0.004;
-
-  const dailyProjectedReturn =
-    deposit * dailyRate;
+function Performance({ user }) {
+  const totalDeposit = Number(user?.totalDeposit || 0);
+  const profit = Number(user?.profit || 0);
+  const dailyProfit = totalDeposit * 0.004;
 
   return (
     <>
       <div className="page-title performance-title">
-        <small>
-          PERFORMANCE
-        </small>
-
-        <h2>
-          Profit Performance
-        </h2>
-
-        <p>
-          Daily return projection based on total deposit.
-        </p>
+        <small>PERFORMANCE</small>
+        <h2>Profit Performance</h2>
+        <p>Your actual credited profit from the Tradenex wallet.</p>
       </div>
 
       <div className="performance-summary">
         <div className="performance-value">
-          <span>
-            Projected Daily Return (0.4%)
-          </span>
-
-          <strong>
-            ${dailyProjectedReturn.toFixed(2)}
-          </strong>
+          <span>Daily Profit (0.4%)</span>
+          <strong>${dailyProfit.toFixed(2)}</strong>
         </div>
-
         <div className="live-indicator">
-          <i />
-          LIVE
+          <i /> ACTIVE
         </div>
       </div>
 
-      <div className="panel-card live-chart-card">
+      <div className="panel-card">
         <div className="chart-header">
           <div>
-            <strong>
-              Tradenex Performance
-            </strong>
-
-            <small>
-              Live market-style chart
-            </small>
-          </div>
-
-          <span>
-            LIVE
-          </span>
-        </div>
-
-        <div className="live-chart">
-          <div className="chart-grid">
-            <span />
-            <span />
-            <span />
-            <span />
-          </div>
-
-          <svg
-            className="chart-svg"
-            viewBox="0 0 1000 360"
-            preserveAspectRatio="none"
-          >
-            <defs>
-              <linearGradient
-                id="areaGradient"
-                x1="0"
-                y1="0"
-                x2="0"
-                y2="1"
-              >
-                <stop
-                  offset="0%"
-                  stopColor="#328bff"
-                  stopOpacity="0.35"
-                />
-
-                <stop
-                  offset="100%"
-                  stopColor="#328bff"
-                  stopOpacity="0"
-                />
-              </linearGradient>
-
-              <filter id="glow">
-                <feGaussianBlur
-                  stdDeviation="3"
-                  result="coloredBlur"
-                />
-
-                <feMerge>
-                  <feMergeNode in="coloredBlur" />
-                  <feMergeNode in="SourceGraphic" />
-                </feMerge>
-              </filter>
-            </defs>
-
-            <polyline
-              points={
-                points
-                  .map(
-                    (value, index) => {
-                      const x =
-                        (index /
-                          (points.length -
-                            1)) *
-                        1000;
-
-                      const y =
-                        320 -
-                        value * 2.7;
-
-                      return `${x},${y}`;
-                    }
-                  )
-                  .join(" ")
-              }
-              fill="none"
-              stroke="#3d8fff"
-              strokeWidth="5"
-              filter="url(#glow)"
-            />
-
-            <polygon
-              points={`0,360 ${points
-                .map(
-                  (value, index) => {
-                    const x =
-                      (index /
-                        (points.length -
-                          1)) *
-                      1000;
-
-                    const y =
-                      320 -
-                      value * 2.7;
-
-                    return `${x},${y}`;
-                  }
-                )
-                .join(
-                  " "
-                )} 1000,360`}
-              fill="url(#areaGradient)"
-            />
-          </svg>
-
-          <div className="chart-candles">
-            {points.map(
-              (value, index) => (
-                <div
-                  className="candle"
-                  key={index}
-                  style={{
-                    height:
-                      `${Math.max(
-                        20,
-                        value * 0.65
-                      )}px`,
-                  }}
-                >
-                  <i />
-                </div>
-              )
-            )}
+            <strong>Total Credited Profit</strong>
+            <small>Profit actually added to your wallet</small>
           </div>
         </div>
-
-        <div className="chart-footer">
-          <span>
-            30 MIN
-          </span>
-
-          <span>
-            1 HOUR
-          </span>
-
-          <span className="active">
-            LIVE
-          </span>
-
-          <span>
-            PERFORMANCE
-          </span>
+        <div className="performance-value">
+          <strong>${profit.toFixed(2)}</strong>
         </div>
       </div>
     </>
