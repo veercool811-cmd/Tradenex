@@ -3646,3 +3646,62 @@ tbody tr:hover {
   }
 }
 
+
+/* Profit Activity clean layout */
+.profit-activity-panel .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 16px 0;
+  border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.profit-activity-panel .row:last-child {
+  border-bottom: 0;
+}
+
+.profit-activity-panel .row > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.profit-activity-panel .row > span b {
+  white-space: nowrap;
+}
+
+.profit-activity-panel .row > span small {
+  display: block;
+  width: 100%;
+  margin-left: 28px;
+  opacity: 0.65;
+  font-size: 12px;
+}
+
+.profit-activity-panel .row > strong {
+  margin-left: auto;
+  white-space: nowrap;
+  font-size: 16px;
+}
+
+@media (max-width: 600px) {
+  .profit-activity-panel .row {
+    align-items: flex-start;
+    gap: 10px;
+  }
+
+  .profit-activity-panel .row > span {
+    flex: 1;
+  }
+
+  .profit-activity-panel .row > span small {
+    margin-left: 28px;
+  }
+
+  .profit-activity-panel .row > strong {
+    font-size: 15px;
+  }
+}
