@@ -1805,24 +1805,34 @@ function LiveTrading({ user, data }) {
   const [livePrice, setLivePrice] = useState(null);
 
   useEffect(() => {
-    const ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@trade");
+    const ws = new WebSocket(
+      "wss://stream.binance.com:9443/ws/btcusdt@trade"
+    );
+
+    let latestPrice = null;
 
     ws.onmessage = (event) => {
       try {
         const tick = JSON.parse(event.data);
         const price = Number(tick.p);
 
-        if (!Number.isFinite(price)) return;
-
-        setLivePrice(price);
-        setLivePrices((prev) => {
-          const next = [...prev, price].slice(-40);
-          return next;
-        });
+        if (Number.isFinite(price)) {
+          latestPrice = price;
+          setLivePrice(price);
+        }
       } catch {}
     };
 
+    const sampler = setInterval(() => {
+      if (!Number.isFinite(latestPrice)) return;
+
+      setLivePrices((prev) => {
+        return [...prev, latestPrice].slice(-60);
+      });
+    }, 1000);
+
     return () => {
+      clearInterval(sampler);
       try {
         ws.close();
       } catch {}
@@ -1831,17 +1841,30 @@ function LiveTrading({ user, data }) {
 
   const chartPoints = (() => {
     if (livePrices.length < 2) {
-      return [18, 24, 22, 31, 28, 39, 36, 48, 45, 57, 53, 66, 62, 74, 71, 84];
+      return [
+        24, 29, 26, 35, 31, 42, 38, 49,
+        45, 55, 51, 62, 58, 69, 65, 76
+      ];
     }
 
     const min = Math.min(...livePrices);
     const max = Math.max(...livePrices);
-    const range = max - min || 1;
+    const rawRange = max - min;
 
-    return livePrices.map((price) =>
-      12 + ((price - min) / range) * 78
-    );
+    const padding =
+      rawRange > 0
+        ? rawRange * 0.18
+        : Math.max(max * 0.0002, 1);
+
+    const low = min - padding;
+    const high = max + padding;
+    const range = high - low || 1;
+
+    return livePrices.map((price) => {
+      return 12 + ((price - low) / range) * 76;
+    });
   })();
+
 
   return (
     <>
