@@ -1866,6 +1866,26 @@ function LiveTrading({ user, data }) {
   })();
 
 
+  const candles = (() => {
+    if (livePrices.length < 2) return [];
+
+    const result = [];
+
+    for (let i = 0; i < livePrices.length; i += 4) {
+      const group = livePrices.slice(i, i + 4);
+      if (group.length < 2) continue;
+
+      const open = group[0];
+      const close = group[group.length - 1];
+      const high = Math.max(...group);
+      const low = Math.min(...group);
+
+      result.push({ open, high, low, close });
+    }
+
+    return result.slice(-16);
+  })();
+
   return (
     <>
       <div className="page-title performance-title">
@@ -1903,8 +1923,14 @@ function LiveTrading({ user, data }) {
       <div className="panel-card live-chart-card">
         <div className="chart-header">
           <div>
-            <strong>Tradenex Live Profit</strong>
-            <small>0.4% daily profit performance</small>
+            <div className="live-market-title">
+              <strong>₿ BTC / USDT</strong>
+              <small>Bitcoin • Live Market Price</small>
+            </div>
+            <div className="live-market-price">
+              <strong>{livePrice ? `$${livePrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "Connecting..."}</strong>
+              <span>● LIVE</span>
+            </div>
           </div>
           <span>ACTIVE</span>
         </div>
@@ -1922,48 +1948,73 @@ function LiveTrading({ user, data }) {
             viewBox="0 0 1000 360"
             preserveAspectRatio="none"
           >
-            <defs>
-              <linearGradient
-                id="liveProfitArea"
-                x1="0"
-                y1="0"
-                x2="0"
-                y2="1"
-              >
-                <stop
-                  offset="0%"
-                  stopColor="#20d66b"
-                  stopOpacity="0.38"
-                />
-                <stop
-                  offset="100%"
-                  stopColor="#20d66b"
-                  stopOpacity="0"
-                />
-              </linearGradient>
-            </defs>
+            {candles.length > 0 && (() => {
+              const min = Math.min(...candles.map(c => c.low));
+              const max = Math.max(...candles.map(c => c.high));
+              const padding = (max - min || 1) * 0.12;
+              const low = min - padding;
+              const high = max + padding;
+              const range = high - low || 1;
 
-            <polygon
-              points={`0,360 ${chartPoints.map((value, index) => {
-                const x =
-                  (index / (chartPoints.length - 1)) * 1000;
-                const y = 320 - value * 2.7;
-                return `${x},${y}`;
-              }).join(" ")} 1000,360`}
-              fill="url(#liveProfitArea)"
-            />
+              const y = (price) =>
+                320 - ((price - low) / range) * 280;
 
-            <polyline
-              points={chartPoints.map((value, index) => {
+              const candleWidth = 42;
+              const gap = 20;
+              const totalWidth =
+                candles.length * (candleWidth + gap) - gap;
+              const offset = (1000 - totalWidth) / 2;
+
+              return candles.map((candle, index) => {
                 const x =
-                  (index / (chartPoints.length - 1)) * 1000;
-                const y = 320 - value * 2.7;
-                return `${x},${y}`;
-              }).join(" ")}
-              fill="none"
-              stroke="#20e878"
-              strokeWidth="5"
-            />
+                  offset + index * (candleWidth + gap);
+
+                const openY = y(candle.open);
+                const closeY = y(candle.close);
+                const highY = y(candle.high);
+                const lowY = y(candle.low);
+
+                const bullish = candle.close >= candle.open;
+                const bodyY = Math.min(openY, closeY);
+                const bodyH = Math.max(
+                  Math.abs(closeY - openY),
+                  5
+                );
+
+                return (
+                  <g key={index}>
+                    <line
+                      x1={x + candleWidth / 2}
+                      y1={highY}
+                      x2={x + candleWidth / 2}
+                      y2={lowY}
+                      stroke={bullish ? "#20e878" : "#ff4d6d"}
+                      strokeWidth="4"
+                    />
+
+                    <rect
+                      x={x}
+                      y={bodyY}
+                      width={candleWidth}
+                      height={bodyH}
+                      rx="5"
+                      fill={bullish ? "#20d66b" : "#ff416c"}
+                      opacity="0.95"
+                    />
+
+                    <rect
+                      x={x + 7}
+                      y={bodyY + 6}
+                      width={candleWidth - 14}
+                      height={Math.max(bodyH - 12, 2)}
+                      rx="3"
+                      fill={bullish ? "#42f58a" : "#ff7189"}
+                      opacity="0.65"
+                    />
+                  </g>
+                );
+              });
+            })()}
           </svg>
         </div>
 
