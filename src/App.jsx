@@ -1787,6 +1787,194 @@ function Transactions({
 }
 
 /* =====================================================
+   LIVE TRADING
+===================================================== */
+
+function LiveTrading({ user, data }) {
+  const totalDeposit = Number(user?.totalDeposit || 0);
+  const balance = Number(user?.balance || 0);
+  const profit = Number(user?.profit || 0);
+  const dailyProfit = totalDeposit * 0.004;
+
+  const progress =
+    dailyProfit > 0
+      ? Math.min(100, Math.max(0, (dailyProfit / Math.max(dailyProfit, 0.01)) * 100))
+      : 0;
+
+  const chartPoints = [
+    18, 24, 22, 31, 28, 39, 36, 48,
+    45, 57, 53, 66, 62, 74, 71, 84
+  ];
+
+  return (
+    <>
+      <div className="page-title performance-title">
+        <small>LIVE TRADING</small>
+        <h2>Live Trading</h2>
+        <p>Real wallet performance based on your credited profit.</p>
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <span>💰</span>
+          <small>Total Deposit</small>
+          <strong>${totalDeposit.toFixed(2)}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>📈</span>
+          <small>Daily Profit (0.4%)</small>
+          <strong>${dailyProfit.toFixed(2)}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>💎</span>
+          <small>Total Profit</small>
+          <strong>${profit.toFixed(2)}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>💵</span>
+          <small>Wallet Balance</small>
+          <strong>${balance.toFixed(2)}</strong>
+        </div>
+      </div>
+
+      <div className="panel-card live-chart-card">
+        <div className="chart-header">
+          <div>
+            <strong>Tradenex Live Profit</strong>
+            <small>0.4% daily profit performance</small>
+          </div>
+          <span>ACTIVE</span>
+        </div>
+
+        <div className="live-chart">
+          <div className="chart-grid">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+
+          <svg
+            className="chart-svg"
+            viewBox="0 0 1000 360"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient
+                id="liveProfitArea"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="0%"
+                  stopColor="#328bff"
+                  stopOpacity="0.38"
+                />
+                <stop
+                  offset="100%"
+                  stopColor="#328bff"
+                  stopOpacity="0"
+                />
+              </linearGradient>
+            </defs>
+
+            <polygon
+              points={`0,360 ${chartPoints.map((value, index) => {
+                const x =
+                  (index / (chartPoints.length - 1)) * 1000;
+                const y = 320 - value * 2.7;
+                return `${x},${y}`;
+              }).join(" ")} 1000,360`}
+              fill="url(#liveProfitArea)"
+            />
+
+            <polyline
+              points={chartPoints.map((value, index) => {
+                const x =
+                  (index / (chartPoints.length - 1)) * 1000;
+                const y = 320 - value * 2.7;
+                return `${x},${y}`;
+              }).join(" ")}
+              fill="none"
+              stroke="#3d8fff"
+              strokeWidth="5"
+            />
+          </svg>
+        </div>
+
+        <div className="chart-footer">
+          <span>START</span>
+          <span>PROFIT</span>
+          <span className="active">0.4% DAILY</span>
+        </div>
+      </div>
+
+      <div className="dashboard-grid">
+        <div className="panel-card">
+          <div className="panel-head">
+            <h3>Today's Profit</h3>
+            <span>0.4%</span>
+          </div>
+
+          <div className="performance-value">
+            <strong>${dailyProfit.toFixed(2)}</strong>
+            <span>Daily credited profit</span>
+          </div>
+        </div>
+
+        <div className="panel-card">
+          <div className="panel-head">
+            <h3>Profit Summary</h3>
+            <span>ACTIVE</span>
+          </div>
+
+          <div className="performance-value">
+            <strong>${profit.toFixed(2)}</strong>
+            <span>Total accumulated profit</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <div className="panel-head">
+          <h3>Profit Activity</h3>
+          <span>Wallet linked</span>
+        </div>
+
+        <div className="row">
+          <span>
+            📈 <b>Daily profit rate</b>
+            <small>Calculated from total deposit</small>
+          </span>
+          <strong>0.40%</strong>
+        </div>
+
+        <div className="row">
+          <span>
+            💰 <b>Current wallet balance</b>
+            <small>Including credited profit</small>
+          </span>
+          <strong>${balance.toFixed(2)}</strong>
+        </div>
+
+        <div className="row">
+          <span>
+            💎 <b>Total credited profit</b>
+            <small>Accumulated in your account</small>
+          </span>
+          <strong>${profit.toFixed(2)}</strong>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
    PERFORMANCE
 ===================================================== */
 
@@ -3320,6 +3508,11 @@ export default function App() {
       "Transactions",
     ],
     [
+      "live-trading",
+      "📈",
+      "Live Trading",
+    ],
+    [
       "performance",
       "↗",
       "Performance",
@@ -3541,6 +3734,14 @@ export default function App() {
           {page ===
             "transactions" && (
             <Transactions
+              data={data}
+            />
+          )}
+
+          {page ===
+            "live-trading" && (
+            <LiveTrading
+              user={user}
               data={data}
             />
           )}
