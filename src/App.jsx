@@ -1877,7 +1877,7 @@ function LiveTrading({ user, data }) {
 
     const result = [];
 
-    for (let i = 0; i < livePrices.length; i += 4) {
+    for (let i = 0; i < livePrices.length; i += 2) {
       const group = livePrices.slice(i, i + 4);
       if (group.length < 2) continue;
 
@@ -1889,7 +1889,7 @@ function LiveTrading({ user, data }) {
       result.push({ open, high, low, close });
     }
 
-    return result.slice(-16);
+    return result.slice(-24);
   })();
 
   return (
