@@ -1932,12 +1932,12 @@ function LiveTrading({ user, data }) {
               >
                 <stop
                   offset="0%"
-                  stopColor="#328bff"
+                  stopColor="#20d66b"
                   stopOpacity="0.38"
                 />
                 <stop
                   offset="100%"
-                  stopColor="#328bff"
+                  stopColor="#20d66b"
                   stopOpacity="0"
                 />
               </linearGradient>
@@ -1961,7 +1961,7 @@ function LiveTrading({ user, data }) {
                 return `${x},${y}`;
               }).join(" ")}
               fill="none"
-              stroke="#3d8fff"
+              stroke="#20e878"
               strokeWidth="5"
             />
           </svg>
