@@ -1801,10 +1801,47 @@ function LiveTrading({ user, data }) {
       ? Math.min(100, Math.max(0, (dailyProfit / Math.max(dailyProfit, 0.01)) * 100))
       : 0;
 
-  const chartPoints = [
-    18, 24, 22, 31, 28, 39, 36, 48,
-    45, 57, 53, 66, 62, 74, 71, 84
-  ];
+  const [livePrices, setLivePrices] = useState([]);
+  const [livePrice, setLivePrice] = useState(null);
+
+  useEffect(() => {
+    const ws = new WebSocket("wss://stream.binance.com:9443/ws/btcusdt@trade");
+
+    ws.onmessage = (event) => {
+      try {
+        const tick = JSON.parse(event.data);
+        const price = Number(tick.p);
+
+        if (!Number.isFinite(price)) return;
+
+        setLivePrice(price);
+        setLivePrices((prev) => {
+          const next = [...prev, price].slice(-40);
+          return next;
+        });
+      } catch {}
+    };
+
+    return () => {
+      try {
+        ws.close();
+      } catch {}
+    };
+  }, []);
+
+  const chartPoints = (() => {
+    if (livePrices.length < 2) {
+      return [18, 24, 22, 31, 28, 39, 36, 48, 45, 57, 53, 66, 62, 74, 71, 84];
+    }
+
+    const min = Math.min(...livePrices);
+    const max = Math.max(...livePrices);
+    const range = max - min || 1;
+
+    return livePrices.map((price) =>
+      12 + ((price - min) / range) * 78
+    );
+  })();
 
   return (
     <>
