@@ -3107,3 +3107,542 @@ tbody tr:hover {
   border-color: rgba(0, 210, 255, .24) !important;
 }
 
+
+/* =====================================================
+   BINANCE STYLE LIVE TRADING TERMINAL
+===================================================== */
+
+.binance-terminal {
+  margin-top: 18px;
+  background: #07111d;
+  border: 1px solid #172b3d;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 18px 50px rgba(0,0,0,.22);
+}
+
+.market-strip {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 12px 15px;
+  background: #091624;
+  border-bottom: 1px solid #172b3d;
+}
+
+.market-strip-title {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #f1f5f9;
+  white-space: nowrap;
+}
+
+.market-strip-title strong {
+  font-size: 13px;
+}
+
+.market-strip-scroll {
+  display: flex;
+  gap: 7px;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.market-strip-scroll::-webkit-scrollbar {
+  display: none;
+}
+
+.market-chip {
+  min-width: 105px;
+  padding: 8px 10px;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  background: transparent;
+  color: #7f94a8;
+  cursor: pointer;
+  text-align: left;
+}
+
+.market-chip strong {
+  display: block;
+  color: #cbd8e4;
+  font-size: 10px;
+}
+
+.market-chip span {
+  display: block;
+  margin-top: 3px;
+  color: #71879b;
+  font-size: 9px;
+}
+
+.market-chip:hover,
+.market-chip.active {
+  background: #102333;
+  border-color: #24455e;
+}
+
+.market-chip.active strong {
+  color: #f5f8fb;
+}
+
+.market-chip.active span {
+  color: #20d889;
+}
+
+.trading-market-head {
+  display: flex;
+  align-items: center;
+  gap: 28px;
+  padding: 16px;
+  background: #07111d;
+  border-bottom: 1px solid #172b3d;
+}
+
+.trading-pair {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 190px;
+}
+
+.coin-logo {
+  width: 38px;
+  height: 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: linear-gradient(145deg,#263f55,#102333);
+  border: 1px solid #34536c;
+  color: #f4f8fb;
+  font-weight: 900;
+}
+
+.trading-pair strong {
+  display: block;
+  color: #f4f8fb;
+  font-size: 17px;
+}
+
+.trading-pair small {
+  display: block;
+  margin-top: 3px;
+  color: #657d91;
+  font-size: 9px;
+}
+
+.trading-price strong {
+  display: block;
+  color: #f5f8fb;
+  font-size: 21px;
+}
+
+.trading-price span {
+  display: block;
+  margin-top: 3px;
+  color: #20e878;
+  font-size: 8px;
+  font-weight: 900;
+  letter-spacing: 1px;
+}
+
+.market-stat {
+  min-width: 85px;
+}
+
+.market-stat small {
+  display: block;
+  color: #60778b;
+  font-size: 8px;
+  margin-bottom: 5px;
+}
+
+.market-stat strong {
+  color: #c7d4df;
+  font-size: 10px;
+}
+
+.market-stat .positive {
+  color: #20d889;
+}
+
+.trading-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 315px;
+  min-height: 470px;
+}
+
+.trading-chart-panel {
+  min-width: 0;
+  border-right: 1px solid #172b3d;
+}
+
+.chart-toolbar {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 12px;
+  border-bottom: 1px solid #172b3d;
+}
+
+.chart-toolbar span {
+  margin-right: 10px;
+  color: #e5edf5;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.chart-toolbar button {
+  border: 0;
+  background: transparent;
+  color: #63798d;
+  padding: 6px 9px;
+  border-radius: 4px;
+  font-size: 9px;
+  cursor: pointer;
+}
+
+.chart-toolbar button:hover,
+.chart-toolbar button.active {
+  color: #f1f5f9;
+  background: #172b3d;
+}
+
+.binance-chart {
+  position: relative;
+  height: 385px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 80% 15%,rgba(0,130,255,.08),transparent 30%),
+    linear-gradient(180deg,#071522,#050e18);
+}
+
+.binance-chart .chart-grid {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+}
+
+.binance-chart .chart-grid span {
+  width: 100%;
+  height: 1px;
+  background: rgba(105,145,175,.09);
+}
+
+.binance-chart svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.chart-line {
+  stroke: #20d889;
+  stroke-width: 3;
+  filter: drop-shadow(0 0 6px rgba(32,216,137,.55));
+}
+
+.chart-fill {
+  fill: url(#chartGradient);
+  opacity: .12;
+}
+
+.chart-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  color: #668095;
+  font-size: 11px;
+}
+
+.chart-bottom {
+  height: 36px;
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  padding: 0 12px;
+  border-top: 1px solid #172b3d;
+  color: #62788b;
+  font-size: 8px;
+}
+
+.chart-bottom strong {
+  margin-left: auto;
+  color: #20d889;
+}
+
+.orderbook-panel {
+  background: #07111d;
+}
+
+.orderbook-head {
+  height: 42px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 13px;
+  border-bottom: 1px solid #172b3d;
+}
+
+.orderbook-head strong {
+  color: #e8f0f6;
+  font-size: 12px;
+}
+
+.orderbook-head span {
+  color: #20d889;
+  font-size: 8px;
+}
+
+.orderbook-cols,
+.order-row {
+  display: grid;
+  grid-template-columns: 1.2fr 1fr 1fr;
+  gap: 8px;
+  padding: 0 12px;
+}
+
+.orderbook-cols {
+  padding-top: 10px;
+  padding-bottom: 7px;
+}
+
+.orderbook-cols span {
+  color: #526a7d;
+  font-size: 8px;
+}
+
+.order-row {
+  height: 26px;
+  align-items: center;
+}
+
+.order-row span {
+  font-family: monospace;
+  font-size: 8px;
+  color: #8ba0b1;
+  text-align: right;
+}
+
+.order-row span:first-child {
+  text-align: left;
+}
+
+.order-row.sell span:first-child {
+  color: #ff647c;
+}
+
+.order-row.buy span:first-child {
+  color: #20d889;
+}
+
+.order-mid {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  margin: 5px 0;
+  border-top: 1px solid #172b3d;
+  border-bottom: 1px solid #172b3d;
+  background: #0a1826;
+}
+
+.order-mid strong {
+  color: #f3f7fa;
+  font-size: 12px;
+}
+
+.order-mid span {
+  color: #60788c;
+  font-size: 8px;
+}
+
+.trade-panel {
+  padding: 16px;
+  border-top: 1px solid #172b3d;
+  background: #07111d;
+}
+
+.trade-tabs {
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid #172b3d;
+}
+
+.trade-tabs button {
+  padding: 9px 2px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: #667d90;
+  font-weight: 800;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.trade-tabs button.active {
+  color: #f4f8fb;
+}
+
+.trade-tabs button.buy-tab.active {
+  color: #20d889;
+  border-color: #20d889;
+}
+
+.trade-tabs button.sell-tab.active {
+  color: #ff526d;
+  border-color: #ff526d;
+}
+
+.trade-form {
+  max-width: 470px;
+  padding-top: 14px;
+}
+
+.trade-field {
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.trade-field span {
+  color: #60788b;
+  font-size: 9px;
+}
+
+.trade-field strong {
+  color: #cbd7e1;
+  font-size: 9px;
+}
+
+.trade-form label {
+  display: block;
+  margin-bottom: 9px;
+  color: #6d8294;
+  font-size: 8px;
+}
+
+.trade-input {
+  display: flex;
+  align-items: center;
+  margin-top: 5px;
+  border: 1px solid #1b3448;
+  border-radius: 5px;
+  background: #091725;
+}
+
+.trade-input:focus-within {
+  border-color: #315b79;
+}
+
+.trade-input input {
+  flex: 1;
+  min-width: 0;
+  padding: 10px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #e8f1f7;
+  font-size: 10px;
+}
+
+.trade-input span {
+  padding-right: 10px;
+  color: #73899a;
+  font-size: 8px;
+  font-weight: 700;
+}
+
+.trade-action {
+  width: 100%;
+  padding: 11px;
+  margin-top: 4px;
+  border: 0;
+  border-radius: 5px;
+  color: #06120d;
+  font-weight: 900;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.buy-action {
+  background: #20d889;
+}
+
+.sell-action {
+  background: #ff526d;
+  color: #fff;
+}
+
+.trade-notice {
+  display: block;
+  margin-top: 8px;
+  color: #526a7d;
+  font-size: 8px;
+}
+
+@media (max-width: 900px) {
+  .trading-market-head {
+    flex-wrap: wrap;
+    gap: 14px;
+  }
+
+  .trading-main {
+    grid-template-columns: 1fr;
+  }
+
+  .trading-chart-panel {
+    border-right: 0;
+    border-bottom: 1px solid #172b3d;
+  }
+
+  .orderbook-panel {
+    min-height: 360px;
+  }
+}
+
+@media (max-width: 600px) {
+  .market-strip {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 9px;
+  }
+
+  .market-strip-scroll {
+    width: 100%;
+  }
+
+  .market-chip {
+    min-width: 92px;
+  }
+
+  .trading-market-head {
+    padding: 13px;
+  }
+
+  .trading-pair {
+    min-width: 100%;
+  }
+
+  .market-stat {
+    min-width: 70px;
+  }
+
+  .trading-price strong {
+    font-size: 18px;
+  }
+
+  .binance-chart {
+    height: 300px;
+  }
+
+  .chart-toolbar {
+    overflow-x: auto;
+  }
+}
+

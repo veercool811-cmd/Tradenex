@@ -1796,108 +1796,168 @@ function LiveTrading({ user, data }) {
   const profit = Number(user?.profit || 0);
   const dailyProfit = totalDeposit * 0.004;
 
-  const progress =
-    dailyProfit > 0
-      ? Math.min(100, Math.max(0, (dailyProfit / Math.max(dailyProfit, 0.01)) * 100))
-      : 0;
+  const markets = [
+    ["BTCUSDT", "BTC", "Bitcoin"],
+    ["ETHUSDT", "ETH", "Ethereum"],
+    ["BNBUSDT", "BNB", "BNB"],
+    ["SOLUSDT", "SOL", "Solana"],
+    ["XRPUSDT", "XRP", "XRP"],
+    ["ADAUSDT", "ADA", "Cardano"],
+    ["DOGEUSDT", "DOGE", "Dogecoin"],
+    ["TRXUSDT", "TRX", "TRON"],
+    ["AVAXUSDT", "AVAX", "Avalanche"],
+    ["LINKUSDT", "LINK", "Chainlink"],
+  ];
 
-  const [livePrices, setLivePrices] = useState([]);
-  const [livePrice, setLivePrice] = useState(null);
+  const [selected, setSelected] = useState("BTCUSDT");
+  const [prices, setPrices] = useState({});
+  const [history, setHistory] = useState({});
+  const [orderBooks, setOrderBooks] = useState({});
+  const [side, setSide] = useState("BUY");
+
+  const selectedMarket =
+    markets.find((m) => m[0] === selected) || markets[0];
 
   useEffect(() => {
-    const ws = new WebSocket(
-      "wss://stream.binance.com:9443/ws/btcusdt@trade"
-    );
+    const streams = markets
+      .flatMap((m) => [
+        `${m[0].toLowerCase()}@trade`,
+        `${m[0].toLowerCase()}@depth5@100ms`,
+      ])
+      .join("/");
 
-    let latestPrice = null;
-    let lastUiUpdate = 0;
+    const ws = new WebSocket(
+      `wss://stream.binance.com:9443/stream?streams=${streams}`
+    );
 
     ws.onmessage = (event) => {
       try {
-        const tick = JSON.parse(event.data);
-        const price = Number(tick.p);
+        const payload = JSON.parse(event.data);
+        const tick = payload?.data;
 
-        if (Number.isFinite(price)) {
-          latestPrice = price;
+        if (!tick) return;
 
-          const now = Date.now();
-          if (now - lastUiUpdate >= 1000) {
-            lastUiUpdate = now;
-            setLivePrice(price);
+        const symbol = tick.s;
+
+        if (tick.e === "trade") {
+          const price = Number(tick.p);
+
+          if (!symbol || !Number.isFinite(price)) return;
+
+          setPrices((prev) => ({
+            ...prev,
+            [symbol]: price,
+          }));
+
+          if (symbol === selected) {
+            setHistory((prev) => {
+              const old = prev[symbol] || [];
+              return {
+                ...prev,
+                [symbol]: [...old, price].slice(-80),
+              };
+            });
           }
+        }
+
+        if (tick.e === "depthUpdate" && symbol) {
+          const asks = Array.isArray(tick.a)
+            ? tick.a
+                .map(([price, amount]) => [
+                  Number(price),
+                  Number(amount),
+                ])
+                .filter(
+                  ([price, amount]) =>
+                    Number.isFinite(price) &&
+                    Number.isFinite(amount) &&
+                    amount > 0
+                )
+                .slice(0, 5)
+            : [];
+
+          const bids = Array.isArray(tick.b)
+            ? tick.b
+                .map(([price, amount]) => [
+                  Number(price),
+                  Number(amount),
+                ])
+                .filter(
+                  ([price, amount]) =>
+                    Number.isFinite(price) &&
+                    Number.isFinite(amount) &&
+                    amount > 0
+                )
+                .slice(0, 5)
+            : [];
+
+          setOrderBooks((prev) => ({
+            ...prev,
+            [symbol]: { asks, bids },
+          }));
         }
       } catch {}
     };
 
-    const sampler = setInterval(() => {
-      if (!Number.isFinite(latestPrice)) return;
-
-      setLivePrices((prev) => {
-        return [...prev, latestPrice].slice(-60);
-      });
-    }, 500);
+    ws.onerror = () => {};
 
     return () => {
-      clearInterval(sampler);
       try {
         ws.close();
       } catch {}
     };
-  }, []);
+  }, [selected]);
 
-  const chartPoints = (() => {
-    if (livePrices.length < 2) {
-      return [
-        24, 29, 26, 35, 31, 42, 38, 49,
-        45, 55, 51, 62, 58, 69, 65, 76
-      ];
-    }
+  const currentOrderBook =
+    orderBooks[selected] || { asks: [], bids: [] };
 
-    const min = Math.min(...livePrices);
-    const max = Math.max(...livePrices);
-    const rawRange = max - min;
+  const asks = [...currentOrderBook.asks]
+    .sort((a, b) => a[0] - b[0])
+    .slice(-5)
+    .reverse();
 
-    const padding =
-      rawRange > 0
-        ? rawRange * 0.18
-        : Math.max(max * 0.0002, 1);
+  const bids = [...currentOrderBook.bids]
+    .sort((a, b) => b[0] - a[0])
+    .slice(0, 5);
 
+  const currentPrice = prices[selected] || null;
+  const selectedHistory = history[selected] || [];
+
+  const chart = useMemo(() => {
+    if (selectedHistory.length < 2) return [];
+
+    const min = Math.min(...selectedHistory);
+    const max = Math.max(...selectedHistory);
+    const padding = (max - min || Math.max(max * 0.0002, 1)) * 0.18;
     const low = min - padding;
     const high = max + padding;
     const range = high - low || 1;
 
-    return livePrices.map((price) => {
-      return 12 + ((price - low) / range) * 76;
-    });
-  })();
+    return selectedHistory.map((price, index) => ({
+      x: (index / Math.max(selectedHistory.length - 1, 1)) * 1000,
+      y: 315 - ((price - low) / range) * 270,
+    }));
+  }, [selectedHistory]);
 
+  const chartPath = chart.length
+    ? chart
+        .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+        .join(" ")
+    : "";
 
-  const candles = (() => {
-    if (livePrices.length < 2) return [];
-
-    const result = [];
-
-    for (let i = 0; i < livePrices.length; i += 2) {
-      const group = livePrices.slice(i, i + 4);
-      if (group.length < 2) continue;
-
-      const open = group[0];
-      const close = group[group.length - 1];
-      const high = Math.max(...group);
-      const low = Math.min(...group);
-
-      result.push({ open, high, low, close });
-    }
-
-    return result.slice(-24);
-  })();
+  const formatPrice = (price) => {
+    if (!Number.isFinite(price)) return "—";
+    if (price >= 1000) return `$${price.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+    if (price >= 1) return `$${price.toFixed(4)}`;
+    return `$${price.toFixed(6)}`;
+  };
 
   return (
     <>
       <div className="page-title performance-title">
-        <small>LIVE TRADING</small>
+        <small>MARKETS</small>
         <h2>Live Trading</h2>
-        <p>Real wallet performance based on your credited profit.</p>
+        <p>Real-time cryptocurrency market prices powered by Binance public market data.</p>
       </div>
 
       <div className="stats-grid">
@@ -1926,108 +1986,216 @@ function LiveTrading({ user, data }) {
         </div>
       </div>
 
-      <div className="panel-card live-chart-card">
-        <div className="chart-header">
-          <div>
-            <div className="live-market-title">
-              <strong>₿ BTC / USDT</strong>
-              <small>Bitcoin • Live Market Price</small>
-            </div>
-            <div className="live-market-price">
-              <strong>{livePrice ? `$${livePrice.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : "Connecting..."}</strong>
-              <span>● LIVE</span>
-            </div>
-          </div>
-          <span>ACTIVE</span>
-        </div>
-
-        <div className="live-chart">
-          <div className="chart-grid">
-            <span />
-            <span />
-            <span />
-            <span />
+      <div className="binance-terminal">
+        <div className="market-strip">
+          <div className="market-strip-title">
+            <span>⭐</span>
+            <strong>Markets</strong>
           </div>
 
-          <svg
-            className="chart-svg"
-            viewBox="0 0 1000 360"
-            preserveAspectRatio="none"
-          >
-            {candles.length > 0 && (() => {
-              const min = Math.min(...candles.map(c => c.low));
-              const max = Math.max(...candles.map(c => c.high));
-              const padding = (max - min || 1) * 0.12;
-              const low = min - padding;
-              const high = max + padding;
-              const range = high - low || 1;
-
-              const y = (price) =>
-                320 - ((price - low) / range) * 280;
-
-              const candleWidth = 42;
-              const gap = 20;
-              const totalWidth =
-                candles.length * (candleWidth + gap) - gap;
-              const offset = (1000 - totalWidth) / 2;
-
-              return candles.map((candle, index) => {
-                const x =
-                  offset + index * (candleWidth + gap);
-
-                const openY = y(candle.open);
-                const closeY = y(candle.close);
-                const highY = y(candle.high);
-                const lowY = y(candle.low);
-
-                const bullish = candle.close >= candle.open;
-                const bodyY = Math.min(openY, closeY);
-                const bodyH = Math.max(
-                  Math.abs(closeY - openY),
-                  5
-                );
-
-                return (
-                  <g key={index}>
-                    <line
-                      x1={x + candleWidth / 2}
-                      y1={highY}
-                      x2={x + candleWidth / 2}
-                      y2={lowY}
-                      stroke={bullish ? "#20e878" : "#ff4d6d"}
-                      strokeWidth="4"
-                    />
-
-                    <rect
-                      x={x}
-                      y={bodyY}
-                      width={candleWidth}
-                      height={bodyH}
-                      rx="5"
-                      fill={bullish ? "#20d66b" : "#ff416c"}
-                      opacity="0.95"
-                    />
-
-                    <rect
-                      x={x + 7}
-                      y={bodyY + 6}
-                      width={candleWidth - 14}
-                      height={Math.max(bodyH - 12, 2)}
-                      rx="3"
-                      fill={bullish ? "#42f58a" : "#ff7189"}
-                      opacity="0.65"
-                    />
-                  </g>
-                );
-              });
-            })()}
-          </svg>
+          <div className="market-strip-scroll">
+            {markets.map(([symbol, coin, name]) => (
+              <button
+                key={symbol}
+                className={`market-chip ${selected === symbol ? "active" : ""}`}
+                onClick={() => setSelected(symbol)}
+              >
+                <strong>{coin}/USDT</strong>
+                <span>{formatPrice(prices[symbol])}</span>
+              </button>
+            ))}
+          </div>
         </div>
 
-        <div className="chart-footer">
-          <span>START</span>
-          <span>PROFIT</span>
-          <span className="active">0.4% DAILY</span>
+        <div className="trading-market-head">
+          <div className="trading-pair">
+            <span className="coin-logo">{selectedMarket[1][0]}</span>
+            <div>
+              <strong>{selectedMarket[1]} / USDT</strong>
+              <small>{selectedMarket[2]} • Spot Market</small>
+            </div>
+          </div>
+
+          <div className="trading-price">
+            <strong>{formatPrice(currentPrice)}</strong>
+            <span>● LIVE</span>
+          </div>
+
+          <div className="market-stat">
+            <small>24h Change</small>
+            <strong className="positive">+ Live Market</strong>
+          </div>
+
+          <div className="market-stat">
+            <small>24h High</small>
+            <strong>Live</strong>
+          </div>
+
+          <div className="market-stat">
+            <small>24h Low</small>
+            <strong>Live</strong>
+          </div>
+        </div>
+
+        <div className="trading-main">
+          <div className="trading-chart-panel">
+            <div className="chart-toolbar">
+              <span>Chart</span>
+              <button className="active">1m</button>
+              <button>5m</button>
+              <button>15m</button>
+              <button>1H</button>
+              <button>4H</button>
+              <button>1D</button>
+            </div>
+
+            <div className="binance-chart">
+              <div className="chart-grid">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+
+              <svg viewBox="0 0 1000 360" preserveAspectRatio="none">
+                {chartPath && (
+                  <>
+                    <path
+                      d={`${chartPath} L 1000 360 L 0 360 Z`}
+                      className="chart-fill"
+                    />
+                    <path
+                      d={chartPath}
+                      className="chart-line"
+                      fill="none"
+                    />
+                  </>
+                )}
+              </svg>
+
+              {!currentPrice && (
+                <div className="chart-loading">
+                  Connecting to live market…
+                </div>
+              )}
+            </div>
+
+            <div className="chart-bottom">
+              <span>LIVE DATA</span>
+              <span>{selectedMarket[1]}/USDT</span>
+              <strong>0.4% DAILY WALLET PROFIT</strong>
+            </div>
+          </div>
+
+          <div className="orderbook-panel">
+            <div className="orderbook-head">
+              <strong>Order Book</strong>
+              <span>Live</span>
+            </div>
+
+            <div className="orderbook-cols">
+              <span>Price(USDT)</span>
+              <span>Amount</span>
+              <span>Total</span>
+            </div>
+
+            <div className="order-rows">
+              {asks.map(([price, amount], index) => (
+                <div className="order-row sell" key={`ask-${price}-${index}`}>
+                  <span>{formatPrice(price).replace("$", "")}</span>
+                  <span>{amount.toFixed(5)}</span>
+                  <span>{(price * amount).toFixed(2)}</span>
+                </div>
+              ))}
+
+              {asks.length === 0 && (
+                <div className="order-empty">
+                  Connecting live order book…
+                </div>
+              )}
+
+              <div className="order-mid">
+                <strong>{formatPrice(currentPrice)}</strong>
+                <span>↕ Live Price</span>
+              </div>
+
+              {bids.map(([price, amount], index) => (
+                <div className="order-row buy" key={`bid-${price}-${index}`}>
+                  <span>{formatPrice(price).replace("$", "")}</span>
+                  <span>{amount.toFixed(5)}</span>
+                  <span>{(price * amount).toFixed(2)}</span>
+                </div>
+              ))}
+
+              {bids.length === 0 && (
+                <div className="order-empty">
+                  Connecting live order book…
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="trade-panel">
+          <div className="trade-tabs">
+            <button
+              className={side === "BUY" ? "active buy-tab" : ""}
+              onClick={() => setSide("BUY")}
+            >
+              Buy
+            </button>
+            <button
+              className={side === "SELL" ? "active sell-tab" : ""}
+              onClick={() => setSide("SELL")}
+            >
+              Sell
+            </button>
+          </div>
+
+          <div className="trade-form">
+            <div className="trade-field">
+              <span>Available</span>
+              <strong>${balance.toFixed(2)} USDT</strong>
+            </div>
+
+            <label>
+              Price
+              <div className="trade-input">
+                <input
+                  value={currentPrice ? currentPrice.toFixed(4) : ""}
+                  readOnly
+                  placeholder="Live price"
+                />
+                <span>USDT</span>
+              </div>
+            </label>
+
+            <label>
+              Amount
+              <div className="trade-input">
+                <input placeholder="0.000000" />
+                <span>{selectedMarket[1]}</span>
+              </div>
+            </label>
+
+            <label>
+              Total
+              <div className="trade-input">
+                <input placeholder="0.00" />
+                <span>USDT</span>
+              </div>
+            </label>
+
+            <button className={`trade-action ${side === "BUY" ? "buy-action" : "sell-action"}`}>
+              {side} {selectedMarket[1]}
+            </button>
+
+            <small className="trade-notice">
+              Trading execution is not connected to an exchange account.
+            </small>
+          </div>
         </div>
       </div>
 
@@ -2037,7 +2205,6 @@ function LiveTrading({ user, data }) {
             <h3>Today's Profit</h3>
             <span>0.4%</span>
           </div>
-
           <div className="performance-value">
             <strong>${dailyProfit.toFixed(2)}</strong>
             <span>Daily credited profit</span>
@@ -2049,7 +2216,6 @@ function LiveTrading({ user, data }) {
             <h3>Profit Summary</h3>
             <span>ACTIVE</span>
           </div>
-
           <div className="performance-value">
             <strong>${profit.toFixed(2)}</strong>
             <span>Total accumulated profit</span>
