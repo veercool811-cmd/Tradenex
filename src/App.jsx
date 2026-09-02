@@ -1940,7 +1940,7 @@ function LiveTrading({ user, data }) {
         </div>
       </div>
 
-      <div className="panel-card">
+      <div className="panel-card profit-activity-panel">
         <div className="panel-head">
           <h3>Profit Activity</h3>
           <span>Wallet linked</span>
