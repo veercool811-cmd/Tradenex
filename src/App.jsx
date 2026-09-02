@@ -259,7 +259,7 @@ function LoginPage({ onLogin }) {
     <div className="auth-page">
       <div className="auth-card">
         <div className="brand">
-          <img src="/tradenex-logo.png" alt="Tradenex" className="auth-logo-img" />
+          <img src="/tradenex-premium-logo.png" alt="Tradenex" className="auth-logo-img" />
           <b>Tradenex</b>
         </div>
 
@@ -3396,7 +3396,7 @@ function LandingPage({ onLogin }) {
       <nav className="landing-nav">
         <div className="landing-logo">
           <div className="landing-logo-mark">
-            <img src="/tradenex-mark.png" alt="Tradenex" className="tradenex-mark-img" />
+            <img src="/tradenex-premium-logo.png" alt="Tradenex" className="tradenex-mark-img" />
           </div>
 
           <div>
@@ -3483,7 +3483,7 @@ function LandingPage({ onLogin }) {
 
           <div className="hero-logo-card">
             <div className="big-tradenex-logo">
-              <img src="/tradenex-logo.png" alt="Tradenex" className="tradenex-logo-img" />
+              <img src="/tradenex-premium-logo.png" alt="Tradenex" className="tradenex-logo-img" />
             </div>
 
             <strong>TRADENEX</strong>
