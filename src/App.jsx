@@ -1910,6 +1910,42 @@ function LiveTrading({ user, data }) {
     };
   }, [selected]);
 
+  useEffect(() => {
+    const symbol = selected.toLowerCase();
+    const depthWs = new WebSocket(
+      `wss://stream.binance.com:9443/ws/${symbol}@depth5@100ms`
+    );
+
+    depthWs.onmessage = (event) => {
+      try {
+        const book = JSON.parse(event.data);
+        const asks = Array.isArray(book.asks)
+          ? book.asks
+              .map(([price, amount]) => [Number(price), Number(amount)])
+              .filter(([price, amount]) => Number.isFinite(price) && Number.isFinite(amount) && amount > 0)
+              .slice(0, 5)
+          : [];
+        const bids = Array.isArray(book.bids)
+          ? book.bids
+              .map(([price, amount]) => [Number(price), Number(amount)])
+              .filter(([price, amount]) => Number.isFinite(price) && Number.isFinite(amount) && amount > 0)
+              .slice(0, 5)
+          : [];
+
+        setOrderBooks((prev) => ({
+          ...prev,
+          [selected]: { asks, bids },
+        }));
+      } catch {}
+    };
+
+    return () => {
+      try {
+        depthWs.close();
+      } catch {}
+    };
+  }, [selected]);
+
   const currentOrderBook =
     orderBooks[selected] || { asks: [], bids: [] };
 
