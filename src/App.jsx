@@ -1810,6 +1810,7 @@ function LiveTrading({ user, data }) {
     );
 
     let latestPrice = null;
+    let lastUiUpdate = 0;
 
     ws.onmessage = (event) => {
       try {
@@ -1818,7 +1819,12 @@ function LiveTrading({ user, data }) {
 
         if (Number.isFinite(price)) {
           latestPrice = price;
-          setLivePrice(price);
+
+          const now = Date.now();
+          if (now - lastUiUpdate >= 1000) {
+            lastUiUpdate = now;
+            setLivePrice(price);
+          }
         }
       } catch {}
     };
@@ -1829,7 +1835,7 @@ function LiveTrading({ user, data }) {
       setLivePrices((prev) => {
         return [...prev, latestPrice].slice(-60);
       });
-    }, 1000);
+    }, 500);
 
     return () => {
       clearInterval(sampler);
