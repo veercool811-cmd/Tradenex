@@ -1837,7 +1837,9 @@ function LiveTrading({ user, data }) {
 
         if (!tick) return;
 
-        const symbol = tick.s;
+        const streamName = payload?.stream || "";
+        const streamSymbol = streamName.split("@")[0].toUpperCase();
+        const symbol = tick.s || streamSymbol;
 
         if (tick.e === "trade") {
           const price = Number(tick.p);
@@ -1860,7 +1862,7 @@ function LiveTrading({ user, data }) {
           }
         }
 
-        if (tick.e === "depthUpdate" && symbol) {
+        if ((tick.e === "depthUpdate" || (Array.isArray(tick.a) && Array.isArray(tick.b))) && symbol) {
           const asks = Array.isArray(tick.a)
             ? tick.a
                 .map(([price, amount]) => [
