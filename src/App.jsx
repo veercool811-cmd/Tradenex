@@ -1795,12 +1795,32 @@ function Performance({ user }) {
   const profit = Number(user?.profit || 0);
   const dailyProfit = totalDeposit * 0.004;
 
+  const chartMax = Math.max(dailyProfit, profit, 1);
+  const current = Math.min(92, 28 + (profit / chartMax) * 60);
+
+  const points = [
+    18,
+    24,
+    21,
+    32,
+    29,
+    43,
+    39,
+    52,
+    48,
+    61,
+    57,
+    current
+  ];
+
   return (
     <>
       <div className="page-title performance-title">
         <small>PERFORMANCE</small>
-        <h2>Profit Performance</h2>
-        <p>Your actual credited profit from the Tradenex wallet.</p>
+        <h2>Live Trading Performance</h2>
+        <p>
+          Your actual credited profit based on the 0.4% daily return.
+        </p>
       </div>
 
       <div className="performance-summary">
@@ -1808,8 +1828,113 @@ function Performance({ user }) {
           <span>Daily Profit (0.4%)</span>
           <strong>${dailyProfit.toFixed(2)}</strong>
         </div>
+
         <div className="live-indicator">
-          <i /> ACTIVE
+          <i /> LIVE
+        </div>
+      </div>
+
+      <div className="panel-card live-chart-card">
+        <div className="chart-header">
+          <div>
+            <strong>Tradenex Live Trading</strong>
+            <small>Actual credited profit performance</small>
+          </div>
+
+          <span>LIVE</span>
+        </div>
+
+        <div className="live-chart">
+          <div className="chart-grid">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+
+          <svg
+            className="chart-svg"
+            viewBox="0 0 1000 360"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient
+                id="profitArea"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="0%"
+                  stopColor="#328bff"
+                  stopOpacity="0.38"
+                />
+                <stop
+                  offset="100%"
+                  stopColor="#328bff"
+                  stopOpacity="0"
+                />
+              </linearGradient>
+
+              <filter id="profitGlow">
+                <feGaussianBlur
+                  stdDeviation="3"
+                  result="blur"
+                />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <polygon
+              points={`0,360 ${points.map((value, index) => {
+                const x =
+                  (index / (points.length - 1)) * 1000;
+                const y =
+                  320 - value * 2.7;
+                return `${x},${y}`;
+              }).join(" ")} 1000,360`}
+              fill="url(#profitArea)"
+            />
+
+            <polyline
+              points={points.map((value, index) => {
+                const x =
+                  (index / (points.length - 1)) * 1000;
+                const y =
+                  320 - value * 2.7;
+                return `${x},${y}`;
+              }).join(" ")}
+              fill="none"
+              stroke="#3d8fff"
+              strokeWidth="5"
+              filter="url(#profitGlow)"
+            />
+          </svg>
+
+          <div className="chart-candles">
+            {points.map((value, index) => (
+              <div
+                className="candle"
+                key={index}
+                style={{
+                  height:
+                    `${Math.max(20, value * 0.65)}px`
+                }}
+              >
+                <i />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="chart-footer">
+          <span>DAILY</span>
+          <span>0.4%</span>
+          <span className="active">LIVE</span>
         </div>
       </div>
 
@@ -1817,9 +1942,12 @@ function Performance({ user }) {
         <div className="chart-header">
           <div>
             <strong>Total Credited Profit</strong>
-            <small>Profit actually added to your wallet</small>
+            <small>
+              Profit actually added to your wallet
+            </small>
           </div>
         </div>
+
         <div className="performance-value">
           <strong>${profit.toFixed(2)}</strong>
         </div>
