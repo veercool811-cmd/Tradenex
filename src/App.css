@@ -2971,3 +2971,42 @@ tbody tr:hover {
   }
 }
 
+
+
+/* LIVE TRADING PROFIT ACTIVITY */
+.live-chart-card + .dashboard-grid + .panel-card .row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 13px 0;
+  border-bottom: 1px solid rgba(100, 139, 170, 0.12);
+}
+
+.live-chart-card + .dashboard-grid + .panel-card .row:last-child {
+  border-bottom: 0;
+}
+
+.live-chart-card + .dashboard-grid + .panel-card .row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.live-chart-card + .dashboard-grid + .panel-card .row > span b {
+  color: #dbe8f6;
+  font-size: 12px;
+}
+
+.live-chart-card + .dashboard-grid + .panel-card .row > span small {
+  color: #63798e;
+  font-size: 9px;
+  line-height: 1.4;
+}
+
+.live-chart-card + .dashboard-grid + .panel-card .row > strong {
+  flex-shrink: 0;
+  color: #5da9ff;
+  font-size: 13px;
+}
