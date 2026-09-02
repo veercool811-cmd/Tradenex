@@ -3633,13 +3633,80 @@ app.use(
   }
 );
 
+async function applyDailyProfits() {
+  const users = read(USERS_FILE);
+  const deposits = read(DEPOSITS_FILE);
+
+  if (!Array.isArray(users) || users.length === 0) return;
+  if (!Array.isArray(deposits)) return;
+
+  const today = new Date().toISOString().slice(0, 10);
+  let changed = false;
+
+  for (const user of users) {
+    const approvedDeposits = deposits.filter(
+      (d) =>
+        d.userId === user.id &&
+        d.status === "Approved" &&
+        d.approvedAt
+    );
+
+    if (approvedDeposits.length === 0) continue;
+
+    let expectedProfit = 0;
+
+    for (const deposit of approvedDeposits) {
+      const amount = number(deposit.amount);
+      if (amount <= 0) continue;
+
+      const startDate = new Date(deposit.approvedAt);
+      const startDay = new Date(
+        Date.UTC(
+          startDate.getUTCFullYear(),
+          startDate.getUTCMonth(),
+          startDate.getUTCDate()
+        )
+      );
+
+      const todayDate = new Date(today + "T00:00:00Z");
+      const days = Math.max(
+        1,
+        Math.floor((todayDate - startDay) / 86400000) + 1
+      );
+
+      expectedProfit += amount * 0.004 * days;
+    }
+
+    const currentProfit = number(user.profit);
+    const missingProfit = expectedProfit - currentProfit;
+
+    if (missingProfit > 0.000001) {
+      user.balance = number(user.balance) + missingProfit;
+      user.profit = expectedProfit;
+      changed = true;
+      console.log(
+        "DAILY PROFIT CATCH-UP:",
+        user.id,
+        "$" + missingProfit.toFixed(2)
+      );
+    }
+
+    user.lastProfitDate = today;
+  }
+
+  if (changed) {
+    write(USERS_FILE, users);
+  }
+}
+
 /* =====================================================
    START
 ===================================================== */
 
 
 initPersistentStorage()
-  .then(() => {
+  .then(async () => {
+    await applyDailyProfits();
     app.listen(
       PORT,
       "0.0.0.0",
