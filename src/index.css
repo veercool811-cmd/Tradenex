@@ -109,3 +109,11 @@ code {
   padding: 4px 8px;
   background: var(--code-bg);
 }
+
+.brandLogo {
+  width: 250px;
+  max-width: 100%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+}
