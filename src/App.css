@@ -3793,3 +3793,82 @@ tbody tr:hover {
     height: 115px;
   }
 }
+
+/* Make premium logo blend naturally with sidebar */
+.logo {
+  width: 100%;
+  height: 125px;
+  min-height: 125px;
+  margin: 0 0 8px;
+  padding: 5px 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+.logo .sidebar-logo-img {
+  width: 155px;
+  max-width: 100%;
+  height: 105px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+  mix-blend-mode: lighten;
+}
+
+.logo b,
+.logo small {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .logo {
+    height: 125px;
+    min-height: 125px;
+    padding: 5px 8px 12px;
+  }
+
+  .logo .sidebar-logo-img {
+    width: 160px;
+    height: 108px;
+  }
+}
+
+/* ===== PREMIUM LOGO THEME INTEGRATION ===== */
+.logo {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  padding: 8px 8px 18px;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+}
+
+.logo .sidebar-logo-img {
+  width: 175px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto 8px;
+  object-fit: contain;
+  mix-blend-mode: screen;
+  border: 0;
+  box-shadow: none;
+}
+
+.logo b {
+  display: none;
+}
+
+.logo small {
+  display: none;
+}
+
