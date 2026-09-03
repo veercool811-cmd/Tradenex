@@ -3746,3 +3746,50 @@ tbody tr:hover {
     max-width: 100%;
   }
 }
+
+/* Final integrated Tradenex sidebar brand */
+.logo {
+  width: calc(100% - 8px);
+  height: 135px;
+  min-height: 135px;
+  margin: 0 4px 8px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  flex-shrink: 0;
+  background: rgba(8, 26, 43, 0.55);
+  border: 1px solid #183149;
+  border-radius: 10px;
+  box-sizing: border-box;
+}
+
+.logo .sidebar-logo-img {
+  width: 175px;
+  max-width: 100%;
+  height: 112px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}
+
+.logo b,
+.logo small {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .logo {
+    height: 135px;
+    min-height: 135px;
+    margin: 0 4px 8px;
+    padding: 8px;
+  }
+
+  .logo .sidebar-logo-img {
+    width: 180px;
+    height: 115px;
+  }
+}
