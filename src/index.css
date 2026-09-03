@@ -117,3 +117,12 @@ code {
   object-fit: contain;
   display: block;
 }
+
+.sidebar-logo-img {
+  width: 150px;
+  max-width: 90%;
+  height: auto;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
+}

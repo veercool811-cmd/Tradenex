@@ -3620,7 +3620,7 @@ function LandingPage({ onLogin }) {
 
       <footer className="landing-footer">
         <div className="footer-logo">
-          <span>₮</span>
+          <img src="/tradenex-premium-logo.png" alt="Tradenex" className="sidebar-logo-img" />
           <strong>TRADENEX</strong>
         </div>
 
@@ -3903,7 +3903,7 @@ export default function App() {
         </div>
 
         <div className="logo">
-          <span>₮</span>
+          <img src="/tradenex-premium-logo.png" alt="Tradenex" className="sidebar-logo-img" />
 
           <b>Tradenex</b>
 
