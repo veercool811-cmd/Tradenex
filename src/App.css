@@ -3705,3 +3705,44 @@ tbody tr:hover {
     font-size: 15px;
   }
 }
+
+/* Premium integrated sidebar branding */
+.logo {
+  width: 100%;
+  min-height: 105px;
+  padding: 12px 8px 18px;
+  margin: 0 0 4px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0;
+  border-bottom: 1px solid #183149;
+  box-sizing: border-box;
+}
+
+.logo .sidebar-logo-img {
+  width: 190px;
+  max-width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+  margin: 0 auto;
+}
+
+.logo b,
+.logo small {
+  display: none;
+}
+
+@media (max-width: 1024px) {
+  .logo {
+    min-height: 115px;
+    padding: 10px 12px 18px;
+  }
+
+  .logo .sidebar-logo-img {
+    width: 205px;
+    max-width: 100%;
+  }
+}
