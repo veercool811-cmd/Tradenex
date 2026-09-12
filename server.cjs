@@ -12,6 +12,7 @@ const cors = require("cors");
 const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
+const nodemailer = require("nodemailer");
 const multer = require("multer");
 
 const app = express();
@@ -555,6 +556,87 @@ function number(value) {
 }
 
 /* =====================================================
+   MSG91 OTP WIDGET
+===================================================== */
+
+async function verifyMSG91AccessToken(accessToken) {
+  const authKey =
+    String(process.env.MSG91_AUTHKEY || "").trim();
+
+  if (!authKey) {
+    throw new Error(
+      "MSG91_AUTHKEY is not configured."
+    );
+  }
+
+  const token =
+    String(accessToken || "").trim();
+
+  if (!token) {
+    return {
+      success: false,
+      message: "MSG91 access token required.",
+    };
+  }
+
+  const response = await fetch(
+    "https://control.msg91.com/api/v5/widget/verifyAccessToken",
+    {
+      method: "POST",
+      headers: {
+        authkey: authKey,
+        "access-token": token,
+      },
+    }
+  );
+
+  const data =
+    await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    console.error(
+      "MSG91 VERIFY ERROR:",
+      response.status,
+      data
+    );
+
+    return {
+      success: false,
+      message:
+        "MSG91 mobile verification failed.",
+    };
+  }
+
+  console.log(
+    "MSG91 VERIFY RESPONSE KEYS:",
+    Object.keys(data || {})
+  );
+
+  if (data && typeof data === "object") {
+    console.log(
+      "MSG91 VERIFY RESPONSE SAFE:",
+      JSON.stringify(data, (key, value) => {
+        const k = String(key).toLowerCase();
+        if (
+          k.includes("token") ||
+          k.includes("access") ||
+          k.includes("jwt") ||
+          k.includes("auth")
+        ) {
+          return "[REDACTED]";
+        }
+        return value;
+      })
+    );
+  }
+
+  return {
+    success: true,
+    data,
+  };
+}
+
+/* =====================================================
    PUBLIC USER
 ===================================================== */
 
@@ -916,6 +998,77 @@ app.get(
         "tradenex-api",
       time: now(),
     });
+  }
+);
+
+/* =====================================================
+   MSG91 MOBILE VERIFICATION
+===================================================== */
+
+app.post(
+  "/api/auth/verify-mobile",
+  async (req, res) => {
+    try {
+      const phone =
+        clean(
+          req.body.phone ||
+            req.body.mobile
+        );
+
+      const accessToken =
+        clean(
+          req.body.accessToken
+        );
+
+      if (!/^[6-9]\d{9}$/.test(phone)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Valid Indian mobile number required.",
+        });
+      }
+
+      if (!accessToken) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "MSG91 access token required.",
+        });
+      }
+
+      const result =
+        await verifyMSG91AccessToken(
+          accessToken
+        );
+
+      if (!result.success) {
+        return res.status(401).json({
+          success: false,
+          message:
+            result.message ||
+            "Mobile verification failed.",
+        });
+      }
+
+      return res.json({
+        success: true,
+        verified: true,
+        phone: "+91" + phone,
+        message:
+          "Mobile number verified successfully.",
+      });
+    } catch (error) {
+      console.error(
+        "MSG91 MOBILE VERIFY ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "Mobile verification failed.",
+      });
+    }
   }
 );
 

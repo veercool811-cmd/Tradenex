@@ -5,6 +5,7 @@ import React, {
 } from "react";
 
 import "./App.css";
+import { loadMSG91 } from "./msg91";
 
 const API = "https://tradenex-api.onrender.com/api";
 
@@ -84,6 +85,16 @@ function LoginPage({ onLogin }) {
       confirmPassword: "",
     });
 
+  const [mobileOtp, setMobileOtp] = useState({
+    otp: "",
+    reqId: "",
+    accessToken: "",
+    sent: false,
+    verified: false,
+    sending: false,
+    verifying: false,
+  });
+
   const [loading, setLoading] =
     useState(false);
 
@@ -128,6 +139,169 @@ function LoginPage({ onLogin }) {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function handleSendMobileOtp() {
+    clearMessages();
+
+    const phone = String(register.mobile || "").replace(/\\D/g, "");
+
+    if (!/^[6-9]\\d{9}$/.test(phone)) {
+      setError("Valid 10-digit Indian mobile number डालें.");
+      return;
+    }
+
+    setMobileOtp((prev) => ({
+      ...prev,
+      sending: true,
+      sent: false,
+      verified: false,
+      otp: "",
+      reqId: "",
+      accessToken: "",
+    }));
+
+    try {
+      await loadMSG91();
+
+      if (typeof window.sendOtp !== "function") {
+        throw new Error("MSG91 OTP service अभी तैयार नहीं है.");
+      }
+
+      window.sendOtp(
+        "91" + phone,
+        (data) => {
+          const reqId = data?.reqId || data?.requestId || "";
+
+          setMobileOtp((prev) => ({
+            ...prev,
+            sending: false,
+            sent: true,
+            reqId,
+          }));
+
+          setMessage("OTP आपके mobile number पर भेज दिया गया है.");
+        },
+        (error) => {
+          setMobileOtp((prev) => ({
+            ...prev,
+            sending: false,
+          }));
+
+          setError(
+            error?.message ||
+              "OTP भेजने में समस्या हुई."
+          );
+        }
+      );
+    } catch (err) {
+      setMobileOtp((prev) => ({
+        ...prev,
+        sending: false,
+      }));
+
+      setError(err.message);
+    }
+  }
+
+  async function handleVerifyMobileOtp() {
+    clearMessages();
+
+    const phone = String(register.mobile || "").replace(/\\D/g, "");
+    const otp = String(mobileOtp.otp || "").trim();
+
+    if (!/^[6-9]\\d{9}$/.test(phone)) {
+      setError("Valid 10-digit Indian mobile number डालें.");
+      return;
+    }
+
+    if (!/^\\d{4,8}$/.test(otp)) {
+      setError("Valid OTP डालें.");
+      return;
+    }
+
+    setMobileOtp((prev) => ({
+      ...prev,
+      verifying: true,
+    }));
+
+    try {
+      await loadMSG91();
+
+      if (typeof window.verifyOtp !== "function") {
+        throw new Error("MSG91 OTP verification service अभी तैयार नहीं है.");
+      }
+
+      window.verifyOtp(
+        otp,
+        async (data) => {
+          const accessToken =
+            data?.accessToken ||
+            data?.token ||
+            data?.jwt ||
+            "";
+
+          if (!accessToken) {
+            setMobileOtp((prev) => ({
+              ...prev,
+              verifying: false,
+            }));
+            setError("MSG91 ने verification token नहीं दिया.");
+            return;
+          }
+
+          try {
+            const verified = await api(
+              "/auth/verify-mobile",
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  phone,
+                  accessToken,
+                }),
+              }
+            );
+
+            setMobileOtp((prev) => ({
+              ...prev,
+              verifying: false,
+              verified: true,
+              accessToken,
+            }));
+
+            setMessage(
+              verified.message ||
+                "Mobile number verified successfully."
+            );
+          } catch (err) {
+            setMobileOtp((prev) => ({
+              ...prev,
+              verifying: false,
+            }));
+            setError(err.message);
+          }
+        },
+        (error) => {
+          setMobileOtp((prev) => ({
+            ...prev,
+            verifying: false,
+          }));
+
+          setError(
+            error?.message ||
+              "OTP गलत या expired है."
+          );
+        },
+        mobileOtp.reqId || undefined
+      );
+    } catch (err) {
+      setMobileOtp((prev) => ({
+        ...prev,
+        verifying: false,
+      }));
+
+      setError(err.message);
     }
   }
 
@@ -428,15 +602,87 @@ function LoginPage({ onLogin }) {
                 type="tel"
                 placeholder="Enter mobile number"
                 value={register.mobile}
-                onChange={(e) =>
+                onChange={(e) => {
+                  const mobile = e.target.value;
+
                   setRegister({
                     ...register,
-                    mobile:
-                      e.target.value,
-                  })
-                }
+                    mobile,
+                  });
+
+                  setMobileOtp((prev) => ({
+                    ...prev,
+                    otp: "",
+                    reqId: "",
+                    accessToken: "",
+                    sent: false,
+                    verified: false,
+                  }));
+                }}
                 required
               />
+
+              {!mobileOtp.verified ? (
+                <>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={handleSendMobileOtp}
+                    disabled={
+                      mobileOtp.sending ||
+                      !register.mobile
+                    }
+                  >
+                    {mobileOtp.sending
+                      ? "Sending OTP..."
+                      : mobileOtp.sent
+                      ? "Resend OTP"
+                      : "Send OTP"}
+                  </button>
+
+                  {mobileOtp.sent && (
+                    <div style={{ marginTop: "10px" }}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength="8"
+                        placeholder="Enter OTP"
+                        value={mobileOtp.otp}
+                        onChange={(e) =>
+                          setMobileOtp((prev) => ({
+                            ...prev,
+                            otp: e.target.value.replace(/\D/g, ""),
+                          }))
+                        }
+                      />
+
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={handleVerifyMobileOtp}
+                        disabled={
+                          mobileOtp.verifying ||
+                          !mobileOtp.otp
+                        }
+                        style={{ marginTop: "8px" }}
+                      >
+                        {mobileOtp.verifying
+                          ? "Verifying..."
+                          : "Verify OTP"}
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    marginTop: "8px",
+                    fontWeight: "600",
+                  }}
+                >
+                  ✓ Mobile number verified
+                </div>
+              )}
 
               <label>
                 Email ID
@@ -555,7 +801,10 @@ function LoginPage({ onLogin }) {
 
               <button
                 className="primary-btn"
-                disabled={loading}
+                disabled={
+                  loading ||
+                  !mobileOtp.verified
+                }
               >
                 {loading
                   ? "Creating..."
