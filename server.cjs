@@ -2507,9 +2507,9 @@ app.post(
       const numericAmount =
         Number(amount);
 
-      const withdrawalSource =
-        source ||
-        "balance";
+      // SECURITY: Only earned profit can be withdrawn.
+      // Principal/deposit balance and referral rewards cannot be withdrawn.
+      const withdrawalSource = "profit";
 
       if (
         !Number.isFinite(
