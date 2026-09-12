@@ -237,9 +237,16 @@ function LoginPage({ onLogin }) {
         otp,
         async (data) => {
           const accessToken =
+            (typeof data === "string" ? data : "") ||
             data?.accessToken ||
+            data?.access_token ||
             data?.token ||
             data?.jwt ||
+            data?.data?.accessToken ||
+            data?.data?.access_token ||
+            data?.data?.token ||
+            data?.response?.accessToken ||
+            data?.response?.access_token ||
             "";
 
           if (!accessToken) {
