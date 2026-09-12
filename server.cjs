@@ -2796,6 +2796,39 @@ app.post(
    SUPPORT
 ===================================================== */
 
+app.get(
+  "/api/support",
+  auth,
+  (req, res) => {
+    try {
+      const tickets = read(SUPPORT_FILE);
+
+      const mine = tickets
+        .filter(
+          (ticket) =>
+            String(ticket.userId) === String(req.user.id)
+        )
+        .sort(
+          (a, b) =>
+            new Date(b.updatedAt || b.createdAt) -
+            new Date(a.updatedAt || a.createdAt)
+        );
+
+      return res.json({
+        success: true,
+        support: mine,
+      });
+    } catch (error) {
+      console.error("USER SUPPORT HISTORY ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to load support tickets.",
+      });
+    }
+  }
+);
+
 app.post(
   "/api/support",
   auth,
@@ -3120,6 +3153,71 @@ app.get(
           message:
             "Unable to load support tickets.",
         });
+    }
+  }
+);
+
+
+/* =====================================================
+   ADMIN SUPPORT REPLY
+===================================================== */
+
+app.post(
+  "/api/admin/support/:id/reply",
+  (req, res) => {
+    try {
+      const reply = clean(req.body?.reply);
+
+      if (!reply) {
+        return res.status(400).json({
+          success: false,
+          message: "Reply message required.",
+        });
+      }
+
+      const support = read(SUPPORT_FILE);
+
+      const index = support.findIndex(
+        (ticket) => String(ticket.id) === String(req.params.id)
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "Support ticket not found.",
+        });
+      }
+
+      const ticket = support[index];
+
+      if (!Array.isArray(ticket.replies)) {
+        ticket.replies = [];
+      }
+
+      ticket.replies.push({
+        id: makeId("REPLY"),
+        sender: "admin",
+        message: reply,
+        createdAt: now(),
+      });
+
+      ticket.status = "Answered";
+      ticket.updatedAt = now();
+
+      write(SUPPORT_FILE, support);
+
+      return res.json({
+        success: true,
+        message: "Reply sent successfully.",
+        ticket,
+      });
+    } catch (error) {
+      console.error("ADMIN SUPPORT REPLY ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to send support reply.",
+      });
     }
   }
 );
