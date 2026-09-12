@@ -145,9 +145,9 @@ function LoginPage({ onLogin }) {
   async function handleSendMobileOtp() {
     clearMessages();
 
-    const phone = String(register.mobile || "").replace(/\\D/g, "");
+    const phone = String(register.mobile || "").replace(/\D/g, "");
 
-    if (!/^[6-9]\\d{9}$/.test(phone)) {
+    if (!/^[6-9]\d{9}$/.test(phone)) {
       setError("Valid 10-digit Indian mobile number डालें.");
       return;
     }
@@ -208,15 +208,15 @@ function LoginPage({ onLogin }) {
   async function handleVerifyMobileOtp() {
     clearMessages();
 
-    const phone = String(register.mobile || "").replace(/\\D/g, "");
+    const phone = String(register.mobile || "").replace(/\D/g, "");
     const otp = String(mobileOtp.otp || "").trim();
 
-    if (!/^[6-9]\\d{9}$/.test(phone)) {
+    if (!/^[6-9]\d{9}$/.test(phone)) {
       setError("Valid 10-digit Indian mobile number डालें.");
       return;
     }
 
-    if (!/^\\d{4,8}$/.test(otp)) {
+    if (!/^\d{4,8}$/.test(otp)) {
       setError("Valid OTP डालें.");
       return;
     }
