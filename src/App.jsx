@@ -3461,6 +3461,39 @@ function Support() {
   const [loading, setLoading] =
     useState(false);
 
+  const [tickets, setTickets] =
+    useState([]);
+
+  const [loadingTickets, setLoadingTickets] =
+    useState(true);
+
+  async function loadTickets() {
+    try {
+      setLoadingTickets(true);
+
+      const data = await api(
+        "/support"
+      );
+
+      setTickets(
+        Array.isArray(data.support)
+          ? data.support
+          : []
+      );
+    } catch (err) {
+      console.error(
+        "Support history error:",
+        err
+      );
+    } finally {
+      setLoadingTickets(false);
+    }
+  }
+
+  useEffect(() => {
+    loadTickets();
+  }, []);
+
   async function submit(e) {
     e.preventDefault();
 
@@ -3473,9 +3506,7 @@ function Support() {
         "/support",
         {
           method: "POST",
-          body: JSON.stringify(
-            form
-          ),
+          body: JSON.stringify(form),
         }
       );
 
@@ -3486,6 +3517,8 @@ function Support() {
         subject: "",
         message: "",
       });
+
+      await loadTickets();
     } catch (err) {
       setError(err.message);
     } finally {
@@ -3524,36 +3557,19 @@ function Support() {
           </label>
 
           <select
-            value={
-              form.category
-            }
+            value={form.category}
             onChange={(e) =>
               setForm({
                 ...form,
-                category:
-                  e.target.value,
+                category: e.target.value,
               })
             }
           >
-            <option>
-              General
-            </option>
-
-            <option>
-              Deposit
-            </option>
-
-            <option>
-              Withdrawal
-            </option>
-
-            <option>
-              Account
-            </option>
-
-            <option>
-              Technical
-            </option>
+            <option>General</option>
+            <option>Deposit</option>
+            <option>Withdrawal</option>
+            <option>Account</option>
+            <option>Technical</option>
           </select>
 
           <label>
@@ -3562,14 +3578,11 @@ function Support() {
 
           <input
             placeholder="Subject"
-            value={
-              form.subject
-            }
+            value={form.subject}
             onChange={(e) =>
               setForm({
                 ...form,
-                subject:
-                  e.target.value,
+                subject: e.target.value,
               })
             }
             required
@@ -3582,14 +3595,11 @@ function Support() {
           <textarea
             rows="7"
             placeholder="Write your message"
-            value={
-              form.message
-            }
+            value={form.message}
             onChange={(e) =>
               setForm({
                 ...form,
-                message:
-                  e.target.value,
+                message: e.target.value,
               })
             }
             required
@@ -3604,6 +3614,83 @@ function Support() {
               : "Submit Support Request"}
           </button>
         </form>
+      </div>
+
+      <div className="panel-card">
+        <div className="page-title">
+          <small>HISTORY</small>
+          <h2>My Support Tickets</h2>
+        </div>
+
+        {loadingTickets ? (
+          <p>Loading support tickets...</p>
+        ) : !tickets.length ? (
+          <p>No support tickets yet.</p>
+        ) : (
+          tickets.map((ticket) => (
+            <div
+              key={ticket.id}
+              className="support-card"
+              style={{
+                marginBottom: "16px",
+              }}
+            >
+              <div>
+                <strong>
+                  {ticket.subject}
+                </strong>
+
+                <div>
+                  <small>
+                    {ticket.category} ·{" "}
+                    {ticket.status}
+                  </small>
+                </div>
+              </div>
+
+              <p>
+                {ticket.message}
+              </p>
+
+              {Array.isArray(ticket.replies) &&
+                ticket.replies.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: "12px",
+                    }}
+                  >
+                    {ticket.replies.map(
+                      (item) => (
+                        <div
+                          key={item.id}
+                          className="panel-card"
+                        >
+                          <strong>
+                            {item.sender ===
+                            "admin"
+                              ? "Admin Reply"
+                              : "Your Reply"}
+                          </strong>
+
+                          <p>
+                            {item.message}
+                          </p>
+
+                          <small>
+                            {item.createdAt
+                              ? new Date(
+                                  item.createdAt
+                                ).toLocaleString()
+                              : ""}
+                          </small>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+            </div>
+          ))
+        )}
       </div>
     </>
   );
