@@ -236,18 +236,46 @@ function LoginPage({ onLogin }) {
       window.verifyOtp(
         otp,
         async (data) => {
-          const accessToken =
-            (typeof data === "string" ? data : "") ||
-            data?.accessToken ||
-            data?.access_token ||
-            data?.token ||
-            data?.jwt ||
-            data?.data?.accessToken ||
-            data?.data?.access_token ||
-            data?.data?.token ||
-            data?.response?.accessToken ||
-            data?.response?.access_token ||
-            "";
+          function findMSG91Token(value) {
+            if (!value) return "";
+
+            if (typeof value === "string") {
+              const text = value.trim();
+
+              if (
+                /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(text)
+              ) {
+                return text;
+              }
+
+              return "";
+            }
+
+            if (typeof value !== "object") return "";
+
+            const preferredKeys = [
+              "accessToken",
+              "access_token",
+              "token",
+              "jwt",
+              "jwtToken",
+              "jwt_token",
+            ];
+
+            for (const key of preferredKeys) {
+              const found = findMSG91Token(value[key]);
+              if (found) return found;
+            }
+
+            for (const key of Object.keys(value)) {
+              const found = findMSG91Token(value[key]);
+              if (found) return found;
+            }
+
+            return "";
+          }
+
+          const accessToken = findMSG91Token(data);
 
           if (!accessToken) {
             setMobileOtp((prev) => ({
