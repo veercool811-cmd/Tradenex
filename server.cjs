@@ -67,7 +67,9 @@ const SUPPORT_FILE = path.join(
   "support.json"
 );
 
-const REFERRAL_REWARD = 10;
+const REFERRAL_REWARD = 100;
+const REFERRAL_MIN_DEPOSIT = 1000;
+const REFERRAL_REQUIRED_COUNT = 3;
 
 const DB_DATA_TABLE = "app_data";
 
@@ -1326,17 +1328,17 @@ app.post(
             user.email,
 
           reward:
-            REFERRAL_REWARD,
+            0,
+
+          qualifying:
+            false,
+
+          rewardCredited:
+            false,
 
           createdAt:
             now(),
         });
-
-        referrer.referralReward =
-          number(
-            referrer.referralReward
-          ) +
-          REFERRAL_REWARD;
       }
 
       users.push(user);
@@ -2507,9 +2509,11 @@ app.post(
       const numericAmount =
         Number(amount);
 
-      // SECURITY: Only earned profit can be withdrawn.
-      // Principal/deposit balance and referral rewards cannot be withdrawn.
-      const withdrawalSource = "profit";
+      // SECURITY: Only earned profit or unlocked referral rewards
+      // can be withdrawn. Principal/balance is never withdrawable.
+      const withdrawalSource = source === "referralReward"
+        ? "referralReward"
+        : "profit";
 
       if (
         !Number.isFinite(
@@ -2666,13 +2670,13 @@ app.post(
         "referralReward"
       ) {
         const count =
-          Array.isArray(
-            user.referrals
-          )
-            ? user.referrals.length
+          Array.isArray(user.referrals)
+            ? user.referrals.filter(
+                (r) => r.qualifying === true
+              ).length
             : 0;
 
-        if (count < 3) {
+        if (count < REFERRAL_REQUIRED_COUNT) {
           return res
             .status(400)
             .json({
@@ -3216,6 +3220,44 @@ app.post(
             .pendingDeposit
         ) - amount
       );
+
+    /*
+      REFERRAL QUALIFICATION
+      A referred user qualifies when their approved
+      total deposit reaches at least $1,000.
+      The referrer receives $100 only once.
+    */
+    const referredUser = users[userIndex];
+
+    if (
+      number(referredUser.totalDeposit) >=
+      REFERRAL_MIN_DEPOSIT
+    ) {
+      for (const referrer of users) {
+        if (!Array.isArray(referrer.referrals)) {
+          continue;
+        }
+
+        const referral = referrer.referrals.find(
+          (r) => r.userId === referredUser.id
+        );
+
+        if (
+          referral &&
+          referral.qualifying !== true
+        ) {
+          referral.qualifying = true;
+          referral.reward = REFERRAL_REWARD;
+          referral.rewardCredited = true;
+
+          referrer.referralReward =
+            number(referrer.referralReward) +
+            REFERRAL_REWARD;
+
+          break;
+        }
+      }
+    }
 
     deposit.status =
       "Approved";
