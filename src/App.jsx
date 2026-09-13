@@ -1,3 +1,4 @@
+import { jsPDF } from "jspdf";
 import React, {
   useEffect,
   useMemo,
@@ -994,200 +995,133 @@ function LoginPage({ onLogin }) {
    DASHBOARD
 ===================================================== */
 
-function Dashboard({
-  user,
-  data,
-}) {
-  const referralCount =
-    data.referrals?.length || 0;
+function Dashboard({ data = {}, user = {}, go }) {
+  const num = (v) => Number(v || 0);
+  const balance = num(data.walletBalance);
+  const deposit = num(data.totalDeposit);
+  const profit = Math.max(0, balance - deposit);
+  const withdrawal = num(data.totalWithdrawal || data.totalWithdrawals);
+  const referralReward = num(data.referralReward);
+  const referrals = Array.isArray(data.referrals) ? data.referrals.length : num(data.referrals);
+  const pending = num(data.pendingDeposit);
+  const downloadStatementPDF = () => {
+    const doc = new jsPDF();
+    const transactions = Array.isArray(data.transactions) ? data.transactions : [];
 
-  function go(page) {
-    window.dispatchEvent(
-      new CustomEvent(
-        "tradenex-page",
-        {
-          detail: page,
-        }
-      )
-    );
-  }
+    doc.setFontSize(20);
+    doc.text("TRADEX - ACCOUNT STATEMENT", 20, 20);
+
+    doc.setFontSize(11);
+    doc.text(`User: ${user?.name || user?.username || user?.email || "User"}`, 20, 32);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 20, 40);
+
+    doc.setFontSize(14);
+    doc.text("Account Summary", 20, 55);
+
+    doc.setFontSize(11);
+    doc.text(`Total Deposit: $${deposit.toFixed(2)}`, 20, 66);
+    doc.text(`Total Profit: $${profit.toFixed(2)}`, 20, 74);
+    doc.text(`Total Withdrawal: $${withdrawal.toFixed(2)}`, 20, 82);
+    doc.text(`Referral Reward: $${referralReward.toFixed(2)}`, 20, 90);
+    doc.text(`Current Balance: $${balance.toFixed(2)}`, 20, 98);
+
+    doc.setFontSize(14);
+    doc.text("Transaction History", 20, 115);
+
+    let y = 126;
+    doc.setFontSize(9);
+    doc.text("#", 20, y);
+    doc.text("Type", 32, y);
+    doc.text("Amount", 75, y);
+    doc.text("Status", 115, y);
+    doc.text("Date", 150, y);
+
+    y += 7;
+
+    transactions.slice(0, 25).forEach((tx, i) => {
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+
+      doc.text(String(i + 1), 20, y);
+      doc.text(String(tx.type || "Deposit").slice(0, 18), 32, y);
+      doc.text(`$${num(tx.amount).toFixed(2)}`, 75, y);
+      doc.text(String(tx.status || "Approved").slice(0, 14), 115, y);
+      doc.text(String(tx.date || tx.createdAt || "-").slice(0, 18), 150, y);
+      y += 7;
+    });
+
+    doc.save(`Tradenex-Statement-${Date.now()}.pdf`);
+  };
+
 
   return (
-    <>
-      <div className="page-title dashboard-title">
-        <small>
-          TRADENEX USER PANEL
-        </small>
+    <div className="premium-dashboard">
 
-        <h2>
-          Welcome back{" "}
-          {user.name || "User"} 👋
-        </h2>
-
-        <p>
-          Manage your wallet, deposits,
-          withdrawals and account.
-        </p>
+      <div className="premium-hero">
+        <div className="hero-copy">
+          <span className="hero-kicker">TRADEX USER PANEL</span>
+          <h1>Build Your <b>Financial Freedom</b></h1>
+          <p>Trade&nbsp;&nbsp;•&nbsp;&nbsp;Grow&nbsp;&nbsp;•&nbsp;&nbsp;Succeed</p>
+        </div>
+        <div className="hero-badge">A Smarter Way to Invest</div>
       </div>
 
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span>💰</span>
-          <small>
-            Wallet Balance
-          </small>
-
-          <strong>
-            $
-            {Number(
-              user.balance || 0
-            ).toFixed(2)}
-          </strong>
+      <section className="transaction-panel">
+        <div className="transaction-head">
+          <div>
+            <h2>Transaction History</h2>
+            <p>{data.transactions?.length || 0} records</p>
+          </div>
+          <button onClick={() => go("transactions")}>View All&nbsp; →</button>
         </div>
 
-        <div className="stat-card">
-          <span>💵</span>
-
-          <small>
-            Total Deposit
-          </small>
-
-          <strong>
-            $
-            {Number(
-              user.totalDeposit || 0
-            ).toFixed(2)}
-          </strong>
+        <div className="premium-table-wrap">
+          <table className="premium-table">
+            <thead>
+              <tr><th>#</th><th>Type</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+            </thead>
+            <tbody>
+              {(data.transactions || []).slice(0,5).map((tx,i) => (
+                <tr key={tx.id || i}>
+                  <td>{i+1}</td>
+                  <td><span className="tx-type">↓</span> {tx.type || "Deposit"}</td>
+                  <td>${num(tx.amount).toFixed(2)}</td>
+                  <td><span className="status-pill">{tx.status || "Approved"}</span></td>
+                  <td>{tx.date || tx.createdAt || "—"}</td>
+                </tr>
+              ))}
+              {!(data.transactions || []).length && (
+                <tr><td colSpan="5" className="empty-row">No transactions yet.</td></tr>
+              )}
+            </tbody>
+          </table>
         </div>
+      </section>
 
-        <div className="stat-card">
-          <span>⏳</span>
-
-          <small>
-            Pending Deposit
-          </small>
-
-          <strong>
-            $
-            {Number(
-              user.pendingDeposit || 0
-            ).toFixed(2)}
-          </strong>
-        </div>
-
-        <div className="stat-card">
-          <span>📈</span>
-
-          <small>
-            Performance
-          </small>
-
-          <strong>
-            $
-            {(
-              Number(user.totalDeposit || 0) * 0.004
-            ).toFixed(2)}
-          </strong>
-        </div>
+      <div className="premium-features">
+        <div>🛡️<b>Secure<br/>Platform</b></div>
+        <div>⚡<b>Fast<br/>Transactions</b></div>
+        <div>◉<b>24/7<br/>Support</b></div>
+        <div>💎<b>Trusted<br/>Worldwide</b></div>
       </div>
 
-      <div className="dashboard-grid">
-        <div className="panel-card">
-          <div className="panel-head">
-            <h3>
-              Referral Program
-            </h3>
-
-            <span>
-              {referralCount} referrals
-            </span>
-          </div>
-
-          <p>
-            आपका Referral Code:
-          </p>
-
-          <div className="referral-code">
-            {user.referralCode || "—"}
-          </div>
-
-          <p>
-            Referral Reward:
-            <strong>
-              {" "}
-              $
-              {Number(
-                user.referralReward || 0
-              ).toFixed(2)}
-            </strong>
-          </p>
-
-          <p>
-            3 referrals होने के बाद
-            referral reward withdrawal
-            available होगा।
-          </p>
-        </div>
-
-        <div className="panel-card">
-          <div className="panel-head">
-            <h3>
-              Quick Actions
-            </h3>
-          </div>
-
-          <div className="quick-actions">
-            <button
-              onClick={() =>
-                go("deposit")
-              }
-            >
-              💳 Deposit
-            </button>
-
-            <button
-              onClick={() =>
-                go("withdraw")
-              }
-            >
-              ↗ Withdraw
-            </button>
-
-            <button
-              onClick={() =>
-                go("transactions")
-              }
-            >
-              ⇄ Transactions
-            </button>
-          </div>
-        </div>
+      <div className="premium-footer">
+        © 2026 Tradenex. All rights reserved.
+        <span>Privacy&nbsp;&nbsp; | &nbsp;&nbsp;Terms&nbsp;&nbsp; | &nbsp;&nbsp;Help</span>
       </div>
 
-      <div className="panel-card">
-        <div className="panel-head">
-          <h3>
-            Recent Transactions
-          </h3>
-        </div>
-
-        {data.transactions?.length ? (
-          <TransactionTable
-            transactions={data.transactions.slice(
-              0,
-              5
-            )}
-          />
-        ) : (
-          <div className="empty">
-            No transactions yet.
-          </div>
-        )}
-      </div>
-    </>
+      {pending > 0 && (
+        <div className="premium-pending">⏳ Pending Deposit: ${pending.toFixed(2)}</div>
+      )}
+    </div>
   );
 }
 
+/* =====================================================
+   TRANSACTION TABLE
+===================================================== */
 /* =====================================================
    TRANSACTION TABLE
 ===================================================== */
@@ -4464,6 +4398,12 @@ export default function App() {
         referrals:
           result.referrals ||
           [],
+
+          totalDeposit: Number(result.user?.totalDeposit || 0),
+          walletBalance: Number(result.user?.walletBalance ?? result.user?.balance ?? 0),
+          totalWithdrawal: Number(result.user?.totalWithdrawal ?? result.user?.totalWithdrawals ?? 0),
+          referralReward: Number(result.user?.referralReward || 0),
+
       });
 
       localStorage.setItem(
