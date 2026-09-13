@@ -468,35 +468,6 @@ function LoginPage({ onLogin }) {
   }
 
 
-  if (updateInfo) {
-    return (
-      <div className="update-overlay">
-        <div className="update-modal">
-          <h2>New Update Available</h2>
-          <p>{updateInfo.message}</p>
-
-          <button
-            className="update-btn"
-            onClick={async () => {
-              try {
-                await Browser.open({
-                  url: updateInfo.url
-                });
-              } catch (e) {
-                window.location.href = updateInfo.url;
-              }
-            }}
-          >
-            Update Now
-          </button>
-
-          <div className="update-version">
-            Latest version: {updateInfo.version}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="auth-page">
