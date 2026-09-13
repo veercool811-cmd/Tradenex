@@ -2030,6 +2030,399 @@ function Withdraw({
 }
 
 /* =====================================================
+   MY STATEMENT
+===================================================== */
+
+function MyStatement({ user, data }) {
+  const transactions = Array.isArray(data?.transactions)
+    ? data.transactions
+    : [];
+
+  const withdrawals = Array.isArray(data?.withdrawals)
+    ? data.withdrawals
+    : [];
+
+  const totalDeposit = Number(user?.totalDeposit || 0);
+
+  const totalProfit = Number(user?.profit || 0);
+
+  const referralReward = Number(
+    user?.referralReward || 0
+  );
+
+  const currentBalance = Number(
+    user?.balance || 0
+  );
+
+  const totalWithdrawal = withdrawals
+    .filter((w) => w.status === "Approved")
+    .reduce(
+      (sum, w) => sum + Number(w.amount || 0),
+      0
+    );
+
+  function moneyValue(value) {
+    return `$${Number(value || 0).toFixed(2)}`;
+  }
+
+  function dateValue(value) {
+    if (!value) return "-";
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+      ? "-"
+      : date.toLocaleString();
+  }
+
+  function downloadStatement() {
+    const name =
+      user?.name ||
+      `${user?.firstName || ""} ${
+        user?.lastName || ""
+      }`.trim() ||
+      "User";
+
+    const rows = transactions.length
+      ? transactions
+          .slice()
+          .sort(
+            (a, b) =>
+              new Date(a.createdAt) -
+              new Date(b.createdAt)
+          )
+          .map(
+            (t) => `
+              <tr>
+                <td>${dateValue(t.createdAt)}</td>
+                <td>${t.type || "-"}</td>
+                <td>${t.method || t.network || "-"}</td>
+                <td>${t.status || "-"}</td>
+                <td>${moneyValue(t.amount)}</td>
+              </tr>
+            `
+          )
+          .join("")
+      : `
+          <tr>
+            <td colspan="5" style="text-align:center">
+              No transaction records found.
+            </td>
+          </tr>
+        `;
+
+    const win = window.open(
+      "",
+      "_blank",
+      "width=1000,height=800"
+    );
+
+    if (!win) {
+      alert(
+        "Please allow pop-ups to download the statement."
+      );
+      return;
+    }
+
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Tradenex Account Statement</title>
+
+        <style>
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            margin: 0;
+            padding: 32px;
+            font-family: Arial, sans-serif;
+            color: #111827;
+            background: white;
+          }
+
+          .header {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            border-bottom: 2px solid #111827;
+            padding-bottom: 18px;
+            margin-bottom: 24px;
+          }
+
+          .brand {
+            font-size: 28px;
+            font-weight: 800;
+          }
+
+          .subtitle {
+            color: #6b7280;
+            margin-top: 5px;
+          }
+
+          .user-info {
+            text-align: right;
+            font-size: 12px;
+            line-height: 1.6;
+          }
+
+          .summary {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 28px;
+          }
+
+          .card {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 14px;
+          }
+
+          .label {
+            color: #6b7280;
+            font-size: 10px;
+            margin-bottom: 7px;
+          }
+
+          .value {
+            font-size: 17px;
+            font-weight: 700;
+          }
+
+          h2 {
+            font-size: 18px;
+            margin: 20px 0 10px;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+          }
+
+          th,
+          td {
+            border: 1px solid #d1d5db;
+            padding: 9px;
+            text-align: left;
+          }
+
+          th {
+            background: #f3f4f6;
+          }
+
+          .footer {
+            margin-top: 30px;
+            padding-top: 12px;
+            border-top: 1px solid #d1d5db;
+            color: #6b7280;
+            font-size: 10px;
+          }
+
+          @media print {
+            body {
+              padding: 18px;
+            }
+
+            @page {
+              size: A4;
+              margin: 12mm;
+            }
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="header">
+          <div>
+            <div class="brand">TRADENEX</div>
+            <div class="subtitle">
+              My Official Account Statement
+            </div>
+          </div>
+
+          <div class="user-info">
+            <b>${name}</b><br>
+            User ID: ${user?.id || "-"}<br>
+            Email: ${user?.email || "-"}<br>
+            Mobile: ${
+              user?.mobile ||
+              user?.phone ||
+              "-"
+            }
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="card">
+            <div class="label">TOTAL DEPOSIT</div>
+            <div class="value">
+              ${moneyValue(totalDeposit)}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="label">TOTAL PROFIT</div>
+            <div class="value">
+              ${moneyValue(totalProfit)}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="label">TOTAL WITHDRAWAL</div>
+            <div class="value">
+              ${moneyValue(totalWithdrawal)}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="label">REFERRAL REWARD</div>
+            <div class="value">
+              ${moneyValue(referralReward)}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="label">CURRENT BALANCE</div>
+            <div class="value">
+              ${moneyValue(currentBalance)}
+            </div>
+          </div>
+        </div>
+
+        <h2>Transaction History</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Method / Network</th>
+              <th>Status</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          Generated by Tradenex User Portal •
+          ${new Date().toLocaleString()}
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 400);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+
+    win.document.close();
+  }
+
+  return (
+    <>
+      <div className="page-title">
+        <small>ACCOUNT STATEMENT</small>
+
+        <h2>My Statement</h2>
+
+        <p>
+          View your account summary and complete
+          transaction history.
+        </p>
+      </div>
+
+      <div
+        className="stats-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(160px,1fr))",
+          gap: "14px",
+          marginBottom: "20px",
+        }}
+      >
+        <div className="panel-card">
+          <small>Total Deposit</small>
+          <h3>{moneyValue(totalDeposit)}</h3>
+        </div>
+
+        <div className="panel-card">
+          <small>Total Profit</small>
+          <h3>{moneyValue(totalProfit)}</h3>
+        </div>
+
+        <div className="panel-card">
+          <small>Total Withdrawal</small>
+          <h3>{moneyValue(totalWithdrawal)}</h3>
+        </div>
+
+        <div className="panel-card">
+          <small>Referral Reward</small>
+          <h3>{moneyValue(referralReward)}</h3>
+        </div>
+
+        <div className="panel-card">
+          <small>Current Balance</small>
+          <h3>{moneyValue(currentBalance)}</h3>
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginBottom: "16px",
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0 }}>
+              Transaction History
+            </h3>
+
+            <small>
+              {transactions.length} records
+            </small>
+          </div>
+
+          <button
+            type="button"
+            onClick={downloadStatement}
+          >
+            🖨️ Download / Save PDF
+          </button>
+        </div>
+
+        {transactions.length ? (
+          <TransactionTable
+            transactions={transactions}
+          />
+        ) : (
+          <div className="empty">
+            No transactions yet.
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
    TRANSACTIONS
 ===================================================== */
 
@@ -4200,6 +4593,11 @@ export default function App() {
       "Transactions",
     ],
     [
+      "statement",
+      "📄",
+      "My Statement",
+    ],
+    [
       "live-trading",
       "📈",
       "Live Trading",
@@ -4426,6 +4824,14 @@ export default function App() {
           {page ===
             "transactions" && (
             <Transactions
+              data={data}
+            />
+          )}
+
+          {page ===
+            "statement" && (
+            <MyStatement
+              user={user}
               data={data}
             />
           )}
