@@ -2962,6 +2962,241 @@ app.get(
   }
 );
 
+
+/* =====================================================
+   ADMIN USER CONTROLS
+===================================================== */
+
+/* ADMIN USER EDIT */
+app.put(
+  "/api/admin/users/:id",
+  (req, res) => {
+    try {
+      const users = read(USERS_FILE);
+      const index = users.findIndex(
+        (u) => String(u.id) === String(req.params.id)
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      const user = users[index];
+
+      if (req.body?.name !== undefined)
+        user.name = String(req.body.name).trim();
+
+      if (req.body?.email !== undefined)
+        user.email = String(req.body.email).trim();
+
+      if (req.body?.mobile !== undefined)
+        user.mobile = String(req.body.mobile).trim();
+
+      if (req.body?.address !== undefined)
+        user.address = String(req.body.address).trim();
+
+      if (req.body?.aadhaar !== undefined)
+        user.aadhaar = String(req.body.aadhaar).trim();
+
+      write(USERS_FILE, users);
+
+      res.json({
+        success: true,
+        message: "User updated successfully.",
+        user: publicUser(user),
+      });
+    } catch (error) {
+      console.error("ADMIN USER EDIT ERROR:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to update user.",
+      });
+    }
+  }
+);
+
+/* ADMIN USER PASSWORD */
+app.put(
+  "/api/admin/users/:id/password",
+  (req, res) => {
+    try {
+      const users = read(USERS_FILE);
+      const index = users.findIndex(
+        (u) => String(u.id) === String(req.params.id)
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      const password = String(req.body?.password || "");
+
+      if (password.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message: "Password must be at least 6 characters.",
+        });
+      }
+
+      users[index].password = password;
+
+      write(USERS_FILE, users);
+
+      res.json({
+        success: true,
+        message: "Password changed successfully.",
+        user: publicUser(users[index]),
+      });
+    } catch (error) {
+      console.error("ADMIN PASSWORD ERROR:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to change password.",
+      });
+    }
+  }
+);
+
+/* ADMIN USER BALANCE */
+app.put(
+  "/api/admin/users/:id/balance",
+  (req, res) => {
+    try {
+      const users = read(USERS_FILE);
+      const index = users.findIndex(
+        (u) => String(u.id) === String(req.params.id)
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      const balance = Number(req.body?.balance);
+
+      if (!Number.isFinite(balance) || balance < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid balance.",
+        });
+      }
+
+      users[index].balance = balance;
+
+      write(USERS_FILE, users);
+
+      res.json({
+        success: true,
+        message: "Balance updated successfully.",
+        user: publicUser(users[index]),
+      });
+    } catch (error) {
+      console.error("ADMIN BALANCE ERROR:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to update balance.",
+      });
+    }
+  }
+);
+
+
+/* ADMIN USER STATUS */
+app.put(
+  "/api/admin/users/:id/status",
+  (req, res) => {
+    try {
+      const users = read(USERS_FILE);
+      const index = users.findIndex(
+        (u) => String(u.id) === String(req.params.id)
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      const status = String(req.body?.status || "").trim();
+
+      if (!["Active", "Inactive"].includes(status)) {
+        return res.status(400).json({
+          success: false,
+          message: "Status must be Active or Inactive.",
+        });
+      }
+
+      users[index].status = status;
+
+      write(USERS_FILE, users);
+
+      res.json({
+        success: true,
+        message: "User status updated successfully.",
+        user: publicUser(users[index]),
+      });
+    } catch (error) {
+      console.error("ADMIN STATUS ERROR:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to update user status.",
+      });
+    }
+  }
+);
+
+/* ADMIN USER DELETE */
+app.delete(
+  "/api/admin/users/:id",
+  (req, res) => {
+    try {
+      const users = read(USERS_FILE);
+      const index = users.findIndex(
+        (u) => String(u.id) === String(req.params.id)
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      const deletedUser = users[index];
+
+      users.splice(index, 1);
+
+      write(USERS_FILE, users);
+
+      res.json({
+        success: true,
+        message: "User deleted successfully.",
+        user: publicUser(deletedUser),
+      });
+    } catch (error) {
+      console.error("ADMIN USER DELETE ERROR:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to delete user.",
+      });
+    }
+  }
+);
+
 /* =====================================================
    ADMIN DEPOSITS
 ===================================================== */
