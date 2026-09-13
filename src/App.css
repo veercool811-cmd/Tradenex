@@ -3872,3 +3872,215 @@ tbody tr:hover {
   display: none;
 }
 
+
+/* =========================================================
+   TRADE NEX — PREMIUM BRANDED THEME
+   UI ONLY — FUNCTIONALITY UNCHANGED
+========================================================= */
+
+:root{
+  --tn-bg:#030914;
+  --tn-bg2:#071426;
+  --tn-card:rgba(10,25,43,.78);
+  --tn-card2:rgba(13,31,52,.92);
+  --tn-blue:#287cff;
+  --tn-blue2:#5146ff;
+  --tn-gold:#f5c451;
+  --tn-text:#f4f7ff;
+  --tn-muted:#8190a8;
+  --tn-border:rgba(93,157,255,.20);
+}
+
+html,body,#root{
+  background:
+    radial-gradient(circle at 15% 10%,rgba(40,124,255,.13),transparent 30%),
+    radial-gradient(circle at 85% 20%,rgba(81,70,255,.12),transparent 30%),
+    linear-gradient(145deg,#020711,#061326 55%,#020813)!important;
+  color:var(--tn-text)!important;
+}
+
+body{
+  font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif!important;
+}
+
+/* main containers */
+main,.main-content,.content,.dashboard,.page,.admin-panel{
+  background:transparent!important;
+}
+
+/* premium cards */
+.card,
+.stat-card,
+.balance-card,
+.summary-card,
+.transaction-card,
+.panel,
+.section,
+.wallet-card,
+.deposit-card,
+.withdraw-card,
+.profile-card,
+.settings-card,
+.support-card{
+  background:linear-gradient(145deg,rgba(14,34,56,.88),rgba(5,17,31,.94))!important;
+  border:1px solid var(--tn-border)!important;
+  border-radius:20px!important;
+  box-shadow:
+    0 18px 50px rgba(0,0,0,.30),
+    inset 0 1px 0 rgba(255,255,255,.035)!important;
+  backdrop-filter:blur(16px)!important;
+}
+
+/* headings */
+h1,h2,h3,h4{
+  color:#f7f9ff!important;
+  letter-spacing:-.02em;
+}
+
+p,.muted,.subtitle,.description{
+  color:var(--tn-muted)!important;
+}
+
+/* buttons */
+button,
+.btn,
+.button,
+a.button{
+  border-radius:12px!important;
+  border:1px solid rgba(75,139,255,.22)!important;
+  transition:all .22s ease!important;
+}
+
+button:hover,
+.btn:hover,
+.button:hover{
+  transform:translateY(-2px)!important;
+  box-shadow:0 10px 28px rgba(40,124,255,.22)!important;
+}
+
+/* primary buttons */
+button[type="submit"],
+.primary,
+.primary-btn,
+.btn-primary,
+.button-primary{
+  background:linear-gradient(135deg,#287cff,#5146ff)!important;
+  color:#fff!important;
+  border:none!important;
+  box-shadow:0 8px 25px rgba(48,91,255,.30)!important;
+}
+
+/* inputs */
+input,
+textarea,
+select{
+  background:rgba(3,13,25,.78)!important;
+  color:#f5f7ff!important;
+  border:1px solid rgba(91,150,255,.20)!important;
+  border-radius:12px!important;
+  outline:none!important;
+}
+
+input:focus,
+textarea:focus,
+select:focus{
+  border-color:rgba(69,133,255,.70)!important;
+  box-shadow:0 0 0 3px rgba(40,124,255,.10)!important;
+}
+
+/* tables */
+table{
+  background:rgba(5,17,30,.55)!important;
+  border-radius:16px!important;
+  overflow:hidden!important;
+}
+
+th{
+  background:rgba(24,53,87,.42)!important;
+  color:#a9c6ec!important;
+}
+
+td{
+  border-color:rgba(91,150,255,.09)!important;
+  color:#dce5f4!important;
+}
+
+/* status badges */
+.badge,
+.status,
+.status-badge{
+  border-radius:999px!important;
+}
+
+/* navigation / sidebar */
+aside,
+.sidebar,
+nav{
+  background:
+    linear-gradient(180deg,rgba(7,24,42,.97),rgba(2,12,24,.98))!important;
+  border-color:rgba(80,145,235,.16)!important;
+  box-shadow:15px 0 50px rgba(0,0,0,.25)!important;
+}
+
+/* active menu */
+.active,
+.nav-active,
+.active-link{
+  background:linear-gradient(135deg,rgba(38,124,255,.95),rgba(76,65,240,.95))!important;
+  color:#fff!important;
+  border-radius:13px!important;
+  box-shadow:0 8px 25px rgba(42,93,255,.28)!important;
+}
+
+/* logo glow */
+img[alt*="logo" i],
+.logo img,
+.brand img{
+  filter:drop-shadow(0 0 18px rgba(49,135,255,.22))!important;
+}
+
+/* premium gold accents */
+.gold,
+.amount,
+.profit,
+.balance,
+.stat-value{
+  color:var(--tn-gold)!important;
+}
+
+/* scrollbar */
+::-webkit-scrollbar{
+  width:7px;
+}
+
+::-webkit-scrollbar-track{
+  background:#020914;
+}
+
+::-webkit-scrollbar-thumb{
+  background:linear-gradient(#287cff,#5146ff);
+  border-radius:20px;
+}
+
+/* mobile */
+@media(max-width:700px){
+  .card,
+  .stat-card,
+  .balance-card,
+  .summary-card,
+  .panel,
+  .section{
+    border-radius:17px!important;
+  }
+
+  h1{font-size:28px!important}
+  h2{font-size:23px!important}
+  h3{font-size:19px!important}
+
+  button,
+  .btn,
+  .button{
+    min-height:44px;
+  }
+}
+
