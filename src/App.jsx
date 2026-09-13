@@ -1,4 +1,6 @@
 import { jsPDF } from "jspdf";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
 import React, {
   useEffect,
   useMemo,
@@ -463,6 +465,37 @@ function LoginPage({ onLogin }) {
     } finally {
       setLoading(false);
     }
+  }
+
+
+  if (updateInfo) {
+    return (
+      <div className="update-overlay">
+        <div className="update-modal">
+          <h2>New Update Available</h2>
+          <p>{updateInfo.message}</p>
+
+          <button
+            className="update-btn"
+            onClick={async () => {
+              try {
+                await Browser.open({
+                  url: updateInfo.url
+                });
+              } catch (e) {
+                window.location.href = updateInfo.url;
+              }
+            }}
+          >
+            Update Now
+          </button>
+
+          <div className="update-version">
+            Latest version: {updateInfo.version}
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -4337,6 +4370,19 @@ function LandingPage({ onLogin }) {
    APP
 ===================================================== */
 
+
+function compareVersions(a, b) {
+  const pa = String(a).split(".").map(Number);
+  const pb = String(b).split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] || 0;
+    const y = pb[i] || 0;
+    if (x > y) return 1;
+    if (x < y) return -1;
+  }
+  return 0;
+}
+
 export default function App() {
   const [user, setUser] =
     useState(null);
@@ -4363,6 +4409,10 @@ export default function App() {
 
   const [sidebarOpen, setSidebarOpen] =
     useState(false);
+  const [updateInfo, setUpdateInfo] =
+    useState(null);
+
+
 
   async function loadUser() {
     try {
@@ -4428,6 +4478,51 @@ export default function App() {
       setLoading(false);
     }
   }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkForUpdate() {
+      try {
+        const platform = CapacitorApp.getInfo
+          ? await CapacitorApp.getInfo()
+          : null;
+
+        if (!platform || platform.platform === "web") return;
+
+        const response = await fetch(
+          "https://tradenex.onrender.com/version.json?t=" + Date.now(),
+          { cache: "no-store" }
+        );
+
+        if (!response.ok) return;
+
+        const latest = await response.json();
+
+        if (
+          !cancelled &&
+          latest?.version &&
+          compareVersions(latest.version, platform.version) > 0
+        ) {
+          setUpdateInfo({
+            version: latest.version,
+            url: latest.url,
+            message:
+              latest.message ||
+              "A new version of Tradenex is available."
+          });
+        }
+      } catch (e) {
+        console.log("Update check skipped:", e);
+      }
+    }
+
+    checkForUpdate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     loadUser();

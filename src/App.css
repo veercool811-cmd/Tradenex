@@ -5484,3 +5484,58 @@ a{
   pointer-events:none !important;
 }
 
+
+/* =====================================================
+   APP UPDATE POPUP
+===================================================== */
+.update-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(2, 8, 23, 0.82);
+  backdrop-filter: blur(12px);
+}
+
+.update-modal {
+  width: min(420px, 100%);
+  padding: 28px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 24px;
+  background: linear-gradient(145deg, #111b38, #080e21);
+  box-shadow: 0 25px 80px rgba(0,0,0,.55);
+  text-align: center;
+  color: #fff;
+}
+
+.update-modal h2 {
+  margin: 0 0 10px;
+  font-size: 24px;
+}
+
+.update-modal p {
+  margin: 0 0 22px;
+  color: rgba(255,255,255,.72);
+  line-height: 1.5;
+}
+
+.update-btn {
+  width: 100%;
+  border: 0;
+  border-radius: 14px;
+  padding: 14px 18px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #2563eb, #7c3aed);
+  color: #fff;
+}
+
+.update-version {
+  margin-top: 12px;
+  font-size: 12px;
+  color: rgba(255,255,255,.45);
+}
