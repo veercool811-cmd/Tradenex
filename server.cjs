@@ -1378,6 +1378,149 @@ app.post(
   }
 );
 
+
+/* =====================================================
+   ADMIN NOTIFICATIONS
+===================================================== */
+
+const ADMIN_NOTIFICATIONS_KEY = "admin_notifications.json";
+
+function readAdminNotifications() {
+  const data = read(
+    path.join(DATA_DIR, ADMIN_NOTIFICATIONS_KEY),
+    []
+  );
+
+  return Array.isArray(data) ? data : [];
+}
+
+function writeAdminNotifications(notifications) {
+  write(
+    path.join(DATA_DIR, ADMIN_NOTIFICATIONS_KEY),
+    Array.isArray(notifications) ? notifications : []
+  );
+}
+
+function createAdminNotification(type, title, message, meta = {}) {
+  try {
+    const notifications = readAdminNotifications();
+
+    notifications.unshift({
+      id: makeId("NTF"),
+      type: clean(type),
+      title: clean(title),
+      message: clean(message),
+      meta: meta || {},
+      read: false,
+      createdAt: now(),
+    });
+
+    writeAdminNotifications(notifications.slice(0, 200));
+  } catch (error) {
+    console.error("ADMIN NOTIFICATION ERROR:", error);
+  }
+}
+
+app.get(
+  "/api/admin/notifications",
+  (req, res) => {
+    try {
+      const notifications = readAdminNotifications();
+
+      return res.json({
+        success: true,
+        notifications,
+        unreadCount: notifications.filter(
+          (n) => n.read !== true
+        ).length,
+      });
+    } catch (error) {
+      console.error(
+        "ADMIN NOTIFICATIONS LOAD ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to load notifications.",
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/admin/notifications/:id/read",
+  (req, res) => {
+    try {
+      const notifications = readAdminNotifications();
+
+      const index = notifications.findIndex(
+        (n) => String(n.id) === String(req.params.id)
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "Notification not found.",
+        });
+      }
+
+      notifications[index].read = true;
+      notifications[index].readAt = now();
+
+      writeAdminNotifications(notifications);
+
+      return res.json({
+        success: true,
+        notification: notifications[index],
+      });
+    } catch (error) {
+      console.error(
+        "ADMIN NOTIFICATION READ ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to mark notification as read.",
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/admin/notifications/read-all",
+  (req, res) => {
+    try {
+      const notifications = readAdminNotifications();
+
+      const timestamp = now();
+
+      notifications.forEach((notification) => {
+        notification.read = true;
+        notification.readAt = timestamp;
+      });
+
+      writeAdminNotifications(notifications);
+
+      return res.json({
+        success: true,
+        message: "All notifications marked as read.",
+      });
+    } catch (error) {
+      console.error(
+        "ADMIN NOTIFICATIONS READ ALL ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to mark notifications as read.",
+      });
+    }
+  }
+);
+
 /* =====================================================
    LOGIN
 ===================================================== */
@@ -2763,6 +2906,19 @@ app.post(
         "Pending",
         withdrawal.id,
         withdrawalSource
+      );
+
+      createAdminNotification(
+        "withdrawal",
+        "New Withdrawal Request",
+        `${req.user.name || req.user.email} requested a $${numericAmount} withdrawal.`,
+        {
+          userId: req.user.id,
+          withdrawalId: withdrawal.id,
+          amount: numericAmount,
+          source: withdrawalSource,
+          network,
+        }
       );
 
       res
