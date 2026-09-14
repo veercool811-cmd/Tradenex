@@ -1096,7 +1096,7 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
           ) : (
             <button
               className="live-offer-button"
-              onClick={() => setOffer(null)}
+              onClick={() => setOfferPopupVisible(true)}
             >
               {offer.buttonText || "Got It"} <span>→</span>
             </button>
@@ -4416,6 +4416,7 @@ export default function App() {
   const [updateInfo, setUpdateInfo] =
     useState(null);
   const [offer, setOffer] = useState(null);
+  const [offerPopupVisible, setOfferPopupVisible] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -4710,12 +4711,12 @@ export default function App() {
   return (
     <div className="app-shell">
 
-      {offer?.enabled && (
+      {offer?.enabled && offerPopupVisible && (
         <div className="offer-popup-overlay">
           <div className="offer-popup">
             <button
               className="offer-popup-close"
-              onClick={() => setOffer(null)}
+              onClick={() => setOfferPopupVisible(false)}
               aria-label="Close"
             >
               ×
@@ -4741,7 +4742,7 @@ export default function App() {
             ) : (
               <button
                 className="offer-popup-button"
-                onClick={() => setOffer(null)}
+                onClick={() => setOfferPopupVisible(false)}
               >
                 {offer.buttonText || "Got It"}
               </button>
