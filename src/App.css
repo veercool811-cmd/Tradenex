@@ -5631,248 +5631,236 @@ a{
 
 
 /* =====================================================
-   LIVE ADMIN OFFER BANNER
+   LIVE ADMIN CONTROLLED PREMIUM OFFER BANNER
 ===================================================== */
 
 .live-offer-banner {
   position: relative;
   overflow: hidden;
-  display: flex;
+  display: grid;
+  grid-template-columns: 110px minmax(0,1fr) auto;
   align-items: center;
-  gap: 18px;
-  margin: 20px 0;
-  padding: 20px 22px;
-  border: 1px solid rgba(96,165,250,.38);
-  border-radius: 22px;
+  gap: 24px;
+  margin: 22px 0;
+  padding: 28px 30px 24px;
+  border: 1px solid rgba(255,193,7,.75);
+  border-radius: 26px;
   background:
-    radial-gradient(circle at 12% 50%, rgba(251,191,36,.20), transparent 28%),
-    radial-gradient(circle at 90% 20%, rgba(59,130,246,.24), transparent 35%),
-    linear-gradient(135deg, #07152f 0%, #0b1d3f 48%, #111827 100%);
+    radial-gradient(circle at 8% 50%, rgba(255,193,7,.22), transparent 24%),
+    radial-gradient(circle at 80% 0%, rgba(59,130,246,.20), transparent 34%),
+    linear-gradient(135deg,#05080d 0%,#101217 48%,#18140a 100%);
   box-shadow:
-    0 18px 45px rgba(0,0,0,.28),
-    inset 0 1px 0 rgba(255,255,255,.10);
+    0 0 0 1px rgba(255,193,7,.10) inset,
+    0 18px 50px rgba(0,0,0,.40),
+    0 0 35px rgba(255,193,7,.12);
+}
+
+.live-offer-banner::before {
+  content:"";
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  background:
+    linear-gradient(90deg,transparent,rgba(255,193,7,.08),transparent);
+  opacity:.8;
 }
 
 .live-offer-glow {
-  position: absolute;
-  width: 180px;
-  height: 180px;
-  right: 12%;
-  top: -110px;
-  border-radius: 50%;
-  background: rgba(59,130,246,.18);
-  filter: blur(35px);
-  pointer-events: none;
+  position:absolute;
+  width:220px;
+  height:220px;
+  left:-70px;
+  top:-80px;
+  border-radius:50%;
+  background:rgba(255,193,7,.16);
+  filter:blur(42px);
+  pointer-events:none;
 }
 
 .live-offer-icon {
-  position: relative;
-  z-index: 1;
-  flex: 0 0 62px;
-  width: 62px;
-  height: 62px;
-  display: grid;
-  place-items: center;
-  border-radius: 18px;
-  font-size: 31px;
-  background: linear-gradient(145deg, #fbbf24, #f59e0b);
-  box-shadow: 0 10px 28px rgba(245,158,11,.30);
+  position:relative;
+  z-index:2;
+  width:104px;
+  height:104px;
+  display:grid;
+  place-items:center;
+  border-radius:26px;
+  font-size:54px;
+  background:
+    radial-gradient(circle at 35% 25%,#ffe082,#ffb300 55%,#e58b00);
+  border:1px solid rgba(255,255,255,.20);
+  box-shadow:
+    0 15px 35px rgba(255,174,0,.28),
+    0 0 30px rgba(255,193,7,.15);
 }
 
 .live-offer-content {
-  position: relative;
-  z-index: 1;
-  flex: 1;
-  min-width: 0;
+  position:relative;
+  z-index:2;
+  min-width:0;
 }
 
 .live-offer-label {
-  display: inline-block;
-  margin-bottom: 4px;
-  font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 1.8px;
-  color: #fbbf24;
+  display:inline-flex;
+  align-items:center;
+  gap:7px;
+  margin-bottom:9px;
+  padding:7px 14px;
+  border:1px solid rgba(255,193,7,.55);
+  border-radius:999px;
+  background:rgba(255,193,7,.09);
+  color:#ffd34e;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:1.7px;
+  text-transform:uppercase;
+}
+
+.live-offer-label::before {
+  content:"♛";
+  font-size:13px;
 }
 
 .live-offer-content h2 {
-  margin: 0 0 5px;
-  font-size: 21px;
-  line-height: 1.2;
-  font-weight: 800;
-  color: #fff;
+  margin:0 0 8px;
+  color:#fff;
+  font-size:clamp(22px,2.3vw,32px);
+  line-height:1.15;
+  font-weight:900;
+  letter-spacing:-.5px;
+  overflow-wrap:anywhere;
+}
+
+.live-offer-content h2::first-letter {
+  color:#ffd02f;
 }
 
 .live-offer-content p {
-  margin: 0;
-  white-space: pre-line;
-  font-size: 13px;
-  line-height: 1.55;
-  color: rgba(255,255,255,.76);
+  margin:0;
+  max-width:720px;
+  color:rgba(224,235,255,.78);
+  font-size:15px;
+  line-height:1.65;
+  white-space:pre-line;
+  overflow-wrap:anywhere;
 }
 
 .live-offer-button {
-  position: relative;
-  z-index: 1;
-  flex: 0 0 auto;
-  border: 0;
-  border-radius: 13px;
-  padding: 13px 18px;
-  cursor: pointer;
-  text-decoration: none;
-  font-size: 13px;
-  font-weight: 800;
-  color: #07111f;
-  background: linear-gradient(135deg, #fbbf24, #fde68a);
-  box-shadow: 0 8px 24px rgba(251,191,36,.24);
-  transition: transform .2s ease, box-shadow .2s ease;
+  position:relative;
+  z-index:2;
+  min-width:210px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+  padding:16px 23px;
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:16px;
+  text-decoration:none;
+  cursor:pointer;
+  color:#171000;
+  background:linear-gradient(135deg,#ffc928 0%,#ffb300 55%,#ffd95a 100%);
+  box-shadow:
+    0 12px 28px rgba(255,174,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.55);
+  font-size:14px;
+  font-weight:900;
+  white-space:normal;
+  text-align:center;
+  transition:.22s ease;
 }
 
 .live-offer-button:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 12px 30px rgba(251,191,36,.35);
+  transform:translateY(-2px);
+  box-shadow:
+    0 17px 35px rgba(255,174,0,.38),
+    inset 0 1px 0 rgba(255,255,255,.65);
 }
 
 .live-offer-button span {
-  margin-left: 5px;
-  font-size: 16px;
+  font-size:20px;
+  line-height:1;
 }
 
-@media (max-width: 700px) {
+@media (max-width: 900px) {
   .live-offer-banner {
-    align-items: flex-start;
-    gap: 13px;
-    padding: 17px;
-    border-radius: 18px;
+    grid-template-columns:82px minmax(0,1fr);
+    gap:18px;
+    padding:22px;
   }
 
   .live-offer-icon {
-    flex-basis: 48px;
-    width: 48px;
-    height: 48px;
-    border-radius: 14px;
-    font-size: 24px;
-  }
-
-  .live-offer-content h2 {
-    font-size: 17px;
-  }
-
-  .live-offer-content p {
-    font-size: 12px;
+    width:82px;
+    height:82px;
+    border-radius:22px;
+    font-size:42px;
   }
 
   .live-offer-button {
-    position: absolute;
-    right: 14px;
-    bottom: 14px;
-    padding: 10px 13px;
-    font-size: 11px;
-  }
-
-  .live-offer-content {
-    padding-right: 88px;
+    grid-column:1 / -1;
+    width:100%;
+    min-width:0;
   }
 }
 
-/* =====================================================
-   PREMIUM LIVE OFFER - MOBILE FIX
-===================================================== */
-@media (max-width: 900px) {
+@media (max-width: 600px) {
   .live-offer-banner {
-    display: grid;
-    grid-template-columns: 58px minmax(0, 1fr);
-    gap: 14px;
-    align-items: start;
-    margin: 16px 0 20px;
-    padding: 18px;
-    border-radius: 22px;
-    min-width: 0;
-    width: 100%;
-    box-sizing: border-box;
+    grid-template-columns:64px minmax(0,1fr);
+    gap:14px;
+    margin:18px 0;
+    padding:19px;
+    border-radius:22px;
   }
 
   .live-offer-icon {
-    width: 58px;
-    height: 58px;
-    flex: none;
-    border-radius: 17px;
-    font-size: 28px;
-  }
-
-  .live-offer-content {
-    min-width: 0;
-    width: 100%;
-    padding: 0 !important;
+    width:64px;
+    height:64px;
+    border-radius:18px;
+    font-size:32px;
   }
 
   .live-offer-label {
-    display: block;
-    margin-bottom: 6px;
-    font-size: 9px;
-    letter-spacing: 1.5px;
-    white-space: nowrap;
+    margin-bottom:7px;
+    padding:6px 10px;
+    font-size:9px;
+    letter-spacing:1.25px;
   }
 
   .live-offer-content h2 {
-    margin: 0 0 7px;
-    font-size: 20px;
-    line-height: 1.25;
-    word-break: normal;
-    overflow-wrap: anywhere;
+    margin-bottom:7px;
+    font-size:22px;
+    line-height:1.18;
   }
 
   .live-offer-content p {
-    margin: 0;
-    font-size: 12px;
-    line-height: 1.55;
-    word-break: normal;
-    overflow-wrap: anywhere;
+    font-size:13px;
+    line-height:1.55;
   }
 
   .live-offer-button {
-    grid-column: 1 / -1;
-    position: relative;
-    right: auto;
-    bottom: auto;
-    width: 100%;
-    box-sizing: border-box;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    min-height: 46px;
-    padding: 12px 16px;
-    border-radius: 14px;
-    font-size: 13px;
-    white-space: normal;
-    text-align: center;
-  }
-
-  .live-offer-button span {
-    margin-left: 7px;
+    padding:15px 16px;
+    border-radius:14px;
+    font-size:14px;
   }
 }
 
-@media (max-width: 420px) {
+@media (max-width: 390px) {
   .live-offer-banner {
-    grid-template-columns: 52px minmax(0, 1fr);
-    gap: 12px;
-    padding: 15px;
-    border-radius: 19px;
+    grid-template-columns:1fr;
+    text-align:center;
+    padding:18px;
   }
 
   .live-offer-icon {
-    width: 52px;
-    height: 52px;
-    border-radius: 15px;
-    font-size: 25px;
-  }
-
-  .live-offer-content h2 {
-    font-size: 18px;
+    margin:0 auto;
   }
 
   .live-offer-content p {
-    font-size: 11.5px;
+    max-width:none;
+  }
+
+  .live-offer-button {
+    grid-column:auto;
   }
 }
+
