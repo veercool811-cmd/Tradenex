@@ -2434,6 +2434,34 @@ function LiveTrading({ user, data }) {
     markets.find((m) => m[0] === selected) || markets[0];
 
   useEffect(() => {
+    let cancelled = false;
+
+    async function loadOffer() {
+      try {
+        const response = await fetch(`${API}/offer?t=${Date.now()}`, {
+          cache: "no-store"
+        });
+
+        if (!response.ok) return;
+
+        const result = await response.json();
+
+        if (!cancelled && result?.success && result?.offer?.enabled) {
+          setOffer(result.offer);
+        }
+      } catch (e) {
+        console.log("Offer check skipped:", e);
+      }
+    }
+
+    loadOffer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
     const streams = markets
       .flatMap((m) => [
         `${m[0].toLowerCase()}@trade`,
