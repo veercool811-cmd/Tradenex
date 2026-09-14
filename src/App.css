@@ -5911,3 +5911,267 @@ a{
   }
 }
 
+
+
+/* =====================================================
+   PREMIUM GOLD LIVE OFFER - FINAL OVERRIDE
+===================================================== */
+
+.live-offer-banner{
+  position:relative !important;
+  overflow:hidden !important;
+  display:grid !important;
+  grid-template-columns:240px minmax(0,1fr) 175px !important;
+  grid-template-rows:auto 76px !important;
+  gap:20px 26px !important;
+  align-items:center !important;
+  width:100% !important;
+  box-sizing:border-box !important;
+  margin:24px 0 !important;
+  padding:28px !important;
+  border:2px solid #ffd34d !important;
+  border-radius:28px !important;
+  background:
+    radial-gradient(circle at 10% 50%,rgba(255,193,7,.25),transparent 25%),
+    radial-gradient(circle at 95% 10%,rgba(255,220,90,.12),transparent 25%),
+    linear-gradient(115deg,#090a0b,#17130a 50%,#070808) !important;
+  box-shadow:
+    0 0 28px rgba(255,193,7,.28),
+    0 20px 55px rgba(0,0,0,.55),
+    inset 0 1px 0 rgba(255,255,255,.18) !important;
+}
+
+.live-offer-banner::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:6px !important;
+  border:1px solid rgba(255,220,100,.28) !important;
+  border-radius:21px !important;
+  pointer-events:none !important;
+}
+
+.live-offer-sparkles{
+  position:absolute !important;
+  top:20px !important;
+  left:30px !important;
+  z-index:3 !important;
+  color:#ffd84d !important;
+  font-size:15px !important;
+  text-shadow:0 0 12px #ffc400 !important;
+}
+
+.live-offer-gift{
+  position:relative !important;
+  z-index:2 !important;
+  display:flex !important;
+  justify-content:center !important;
+  align-items:center !important;
+  min-height:205px !important;
+}
+
+.live-offer-gift-box{
+  width:175px !important;
+  height:175px !important;
+  display:grid !important;
+  place-items:center !important;
+  border-radius:32px !important;
+  font-size:92px !important;
+  background:
+    radial-gradient(circle at 50% 20%,#fff3a6,#ffc62d 42%,#d98b00 76%,#5b3400) !important;
+  border:2px solid rgba(255,230,140,.85) !important;
+  box-shadow:
+    0 0 38px rgba(255,193,7,.48),
+    0 14px 35px rgba(0,0,0,.58),
+    inset 0 3px 12px rgba(255,255,255,.38) !important;
+}
+
+.live-offer-main{
+  position:relative !important;
+  z-index:2 !important;
+  min-width:0 !important;
+}
+
+.live-offer-label{
+  display:inline-flex !important;
+  align-items:center !important;
+  padding:9px 20px !important;
+  margin-bottom:12px !important;
+  border:1px solid rgba(255,193,7,.75) !important;
+  border-radius:999px !important;
+  color:#ffd94d !important;
+  background:rgba(255,193,7,.07) !important;
+  box-shadow:0 0 18px rgba(255,193,7,.15) !important;
+  font-size:13px !important;
+  font-weight:900 !important;
+  letter-spacing:1.5px !important;
+}
+
+.live-offer-main h2{
+  margin:0 0 10px !important;
+  color:#fff !important;
+  font-size:clamp(27px,3vw,40px) !important;
+  line-height:1.15 !important;
+  font-weight:900 !important;
+  overflow-wrap:anywhere !important;
+}
+
+.live-offer-main p{
+  margin:0 !important;
+  color:#dce8f7 !important;
+  font-size:17px !important;
+  line-height:1.55 !important;
+  white-space:pre-line !important;
+  overflow-wrap:anywhere !important;
+}
+
+.live-offer-highlight{
+  position:relative !important;
+  z-index:2 !important;
+  height:180px !important;
+  display:flex !important;
+  flex-direction:column !important;
+  justify-content:center !important;
+  align-items:center !important;
+  box-sizing:border-box !important;
+  border:2px solid #e8bd3d !important;
+  border-radius:24px !important;
+  background:linear-gradient(145deg,rgba(255,193,7,.11),rgba(0,0,0,.48)) !important;
+  box-shadow:
+    0 0 24px rgba(255,193,7,.20),
+    inset 0 0 24px rgba(255,193,7,.06) !important;
+}
+
+.live-offer-highlight::after{
+  content:"✦" !important;
+  position:absolute !important;
+  right:-8px !important;
+  top:-20px !important;
+  color:#fff0a0 !important;
+  font-size:32px !important;
+  text-shadow:0 0 16px #ffd000 !important;
+}
+
+.live-offer-highlight span{
+  color:#fff !important;
+  font-size:14px !important;
+  font-weight:700 !important;
+}
+
+.live-offer-highlight strong{
+  margin:3px 0 !important;
+  color:#ffd43b !important;
+  font-size:57px !important;
+  line-height:1 !important;
+  font-weight:950 !important;
+}
+
+.live-offer-highlight b{
+  color:#fff !important;
+  font-size:21px !important;
+}
+
+.live-offer-highlight small{
+  margin-top:4px !important;
+  color:#ffd43b !important;
+  font-size:11px !important;
+  font-weight:900 !important;
+  letter-spacing:2px !important;
+}
+
+.live-offer-button{
+  position:relative !important;
+  z-index:2 !important;
+  grid-column:1 / -1 !important;
+  width:100% !important;
+  min-height:66px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  gap:8px !important;
+  box-sizing:border-box !important;
+  border:1px solid rgba(255,255,255,.5) !important;
+  border-radius:22px !important;
+  color:#090909 !important;
+  background:linear-gradient(135deg,#ffe46f,#ffb91d 48%,#ffd75b) !important;
+  box-shadow:
+    0 10px 30px rgba(255,183,0,.34),
+    inset 0 2px 0 rgba(255,255,255,.65) !important;
+  text-decoration:none !important;
+  cursor:pointer !important;
+  font-size:19px !important;
+  font-weight:950 !important;
+}
+
+.live-offer-button span{
+  margin-left:8px !important;
+  font-size:25px !important;
+}
+
+/* MOBILE PREMIUM VERSION */
+@media(max-width:600px){
+
+  .live-offer-banner{
+    display:grid !important;
+    grid-template-columns:1fr !important;
+    grid-template-rows:auto auto auto auto !important;
+    gap:15px !important;
+    margin:18px 0 !important;
+    padding:25px 18px 18px !important;
+    border-radius:25px !important;
+    text-align:center !important;
+  }
+
+  .live-offer-sparkles{
+    top:17px !important;
+    left:20px !important;
+    font-size:13px !important;
+  }
+
+  .live-offer-gift{
+    min-height:105px !important;
+  }
+
+  .live-offer-gift-box{
+    width:108px !important;
+    height:108px !important;
+    border-radius:26px !important;
+    font-size:58px !important;
+  }
+
+  .live-offer-label{
+    font-size:10px !important;
+    padding:8px 15px !important;
+    letter-spacing:1.2px !important;
+  }
+
+  .live-offer-main h2{
+    font-size:25px !important;
+    line-height:1.2 !important;
+  }
+
+  .live-offer-main p{
+    font-size:14px !important;
+    line-height:1.65 !important;
+  }
+
+  .live-offer-highlight{
+    width:150px !important;
+    height:108px !important;
+    margin:2px auto !important;
+  }
+
+  .live-offer-highlight strong{
+    font-size:43px !important;
+  }
+
+  .live-offer-highlight b{
+    font-size:17px !important;
+  }
+
+  .live-offer-button{
+    grid-column:1 !important;
+    min-height:63px !important;
+    border-radius:18px !important;
+    font-size:16px !important;
+  }
+}

@@ -1074,14 +1074,32 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
 
       {offer?.enabled && (
         <section className="live-offer-banner">
-          <div className="live-offer-glow"></div>
 
-          <div className="live-offer-icon">🎁</div>
+          <div className="live-offer-sparkles">✦　✦　✦</div>
 
-          <div className="live-offer-content">
-            <span className="live-offer-label">LIMITED TIME OFFER</span>
-            <h2>{offer.title || "Special Offer"}</h2>
+          <div className="live-offer-gift">
+            <div className="live-offer-gift-box">🎁</div>
+          </div>
+
+          <div className="live-offer-main">
+            <div className="live-offer-label">♛ &nbsp; LIMITED TIME OFFER</div>
+
+            <h2>{offer.title || "Special Welcome Bonus!"}</h2>
+
             <p>{offer.message || "A special offer is available for you."}</p>
+          </div>
+
+          <div className="live-offer-highlight">
+            <span>GET</span>
+            <strong>
+              {(() => {
+                const text = String(offer.message || "");
+                const nums = text.match(/\b\d+(?:,\d{3})*(?:\.\d+)?\b/g) || [];
+                return nums.length ? nums[nums.length - 1] : "200";
+              })()}
+            </strong>
+            <b>USDT</b>
+            <small>BONUS</small>
           </div>
 
           {offer.buttonUrl ? (
@@ -1091,16 +1109,17 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              {offer.buttonText || "View Offer"} <span>→</span>
+              🚀 &nbsp; {offer.buttonText || "Grab This Offer Now"} <span>→</span>
             </a>
           ) : (
             <button
               className="live-offer-button"
-              onClick={() => setOfferPopupVisible(true)}
+              onClick={() => setOffer(null)}
             >
-              {offer.buttonText || "Got It"} <span>→</span>
+              🚀 &nbsp; {offer.buttonText || "Grab This Offer Now"} <span>→</span>
             </button>
           )}
+
         </section>
       )}
 
