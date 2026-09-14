@@ -1072,6 +1072,38 @@ function Dashboard({ data = {}, user = {}, go }) {
         <div className="hero-badge">A Smarter Way to Invest</div>
       </div>
 
+      {offer?.enabled && (
+        <section className="live-offer-banner">
+          <div className="live-offer-glow"></div>
+
+          <div className="live-offer-icon">🎁</div>
+
+          <div className="live-offer-content">
+            <span className="live-offer-label">LIMITED TIME OFFER</span>
+            <h2>{offer.title || "Special Offer"}</h2>
+            <p>{offer.message || "A special offer is available for you."}</p>
+          </div>
+
+          {offer.buttonUrl ? (
+            <a
+              className="live-offer-button"
+              href={offer.buttonUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              {offer.buttonText || "View Offer"} <span>→</span>
+            </a>
+          ) : (
+            <button
+              className="live-offer-button"
+              onClick={() => setOffer(null)}
+            >
+              {offer.buttonText || "Got It"} <span>→</span>
+            </button>
+          )}
+        </section>
+      )}
+
       <section className="transaction-panel">
         <div className="transaction-head">
           <div>
