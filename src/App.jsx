@@ -999,7 +999,7 @@ function LoginPage({ onLogin }) {
    DASHBOARD
 ===================================================== */
 
-function Dashboard({ data = {}, user = {}, go }) {
+function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
   const num = (v) => Number(v || 0);
   const balance = num(data.walletBalance);
   const deposit = num(data.totalDeposit);
@@ -4908,6 +4908,9 @@ export default function App() {
             <Dashboard
               user={user}
               data={data}
+              go={openPage}
+              offer={offer}
+              setOffer={setOffer}
             />
           )}
 
