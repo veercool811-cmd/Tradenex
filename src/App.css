@@ -5774,3 +5774,105 @@ a{
     padding-right: 88px;
   }
 }
+
+/* =====================================================
+   PREMIUM LIVE OFFER - MOBILE FIX
+===================================================== */
+@media (max-width: 900px) {
+  .live-offer-banner {
+    display: grid;
+    grid-template-columns: 58px minmax(0, 1fr);
+    gap: 14px;
+    align-items: start;
+    margin: 16px 0 20px;
+    padding: 18px;
+    border-radius: 22px;
+    min-width: 0;
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .live-offer-icon {
+    width: 58px;
+    height: 58px;
+    flex: none;
+    border-radius: 17px;
+    font-size: 28px;
+  }
+
+  .live-offer-content {
+    min-width: 0;
+    width: 100%;
+    padding: 0 !important;
+  }
+
+  .live-offer-label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 9px;
+    letter-spacing: 1.5px;
+    white-space: nowrap;
+  }
+
+  .live-offer-content h2 {
+    margin: 0 0 7px;
+    font-size: 20px;
+    line-height: 1.25;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .live-offer-content p {
+    margin: 0;
+    font-size: 12px;
+    line-height: 1.55;
+    word-break: normal;
+    overflow-wrap: anywhere;
+  }
+
+  .live-offer-button {
+    grid-column: 1 / -1;
+    position: relative;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 46px;
+    padding: 12px 16px;
+    border-radius: 14px;
+    font-size: 13px;
+    white-space: normal;
+    text-align: center;
+  }
+
+  .live-offer-button span {
+    margin-left: 7px;
+  }
+}
+
+@media (max-width: 420px) {
+  .live-offer-banner {
+    grid-template-columns: 52px minmax(0, 1fr);
+    gap: 12px;
+    padding: 15px;
+    border-radius: 19px;
+  }
+
+  .live-offer-icon {
+    width: 52px;
+    height: 52px;
+    border-radius: 15px;
+    font-size: 25px;
+  }
+
+  .live-offer-content h2 {
+    font-size: 18px;
+  }
+
+  .live-offer-content p {
+    font-size: 11.5px;
+  }
+}
