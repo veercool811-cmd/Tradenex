@@ -1,6 +1,4 @@
 import { jsPDF } from "jspdf";
-import { App as CapacitorApp } from "@capacitor/app";
-import { Browser } from "@capacitor/browser";
 import React, {
   useEffect,
   useMemo,
@@ -466,8 +464,6 @@ function LoginPage({ onLogin }) {
       setLoading(false);
     }
   }
-
-
 
   return (
     <div className="auth-page">
@@ -1071,6 +1067,47 @@ function Dashboard({ data = {}, user = {}, go }) {
         </div>
         <div className="hero-badge">A Smarter Way to Invest</div>
       </div>
+
+      <section className="statement-panel">
+        <div className="statement-head">
+          <div>
+            <span className="section-kicker">ACCOUNT STATEMENT</span>
+            <h2>My Statement</h2>
+            <p>View your account summary and complete transaction history.</p>
+          </div>
+          <button type="button" className="download-statement" onClick={() => downloadStatementPDF()} onTouchEnd={(e) => { e.preventDefault(); downloadStatementPDF(); }}>
+            📄 &nbsp;Download PDF
+          </button>
+        </div>
+
+        <div className="statement-grid">
+          <div className="statement-card blue-card">
+            <span className="statement-icon">🪙</span>
+            <div><small>Total Deposit</small><strong>${deposit.toFixed(2)}</strong><em>↗ +12.4%</em></div>
+          </div>
+
+          <div className="statement-card green-card">
+            <span className="statement-icon">📊</span>
+            <div><small>Total Profit</small><strong>${profit.toFixed(2)}</strong><em>↗ +8.6%</em></div>
+          </div>
+
+          <div className="statement-card red-card">
+            <span className="statement-icon">⬆</span>
+            <div><small>Total Withdrawal</small><strong>${withdrawal.toFixed(2)}</strong></div>
+          </div>
+
+          <div className="statement-card purple-card">
+            <span className="statement-icon">👥</span>
+            <div><small>Referral Reward</small><strong>${referralReward.toFixed(2)}</strong></div>
+          </div>
+
+          <div className="statement-card gold-card current-balance">
+            <span className="statement-icon">💼</span>
+            <div><small>Current Balance</small><strong>${balance.toFixed(2)}</strong></div>
+            <span className="crown">♛</span>
+          </div>
+        </div>
+      </section>
 
       <section className="transaction-panel">
         <div className="transaction-head">
@@ -4341,19 +4378,6 @@ function LandingPage({ onLogin }) {
    APP
 ===================================================== */
 
-
-function compareVersions(a, b) {
-  const pa = String(a).split(".").map(Number);
-  const pb = String(b).split(".").map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const x = pa[i] || 0;
-    const y = pb[i] || 0;
-    if (x > y) return 1;
-    if (x < y) return -1;
-  }
-  return 0;
-}
-
 export default function App() {
   const [user, setUser] =
     useState(null);
@@ -4380,11 +4404,6 @@ export default function App() {
 
   const [sidebarOpen, setSidebarOpen] =
     useState(false);
-  const [updateInfo, setUpdateInfo] =
-    useState(null);
-  const [offer, setOffer] = useState(null);
-
-
 
   async function loadUser() {
     try {
@@ -4450,51 +4469,6 @@ export default function App() {
       setLoading(false);
     }
   }
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function checkForUpdate() {
-      try {
-        const platform = CapacitorApp.getInfo
-          ? await CapacitorApp.getInfo()
-          : null;
-
-        if (!platform || platform.platform === "web") return;
-
-        const response = await fetch(
-          "https://tradenex.onrender.com/version.json?t=" + Date.now(),
-          { cache: "no-store" }
-        );
-
-        if (!response.ok) return;
-
-        const latest = await response.json();
-
-        if (
-          !cancelled &&
-          latest?.version &&
-          compareVersions(latest.version, platform.version) > 0
-        ) {
-          setUpdateInfo({
-            version: latest.version,
-            url: latest.url,
-            message:
-              latest.message ||
-              "A new version of Tradenex is available."
-          });
-        }
-      } catch (e) {
-        console.log("Update check skipped:", e);
-      }
-    }
-
-    checkForUpdate();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   useEffect(() => {
     loadUser();
@@ -4648,47 +4622,6 @@ export default function App() {
 
   return (
     <div className="app-shell">
-
-      {offer?.enabled && (
-        <div className="offer-popup-overlay">
-          <div className="offer-popup">
-            <button
-              className="offer-popup-close"
-              onClick={() => setOffer(null)}
-              aria-label="Close"
-            >
-              ×
-            </button>
-
-            <div className="offer-popup-icon">🎁</div>
-
-            <h2>{offer.title || "Special Offer"}</h2>
-
-            <p>
-              {offer.message || "A special offer is available for you."}
-            </p>
-
-            {offer.buttonUrl ? (
-              <a
-                className="offer-popup-button"
-                href={offer.buttonUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {offer.buttonText || "View Offer"}
-              </a>
-            ) : (
-              <button
-                className="offer-popup-button"
-                onClick={() => setOffer(null)}
-              >
-                {offer.buttonText || "Got It"}
-              </button>
-            )}
-          </div>
-        </div>
-      )}
-
       {/* MOBILE OVERLAY */}
 
       {sidebarOpen && (
