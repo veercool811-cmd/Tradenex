@@ -1521,6 +1521,113 @@ app.put(
   }
 );
 
+
+/* =====================================================
+   ADMIN OFFER / USER POPUP
+===================================================== */
+
+app.get(
+  "/api/offer",
+  async (req, res) => {
+    try {
+      const result = await pool.query(
+        "SELECT data FROM app_data WHERE key = $1",
+        ["active_offer"]
+      );
+
+      const offer = result.rows[0]?.data || {
+        enabled: false,
+        title: "",
+        message: "",
+        buttonText: "",
+        buttonUrl: "",
+        updatedAt: null
+      };
+
+      return res.json({
+        success: true,
+        offer
+      });
+    } catch (error) {
+      console.error("OFFER GET ERROR:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Unable to load offer."
+      });
+    }
+  }
+);
+
+app.get(
+  "/api/admin/offer",
+  async (req, res) => {
+    try {
+      const result = await pool.query(
+        "SELECT data FROM app_data WHERE key = $1",
+        ["active_offer"]
+      );
+
+      const offer = result.rows[0]?.data || {
+        enabled: false,
+        title: "",
+        message: "",
+        buttonText: "",
+        buttonUrl: "",
+        updatedAt: null
+      };
+
+      return res.json({
+        success: true,
+        offer
+      });
+    } catch (error) {
+      console.error("ADMIN OFFER GET ERROR:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Unable to load offer."
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/admin/offer",
+  async (req, res) => {
+    try {
+      const body = req.body || {};
+
+      const offer = {
+        enabled: Boolean(body.enabled),
+        title: clean(body.title).slice(0, 120),
+        message: clean(body.message).slice(0, 1000),
+        buttonText: clean(body.buttonText).slice(0, 50),
+        buttonUrl: clean(body.buttonUrl).slice(0, 500),
+        updatedAt: now()
+      };
+
+      await pool.query(
+        `INSERT INTO app_data (key, data, updated_at)
+         VALUES ($1, $2::jsonb, NOW())
+         ON CONFLICT (key)
+         DO UPDATE SET data = EXCLUDED.data, updated_at = NOW()`,
+        ["active_offer", JSON.stringify(offer)]
+      );
+
+      return res.json({
+        success: true,
+        message: "Offer saved successfully.",
+        offer
+      });
+    } catch (error) {
+      console.error("ADMIN OFFER SAVE ERROR:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Unable to save offer."
+      });
+    }
+  }
+);
+
 /* =====================================================
    LOGIN
 ===================================================== */
