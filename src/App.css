@@ -6500,3 +6500,101 @@ a{
   }
 }
 
+
+/* =====================================================
+   MOBILE FULL-WIDTH PREMIUM LAYOUT FIX
+===================================================== */
+@media (max-width: 700px){
+
+  html,
+  body,
+  #root{
+    width:100%;
+    max-width:100%;
+    overflow-x:hidden;
+  }
+
+  .app-shell{
+    width:100%;
+    max-width:100%;
+    overflow-x:hidden;
+  }
+
+  .content{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+    padding:12px !important;
+    margin:0 !important;
+  }
+
+  .premium-dashboard{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+    margin:0 !important;
+    padding:0 !important;
+  }
+
+  .premium-dashboard > *{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+  }
+
+  .premium-hero{
+    width:100% !important;
+    box-sizing:border-box !important;
+    margin:0 0 16px !important;
+  }
+
+  .live-offer-banner{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+    margin:16px 0 !important;
+  }
+
+  .transaction-panel{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+  }
+
+  .dashboard-grid{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+  }
+
+  .premium-table-wrap{
+    width:100% !important;
+    max-width:100% !important;
+    overflow-x:auto !important;
+  }
+
+  .premium-table{
+    min-width:620px;
+  }
+}
+
+/* Extra-small phones */
+@media (max-width:430px){
+  .content{
+    padding:8px !important;
+  }
+
+  .premium-hero,
+  .live-offer-banner,
+  .transaction-panel{
+    border-radius:20px !important;
+  }
+
+  .live-offer-banner{
+    margin:12px 0 !important;
+  }
+}
