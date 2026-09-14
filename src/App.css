@@ -6175,3 +6175,328 @@ a{
     font-size:16px !important;
   }
 }
+
+/* =====================================================
+   FINAL PREMIUM MOBILE LAYOUT
+===================================================== */
+@media (max-width: 600px){
+
+  .premium-dashboard{
+    width:100%;
+    max-width:100%;
+    overflow-x:hidden;
+  }
+
+  /* MOBILE HEADER */
+  .premium-dashboard .dashboard-header{
+    padding:18px 16px;
+    min-height:105px;
+  }
+
+  /* HERO */
+  .premium-hero{
+    margin:12px 16px 18px !important;
+    padding:38px 18px 30px !important;
+    min-height:250px !important;
+    border-radius:26px !important;
+    text-align:center;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:center !important;
+    gap:14px !important;
+    overflow:hidden;
+  }
+
+  .premium-hero .hero-copy{
+    width:100%;
+    text-align:center;
+  }
+
+  .premium-hero .hero-kicker{
+    display:block;
+    font-size:10px;
+    letter-spacing:4px;
+    margin-bottom:13px;
+  }
+
+  .premium-hero h1{
+    font-size:34px !important;
+    line-height:1.08 !important;
+    margin:0 !important;
+  }
+
+  .premium-hero p{
+    font-size:16px !important;
+    line-height:1.4;
+    margin:12px 0 0 !important;
+  }
+
+  .premium-hero .hero-badge{
+    position:static !important;
+    margin:0 auto !important;
+    font-size:11px !important;
+    padding:12px 18px !important;
+    border-radius:999px !important;
+  }
+
+  /* PREMIUM OFFER */
+  .live-offer-banner{
+    position:relative !important;
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:center !important;
+    justify-content:flex-start !important;
+
+    width:auto !important;
+    margin:18px 16px 24px !important;
+    padding:28px 18px 18px !important;
+
+    border:2px solid #f7c948 !important;
+    border-radius:27px !important;
+
+    background:
+      radial-gradient(circle at 20% 20%,rgba(255,193,7,.18),transparent 28%),
+      radial-gradient(circle at 85% 80%,rgba(255,193,7,.12),transparent 30%),
+      linear-gradient(145deg,#070809 0%,#17140a 48%,#050607 100%) !important;
+
+    box-shadow:
+      0 0 25px rgba(255,193,7,.30),
+      0 15px 45px rgba(0,0,0,.55),
+      inset 0 1px 0 rgba(255,255,255,.16) !important;
+
+    text-align:center;
+    overflow:hidden;
+  }
+
+  .live-offer-banner::before{
+    content:"";
+    position:absolute;
+    inset:5px;
+    border:1px solid rgba(255,216,100,.30);
+    border-radius:22px;
+    pointer-events:none;
+  }
+
+  /* GOLD GLOW */
+  .live-offer-shine{
+    position:absolute !important;
+    width:230px !important;
+    height:230px !important;
+    left:50% !important;
+    top:-100px !important;
+    transform:translateX(-50%);
+    background:rgba(255,193,7,.18) !important;
+    filter:blur(55px) !important;
+  }
+
+  /* GIFT */
+  .live-offer-gift{
+    position:relative !important;
+    z-index:2;
+    width:100% !important;
+    min-height:auto !important;
+    height:125px !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+
+  .live-offer-gift-box{
+    position:relative !important;
+    width:108px !important;
+    height:108px !important;
+    border-radius:27px !important;
+    font-size:60px !important;
+
+    background:
+      radial-gradient(circle at 50% 20%,#fff5b5,#ffd331 42%,#e19a00 78%,#5c3500) !important;
+
+    border:2px solid rgba(255,230,135,.85) !important;
+
+    box-shadow:
+      0 0 35px rgba(255,193,7,.55),
+      0 12px 30px rgba(0,0,0,.55),
+      inset 0 3px 12px rgba(255,255,255,.35) !important;
+  }
+
+  .live-offer-gift-box::after{
+    width:88px !important;
+    height:88px !important;
+    border-radius:22px !important;
+  }
+
+  .live-offer-sparkles{
+    top:2px !important;
+    left:8px !important;
+    font-size:13px !important;
+    color:#ffe36b !important;
+  }
+
+  /* MAIN CONTENT */
+  .live-offer-main{
+    position:relative;
+    z-index:2;
+    width:100% !important;
+    min-width:0 !important;
+  }
+
+  .live-offer-label{
+    display:inline-flex !important;
+    margin:4px auto 14px !important;
+    padding:9px 17px !important;
+
+    color:#ffd84d !important;
+    border:1px solid rgba(255,193,7,.75) !important;
+    border-radius:999px !important;
+    background:rgba(255,193,7,.07) !important;
+
+    font-size:10px !important;
+    font-weight:900 !important;
+    letter-spacing:1.3px !important;
+    white-space:nowrap;
+  }
+
+  .live-offer-main h2{
+    margin:0 0 13px !important;
+    color:#fff !important;
+    font-size:27px !important;
+    line-height:1.15 !important;
+    font-weight:950 !important;
+    overflow-wrap:anywhere;
+    text-shadow:0 2px 12px rgba(255,193,7,.15);
+  }
+
+  .live-offer-main p{
+    margin:0 auto !important;
+    max-width:100% !important;
+    color:#dbe7f5 !important;
+    font-size:15px !important;
+    line-height:1.65 !important;
+    white-space:pre-line !important;
+    overflow-wrap:anywhere;
+  }
+
+  /* BONUS BOX */
+  .live-offer-highlight{
+    position:relative !important;
+    z-index:2;
+
+    width:150px !important;
+    height:145px !important;
+    min-height:145px !important;
+    margin:18px auto 14px !important;
+
+    display:flex !important;
+    flex-direction:column !important;
+    justify-content:center !important;
+    align-items:center !important;
+
+    border:2px solid #e9be3d !important;
+    border-radius:25px !important;
+
+    background:
+      linear-gradient(145deg,rgba(255,193,7,.12),rgba(0,0,0,.48)) !important;
+
+    box-shadow:
+      0 0 24px rgba(255,193,7,.20),
+      inset 0 0 25px rgba(255,193,7,.06) !important;
+  }
+
+  .live-offer-highlight span{
+    font-size:14px !important;
+    color:#fff !important;
+  }
+
+  .live-offer-highlight strong{
+    margin:3px 0 !important;
+    color:#ffd43b !important;
+    font-size:52px !important;
+    line-height:.95 !important;
+    font-weight:950 !important;
+  }
+
+  .live-offer-highlight b{
+    color:#fff !important;
+    font-size:19px !important;
+  }
+
+  .live-offer-highlight small{
+    margin-top:4px !important;
+    color:#ffd43b !important;
+    font-size:11px !important;
+    font-weight:900 !important;
+    letter-spacing:2px !important;
+  }
+
+  .live-offer-highlight::after{
+    right:-7px !important;
+    top:-17px !important;
+    font-size:30px !important;
+  }
+
+  /* PREMIUM CTA */
+  .live-offer-button{
+    position:relative !important;
+    z-index:2;
+
+    width:100% !important;
+    min-height:64px !important;
+    height:auto !important;
+
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    text-align:center !important;
+
+    padding:15px 18px !important;
+    box-sizing:border-box !important;
+
+    border-radius:19px !important;
+    border:1px solid rgba(255,255,255,.50) !important;
+
+    color:#090909 !important;
+    background:
+      linear-gradient(135deg,#ffe36f 0%,#ffb91f 48%,#ffd85c 100%) !important;
+
+    box-shadow:
+      0 10px 30px rgba(255,183,0,.34),
+      inset 0 2px 0 rgba(255,255,255,.65) !important;
+
+    font-size:16px !important;
+    line-height:1.25 !important;
+    font-weight:950 !important;
+  }
+
+  .live-offer-button span{
+    font-size:25px !important;
+    margin-left:8px !important;
+  }
+
+  /* TRANSACTION PANEL */
+  .transaction-panel{
+    margin-left:16px !important;
+    margin-right:16px !important;
+    border-radius:25px !important;
+    overflow:hidden;
+  }
+
+  .transaction-head{
+    padding:20px 18px !important;
+  }
+
+  .transaction-head h2{
+    font-size:27px !important;
+    line-height:1.15 !important;
+  }
+
+  .transaction-head p{
+    font-size:13px !important;
+  }
+
+  /* REMOVE HORIZONTAL PAGE OVERFLOW */
+  body{
+    overflow-x:hidden !important;
+  }
+}
+
