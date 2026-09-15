@@ -67,9 +67,22 @@ const SUPPORT_FILE = path.join(
   "support.json"
 );
 
-const REFERRAL_REWARD = 100;
 const REFERRAL_MIN_DEPOSIT = 1000;
 const REFERRAL_REQUIRED_COUNT = 3;
+
+const REFERRAL_COMMISSION_RATES = [
+  0.10,
+  0.02,
+  0.01,
+  0.01,
+  0.01,
+];
+
+const REFERRAL_MILESTONES = [
+  { id: "iphone", volume: 10000, reward: "iPhone" },
+  { id: "bullet", volume: 20000, reward: "Royal Enfield Bullet" },
+  { id: "car", volume: 50000, reward: "Maruti Swift / Baleno / Hyundai i20" },
+];
 
 const DB_DATA_TABLE = "app_data";
 
@@ -558,6 +571,254 @@ function number(value) {
 }
 
 /* =====================================================
+   MULTI-LEVEL REFERRAL COMMISSION
+   L1 10% | L2 2% | L3 1% | L4 1% | L5 1%
+   Commission is credited only from approved deposits.
+===================================================== */
+
+
+function updateReferralMilestones(users, deposit) {
+  const depositAmount = number(deposit.amount);
+  const depositUserId = String(deposit.userId || "").trim();
+
+  if (
+    depositAmount < REFERRAL_MIN_DEPOSIT ||
+    !depositUserId
+  ) {
+    return [];
+  }
+
+  /*
+    Find the direct referrer of the depositing user.
+  */
+  const referrer = users.find(
+    (u) =>
+      Array.isArray(u.referrals) &&
+      u.referrals.some(
+        (r) => String(r.userId) === depositUserId
+      )
+  );
+
+  if (!referrer) {
+    return [];
+  }
+
+  const referral = referrer.referrals.find(
+    (r) => String(r.userId) === depositUserId
+  );
+
+  if (!referral) {
+    return [];
+  }
+
+  /*
+    Every approved qualifying deposit from this referral
+    contributes to the referrer's combined referral volume.
+  */
+  referral.qualifyingVolume =
+    number(referral.qualifyingVolume) + depositAmount;
+
+  referral.qualifying = true;
+
+  /*
+    Combined volume across ALL qualifying referrals.
+    Example: 1,000 + 9,000 = 10,000 USDT.
+  */
+  const totalReferralVolume =
+    referrer.referrals.reduce(
+      (total, r) =>
+        total + number(r.qualifyingVolume),
+      0
+    );
+
+  referrer.referralVolume =
+    totalReferralVolume;
+
+  if (!Array.isArray(referrer.referralMilestones)) {
+    referrer.referralMilestones = [];
+  }
+
+  const earned = [];
+
+  for (const milestone of REFERRAL_MILESTONES) {
+    if (
+      totalReferralVolume >= milestone.volume &&
+      !referrer.referralMilestones.some(
+        (m) => m.id === milestone.id
+      )
+    ) {
+      const record = {
+        id: milestone.id,
+        volume: milestone.volume,
+        reward: milestone.reward,
+        earnedAt: now(),
+      };
+
+      referrer.referralMilestones.push(record);
+      earned.push(record);
+    }
+  }
+
+  return earned;
+}
+
+
+function creditReferralCommissions(users, deposit) {
+  const depositAmount = number(deposit.amount);
+  const depositUserId = String(deposit.userId || "").trim();
+  const depositId = String(deposit.id || "").trim();
+
+  if (
+    !depositAmount ||
+    depositAmount <= 0 ||
+    !depositUserId ||
+    !depositId
+  ) {
+    return [];
+  }
+
+  /*
+    Referral commission is protected per deposit + level.
+    This allows L1-L5 to be credited independently and prevents
+    duplicate credit if the approval flow is retried.
+  */
+  const transactions = read(TRANSACTIONS_FILE);
+
+  const directReferrer = users.find(
+    (u) =>
+      Array.isArray(u.referrals) &&
+      u.referrals.some(
+        (r) => String(r.userId) === depositUserId
+      )
+  );
+
+  if (!directReferrer) {
+    return [];
+  }
+
+  const commissions = [];
+  const visited = new Set([depositUserId]);
+
+  let currentReferrer = directReferrer;
+
+  for (
+    let level = 0;
+    level < REFERRAL_COMMISSION_RATES.length;
+    level++
+  ) {
+    if (!currentReferrer) {
+      break;
+    }
+
+    const referrerId = String(currentReferrer.id || "");
+
+    /*
+      Safety: stop cycles/self-referral chains.
+    */
+    if (!referrerId || visited.has(referrerId)) {
+      break;
+    }
+
+    visited.add(referrerId);
+
+    const rate = number(
+      REFERRAL_COMMISSION_RATES[level]
+    );
+
+    const commission = Number(
+      (depositAmount * rate).toFixed(8)
+    );
+
+    const levelNumber = level + 1;
+    const levelReference =
+      "REF-" + depositId + "-L" + levelNumber;
+
+    const levelAlreadyCredited = transactions.some(
+      (t) =>
+        t.source === "referralCommission" &&
+        String(t.depositId || "") === depositId &&
+        String(t.level || "") === String(levelNumber)
+    );
+
+    if (levelAlreadyCredited) {
+      const parent = users.find(
+        (u) =>
+          Array.isArray(u.referrals) &&
+          u.referrals.some(
+            (r) =>
+              String(r.userId) ===
+              referrerId
+          )
+      );
+
+      currentReferrer = parent || null;
+      continue;
+    }
+
+    if (commission > 0) {
+      currentReferrer.referralReward =
+        number(currentReferrer.referralReward) +
+        commission;
+
+      commissions.push({
+        userId: referrerId,
+        level: level + 1,
+        rate,
+        amount: commission,
+        depositId,
+        sourceUserId: depositUserId,
+        createdAt: now(),
+      });
+
+      createTransaction(
+        referrerId,
+        "Referral Commission",
+        "Referral",
+        "",
+        commission,
+        "Approved",
+        levelReference,
+        "referralCommission"
+      );
+
+      const txns = read(TRANSACTIONS_FILE);
+      const txIndex = txns.findIndex(
+        (t) =>
+          t.referenceId === levelReference
+      );
+
+      if (txIndex !== -1) {
+        txns[txIndex].depositId = depositId;
+        txns[txIndex].sourceUserId = depositUserId;
+        txns[txIndex].level = level + 1;
+        txns[txIndex].rate = rate;
+      }
+
+      write(TRANSACTIONS_FILE, txns);
+    }
+
+    /*
+      Find the next upline.
+      The current referrer is Level N.
+    */
+    const parent = users.find(
+      (u) =>
+        Array.isArray(u.referrals) &&
+        u.referrals.some(
+          (r) =>
+            String(r.userId) ===
+            referrerId
+        )
+    );
+
+    currentReferrer = parent || null;
+  }
+
+  return commissions;
+}
+
+
+/* =====================================================
    MSG91 OTP WIDGET
 ===================================================== */
 
@@ -691,6 +952,16 @@ function publicUser(user) {
 
     referralCode:
       user.referralCode || "",
+
+    referralVolume:
+      number(user.referralVolume),
+
+    referralMilestones:
+      Array.isArray(
+        user.referralMilestones
+      )
+        ? user.referralMilestones
+        : [],
 
     referrals:
       Array.isArray(
@@ -1332,6 +1603,9 @@ app.post(
 
           qualifying:
             false,
+
+          qualifyingVolume:
+            0,
 
           rewardCredited:
             false,
@@ -3817,46 +4091,23 @@ app.post(
         ) - amount
       );
 
-    /*
-      REFERRAL QUALIFICATION
-      A referred user qualifies when their approved
-      total deposit reaches at least $1,000.
-      The referrer receives $100 only once.
-    */
-    const referredUser = users[userIndex];
-
-    if (
-      number(referredUser.totalDeposit) >=
-      REFERRAL_MIN_DEPOSIT
-    ) {
-      for (const referrer of users) {
-        if (!Array.isArray(referrer.referrals)) {
-          continue;
-        }
-
-        const referral = referrer.referrals.find(
-          (r) => r.userId === referredUser.id
-        );
-
-        if (
-          referral &&
-          referral.qualifying !== true
-        ) {
-          referral.qualifying = true;
-          referral.reward = REFERRAL_REWARD;
-          referral.rewardCredited = true;
-
-          referrer.referralReward =
-            number(referrer.referralReward) +
-            REFERRAL_REWARD;
-
-          break;
-        }
-      }
-    }
-
     deposit.status =
       "Approved";
+
+    /*
+      MULTI-LEVEL REFERRAL COMMISSION
+      L1 10% | L2 2% | L3 1% | L4 1% | L5 1%
+      Credited only after this deposit is approved.
+    */
+    updateReferralMilestones(
+      users,
+      deposit
+    );
+
+    creditReferralCommissions(
+      users,
+      deposit
+    );
 
     deposit.approvedAt =
       now();
@@ -4120,13 +4371,13 @@ app.post(
       "referralReward"
     ) {
       const count =
-        Array.isArray(
-          user.referrals
-        )
-          ? user.referrals.length
+        Array.isArray(user.referrals)
+          ? user.referrals.filter(
+              (r) => r && r.qualifying === true
+            ).length
           : 0;
 
-      if (count < 3) {
+      if (count < REFERRAL_REQUIRED_COUNT) {
         return res
           .status(400)
           .json({
@@ -4537,7 +4788,11 @@ initPersistentStorage()
         );
 
         console.log(
-          `Referral Reward: $${REFERRAL_REWARD}`
+          "Referral Commission: L1 10% | L2 2% | L3 1% | L4 1% | L5 1%"
+        );
+
+        console.log(
+          "Referral Milestones: 10K iPhone | 20K Bullet | 50K Car"
         );
 
         console.log(
