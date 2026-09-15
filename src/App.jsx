@@ -3140,8 +3140,65 @@ function Referrals({
   user,
   data,
 }) {
-  const count =
-    data.referrals?.length || 0;
+  const referrals =
+    Array.isArray(data.referrals)
+      ? data.referrals
+      : [];
+
+  const count = referrals.length;
+
+  const qualifyingCount =
+    referrals.filter(
+      (r) => r.qualifying === true
+    ).length;
+
+  const referralVolume = Number(
+    user.referralVolume || 0
+  );
+
+  const milestones = [
+    {
+      id: "iphone",
+      volume: 10000,
+      icon: "📱",
+      title: "iPhone",
+    },
+    {
+      id: "bullet",
+      volume: 20000,
+      icon: "🏍️",
+      title: "Royal Enfield Bullet",
+    },
+    {
+      id: "car",
+      volume: 50000,
+      icon: "🚗",
+      title: "Maruti Swift / Baleno / Hyundai i20",
+    },
+  ];
+
+  const earnedMilestones =
+    Array.isArray(user.referralMilestones)
+      ? user.referralMilestones
+      : [];
+
+  const nextMilestone =
+    milestones.find(
+      (m) =>
+        !earnedMilestones.some(
+          (e) => e.id === m.id
+        )
+    ) || null;
+
+  const progressTarget =
+    nextMilestone
+      ? nextMilestone.volume
+      : 50000;
+
+  const progressPercent = Math.min(
+    100,
+    (referralVolume / progressTarget) * 100
+  );
 
   return (
     <>
@@ -3155,8 +3212,9 @@ function Referrals({
         </h2>
 
         <p>
-          Invite users and earn
-          referral rewards.
+          Build your referral network and
+          earn multi-level commissions on
+          approved qualifying deposits.
         </p>
       </div>
 
@@ -3174,18 +3232,36 @@ function Referrals({
         </div>
 
         <div className="stat-card">
-          <span>🎁</span>
+          <span>💰</span>
 
           <small>
-            Referral Reward
+            Referral Commission
           </small>
 
           <strong>
             $
             {Number(
-              user.referralReward ||
-                0
+              user.referralReward || 0
             ).toFixed(2)}
+          </strong>
+        </div>
+
+        <div className="stat-card">
+          <span>📊</span>
+
+          <small>
+            Referral Volume
+          </small>
+
+          <strong>
+            $
+            {referralVolume.toLocaleString(
+              undefined,
+              {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              }
+            )}
           </strong>
         </div>
       </div>
@@ -3196,28 +3272,212 @@ function Referrals({
         </h3>
 
         <div className="referral-code big">
-          {user.referralCode ||
-            "—"}
+          {user.referralCode || "—"}
         </div>
 
         <p>
-          इस code को अपने friends
-          के साथ share करें।
+          इस code को अपने friends के साथ
+          share करें।
         </p>
 
         <div className="referral-info">
           <strong>
-            Reward per referral:
+            Commission Levels:
+          </strong>
+        </div>
+
+        <div className="referral-info">
+          Level 1 — <strong>10%</strong>
+        </div>
+
+        <div className="referral-info">
+          Level 2 — <strong>2%</strong>
+        </div>
+
+        <div className="referral-info">
+          Level 3 — <strong>1%</strong>
+        </div>
+
+        <div className="referral-info">
+          Level 4 — <strong>1%</strong>
+        </div>
+
+        <div className="referral-info">
+          Level 5 — <strong>1%</strong>
+        </div>
+
+        <div className="referral-info">
+          <strong>
+            Total possible commission:
           </strong>{" "}
-          $10
+          15%
+        </div>
+
+        <div className="referral-info">
+          <strong>
+            Qualifying deposit:
+          </strong>{" "}
+          Minimum $1,000 USDT
         </div>
 
         <div className="referral-info">
           <strong>
             Withdrawal unlock:
           </strong>{" "}
-          3 referrals
+          {qualifyingCount} / 3 qualifying referrals
         </div>
+      </div>
+
+      <div className="panel-card">
+        <div className="panel-head">
+          <h3>
+            Referral Milestones
+          </h3>
+        </div>
+
+        <div className="referral-info">
+          Combined qualifying referral volume:
+          {" "}
+          <strong>
+            $
+            {referralVolume.toLocaleString(
+              undefined,
+              {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              }
+            )}
+          </strong>
+        </div>
+
+        {nextMilestone && (
+          <>
+            <div className="referral-info">
+              Next milestone:
+              {" "}
+              <strong>
+                ${nextMilestone.volume.toLocaleString()}
+              </strong>
+            </div>
+
+            <div
+              style={{
+                width: "100%",
+                height: "10px",
+                background: "rgba(255,255,255,.08)",
+                borderRadius: "20px",
+                overflow: "hidden",
+                margin: "12px 0 18px",
+              }}
+            >
+              <div
+                style={{
+                  width: `${progressPercent}%`,
+                  height: "100%",
+                  background:
+                    "linear-gradient(90deg,#38bdf8,#8b5cf6,#f59e0b)",
+                  borderRadius: "20px",
+                  transition: "width .5s ease",
+                }}
+              />
+            </div>
+          </>
+        )}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit,minmax(170px,1fr))",
+            gap: "12px",
+          }}
+        >
+          {milestones.map((milestone) => {
+            const earned =
+              earnedMilestones.some(
+                (m) => m.id === milestone.id
+              );
+
+            const reached =
+              referralVolume >= milestone.volume;
+
+            return (
+              <div
+                key={milestone.id}
+                style={{
+                  padding: "18px",
+                  border: earned
+                    ? "1px solid rgba(34,197,94,.7)"
+                    : "1px solid rgba(117,183,255,.22)",
+                  borderRadius: "14px",
+                  background:
+                    "linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.02))",
+                  textAlign: "center",
+                  boxShadow: reached
+                    ? "0 0 22px rgba(56,189,248,.18)"
+                    : "none",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "38px",
+                    marginBottom: "8px",
+                  }}
+                >
+                  {milestone.icon}
+                </div>
+
+                <strong
+                  style={{
+                    display: "block",
+                    color: "#fff",
+                    marginBottom: "6px",
+                  }}
+                >
+                  {milestone.title}
+                </strong>
+
+                <div
+                  style={{
+                    color: "#75b7ff",
+                    fontWeight: 800,
+                  }}
+                >
+                  ${milestone.volume.toLocaleString()}
+                </div>
+
+                <small
+                  style={{
+                    display: "block",
+                    marginTop: "8px",
+                    color: earned
+                      ? "#4ade80"
+                      : "#8da1b5",
+                  }}
+                >
+                  {earned
+                    ? "✓ Earned"
+                    : reached
+                    ? "Eligible"
+                    : "In Progress"}
+                </small>
+              </div>
+            );
+          })}
+        </div>
+
+        <p
+          style={{
+            marginTop: "16px",
+            color: "#8293a6",
+            fontSize: "12px",
+            lineHeight: 1.6,
+          }}
+        >
+          Milestones are based on combined approved
+          qualifying deposit volume from your referrals.
+          Example: $1,000 + $9,000 = $10,000 volume.
+        </p>
       </div>
 
       <div className="panel-card">
@@ -3229,8 +3489,7 @@ function Referrals({
 
         {count === 0 ? (
           <div className="empty">
-            अभी कोई referral नहीं
-            है।
+            अभी कोई referral नहीं है।
           </div>
         ) : (
           <div className="table-wrap">
@@ -3239,18 +3498,17 @@ function Referrals({
                 <tr>
                   <th>Name</th>
                   <th>Email</th>
-                  <th>Reward</th>
+                  <th>Qualifying Volume</th>
+                  <th>Status</th>
                   <th>Date</th>
                 </tr>
               </thead>
 
               <tbody>
-                {data.referrals.map(
+                {referrals.map(
                   (ref) => (
                     <tr
-                      key={
-                        ref.userId
-                      }
+                      key={ref.userId}
                     >
                       <td>
                         {ref.name}
@@ -3263,9 +3521,14 @@ function Referrals({
                       <td>
                         $
                         {Number(
-                          ref.reward ||
-                            10
+                          ref.qualifyingVolume || 0
                         ).toFixed(2)}
+                      </td>
+
+                      <td>
+                        {ref.qualifying
+                          ? "Approved"
+                          : "Pending"}
                       </td>
 
                       <td>

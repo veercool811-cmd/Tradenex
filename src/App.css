@@ -6598,3 +6598,232 @@ a{
     margin:12px 0 !important;
   }
 }
+
+/* ===== PREMIUM OFFER MOBILE WIDTH FIX ===== */
+@media (max-width: 600px){
+  .live-offer-banner{
+    width: calc(100% + 28px);
+    max-width: none;
+    margin-left: -14px;
+    margin-right: -14px;
+    box-sizing: border-box;
+    padding: 22px 14px 16px;
+    border-radius: 22px;
+  }
+
+  .live-offer-main h2{
+    font-size: 24px;
+    line-height: 1.15;
+  }
+
+  .live-offer-main p{
+    font-size: 14px;
+    line-height: 1.45;
+  }
+
+  .live-offer-gift-box{
+    width: 95px;
+    height: 95px;
+    font-size: 54px;
+  }
+
+  .live-offer-highlight{
+    width: 145px;
+    height: 100px;
+  }
+
+  .live-offer-highlight strong{
+    font-size: 40px;
+  }
+
+  .live-offer-button{
+    width: 100%;
+    min-height: 60px;
+    font-size: 15px;
+  }
+}
+
+/* =====================================================
+   MOBILE FULL-WIDTH PREMIUM LAYOUT
+===================================================== */
+@media (max-width: 600px){
+
+  html, body, #root{
+    width:100% !important;
+    max-width:100% !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow-x:hidden !important;
+  }
+
+  *, *::before, *::after{
+    box-sizing:border-box;
+  }
+
+  main,
+  .app,
+  .app-container,
+  .dashboard,
+  .dashboard-container,
+  .page,
+  .page-content,
+  .content,
+  .main-content,
+  .user-panel{
+    width:100% !important;
+    max-width:none !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+  }
+
+  /* Main dashboard outer spacing */
+  .dashboard,
+  .dashboard-container,
+  .page-content,
+  .main-content,
+  .user-panel{
+    padding-left:8px !important;
+    padding-right:8px !important;
+  }
+
+  /* All major cards */
+  .card,
+  .panel,
+  .dashboard-card,
+  .hero-card,
+  .hero-banner,
+  .transaction-card,
+  .transactions-card,
+  .live-offer-banner{
+    width:100% !important;
+    max-width:none !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+  }
+
+  /* Premium offer */
+  .live-offer-banner{
+    width:100% !important;
+    margin-left:0 !important;
+    margin-right:0 !important;
+    padding-left:12px !important;
+    padding-right:12px !important;
+  }
+
+  /* Hero */
+  .hero-card,
+  .hero-banner{
+    padding-left:12px !important;
+    padding-right:12px !important;
+  }
+
+  /* Tables should use available width */
+  .table-container,
+  .transactions-table,
+  .table-wrapper{
+    width:100% !important;
+    max-width:none !important;
+    overflow-x:auto;
+  }
+
+  /* Remove excessive mobile horizontal gaps */
+  section,
+  article{
+    max-width:100% !important;
+  }
+
+}
+
+/* FINAL MOBILE WIDE OFFER */
+@media (max-width:600px){
+  .live-offer-banner{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+    display:grid !important;
+    grid-template-columns:105px minmax(0,1fr) 92px !important;
+    grid-template-rows:auto 58px !important;
+    gap:10px !important;
+    margin:18px 0 !important;
+    padding:18px 12px !important;
+    border-radius:23px !important;
+  }
+
+  .live-offer-gift{
+    min-height:115px !important;
+  }
+
+  .live-offer-gift-box{
+    width:92px !important;
+    height:92px !important;
+    font-size:52px !important;
+  }
+
+  .live-offer-main{
+    min-width:0 !important;
+    text-align:left !important;
+  }
+
+  .live-offer-label{
+    font-size:8px !important;
+    padding:6px 10px !important;
+    margin-bottom:7px !important;
+    letter-spacing:1px !important;
+    white-space:nowrap !important;
+  }
+
+  .live-offer-main h2{
+    font-size:21px !important;
+    line-height:1.1 !important;
+    margin-bottom:6px !important;
+  }
+
+  .live-offer-main p{
+    font-size:12px !important;
+    line-height:1.4 !important;
+    display:-webkit-box !important;
+    -webkit-line-clamp:4 !important;
+    -webkit-box-orient:vertical !important;
+    overflow:hidden !important;
+  }
+
+  .live-offer-highlight{
+    width:88px !important;
+    height:112px !important;
+    border-radius:18px !important;
+  }
+
+  .live-offer-highlight strong{
+    font-size:34px !important;
+  }
+
+  .live-offer-button{
+    grid-column:1 / -1 !important;
+    width:100% !important;
+    min-height:58px !important;
+    border-radius:16px !important;
+    font-size:15px !important;
+  }
+}
+
+/* MAKE MAIN SITE FULL WIDTH */
+@media (max-width:600px){
+  html,body,#root{
+    width:100% !important;
+    max-width:none !important;
+    margin:0 !important;
+    padding:0 !important;
+    overflow-x:hidden !important;
+  }
+
+  .app,
+  .dashboard,
+  .dashboard-main,
+  .main-content,
+  .content,
+  .page-content{
+    width:100% !important;
+    max-width:none !important;
+    box-sizing:border-box !important;
+  }
+}
