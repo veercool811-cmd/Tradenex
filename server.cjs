@@ -416,6 +416,9 @@ function queuePersist(fileName, data) {
 
 app.set("trust proxy", 1);
 
+app.use(express.static(path.join(__dirname, "public")));
+
+
 app.use(
   cors({
     origin: true,
@@ -434,11 +437,13 @@ app.use(
   })
 );
 
+
 app.use(
   express.json({
     limit: "20mb",
   })
 );
+
 
 app.use(
   express.urlencoded({
@@ -1228,6 +1233,7 @@ const upload =
       }
     },
   });
+
 
 app.use(
   "/uploads",
@@ -4626,6 +4632,7 @@ app.get(
    404
 ===================================================== */
 
+
 app.use(
   (req, res) => {
     res
@@ -4647,6 +4654,7 @@ app.use(
 /* =====================================================
    ERROR HANDLER
 ===================================================== */
+
 
 app.use(
   (
