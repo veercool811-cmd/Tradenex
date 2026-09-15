@@ -3161,18 +3161,21 @@ function Referrals({
       id: "iphone",
       volume: 10000,
       icon: "📱",
+      image: "/images/referral/iphone-15-pro.png",
       title: "iPhone",
     },
     {
       id: "bullet",
       volume: 20000,
       icon: "🏍️",
+      image: "/images/referral/royal-enfield-bullet.png",
       title: "Royal Enfield Bullet",
     },
     {
       id: "car",
       volume: 50000,
       icon: "🚗",
+      image: "/images/referral/maruti-baleno.png",
       title: "Maruti Swift / Baleno / Hyundai i20",
     },
   ];
@@ -3420,11 +3423,29 @@ function Referrals({
               >
                 <div
                   style={{
-                    fontSize: "38px",
-                    marginBottom: "8px",
+                    height: "150px",
+                    marginBottom: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    background: "rgba(0,0,0,.18)",
                   }}
                 >
-                  {milestone.icon}
+                  <img
+                    src={milestone.image}
+                    alt={milestone.title}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      display: "block",
+                      filter: reached
+                        ? "drop-shadow(0 0 18px rgba(56,189,248,.45))"
+                        : "drop-shadow(0 0 10px rgba(56,189,248,.18))",
+                    }}
+                  />
                 </div>
 
                 <strong
