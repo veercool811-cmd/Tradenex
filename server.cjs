@@ -823,6 +823,144 @@ function creditReferralCommissions(users, deposit) {
 }
 
 
+
+/* =====================================================
+   REFERRAL HISTORICAL BACKFILL
+   Rebuilds qualifying referral volume from ALL approved
+   historical deposits and safely restores missing
+   L1-L5 commissions without duplicating existing ones.
+===================================================== */
+
+function backfillReferralData(users, deposits) {
+  const approvedDeposits = Array.isArray(deposits)
+    ? deposits.filter(
+        (d) =>
+          d &&
+          String(d.status || "").toLowerCase() === "approved" &&
+          number(d.amount) > 0 &&
+          String(d.userId || "").trim()
+      )
+    : [];
+
+  let referralRecords = 0;
+  let qualifyingRecords = 0;
+  let commissionsAdded = 0;
+  let milestonesAdded = 0;
+
+  /*
+    First rebuild referral metadata from the existing signup
+    relationships. Existing referral records are preserved.
+  */
+  for (const referrer of users) {
+    if (!Array.isArray(referrer.referrals)) {
+      referrer.referrals = [];
+    }
+
+    for (const referral of referrer.referrals) {
+      if (!referral || !referral.userId) continue;
+
+      referralRecords++;
+
+      referral.qualifyingVolume = 0;
+      referral.qualifying = false;
+    }
+
+    referrer.referralVolume = 0;
+
+    if (!Array.isArray(referrer.referralMilestones)) {
+      referrer.referralMilestones = [];
+    }
+  }
+
+  /*
+    Recalculate historical qualifying volume.
+    Only approved deposits >= the qualifying minimum count.
+  */
+  for (const deposit of approvedDeposits) {
+    const amount = number(deposit.amount);
+    if (amount < REFERRAL_MIN_DEPOSIT) continue;
+
+    const depositUserId = String(deposit.userId || "").trim();
+
+    const referrer = users.find(
+      (u) =>
+        Array.isArray(u.referrals) &&
+        u.referrals.some(
+          (r) => String(r.userId) === depositUserId
+        )
+    );
+
+    if (!referrer) continue;
+
+    const referral = referrer.referrals.find(
+      (r) => String(r.userId) === depositUserId
+    );
+
+    if (!referral) continue;
+
+    referral.qualifyingVolume =
+      number(referral.qualifyingVolume) + amount;
+
+    referral.qualifying = true;
+  }
+
+  /*
+    Rebuild combined referral volume and milestone state.
+    Existing earned milestone records are preserved.
+  */
+  for (const referrer of users) {
+    if (!Array.isArray(referrer.referrals)) continue;
+
+    referrer.referralVolume = referrer.referrals.reduce(
+      (sum, r) => sum + number(r && r.qualifyingVolume),
+      0
+    );
+
+    qualifyingRecords += referrer.referrals.filter(
+      (r) => r && r.qualifying === true
+    ).length;
+
+    for (const milestone of REFERRAL_MILESTONES) {
+      if (
+        number(referrer.referralVolume) >= number(milestone.volume) &&
+        !referrer.referralMilestones.some(
+          (m) => m && m.id === milestone.id
+        )
+      ) {
+        referrer.referralMilestones.push({
+          id: milestone.id,
+          volume: milestone.volume,
+          reward: milestone.reward,
+          earnedAt: now(),
+        });
+
+        milestonesAdded++;
+      }
+    }
+  }
+
+  /*
+    Historical commissions.
+    creditReferralCommissions() already protects each deposit
+    and level through depositId + level transaction records.
+  */
+  for (const deposit of approvedDeposits) {
+    const added = creditReferralCommissions(users, deposit);
+    commissionsAdded += Array.isArray(added)
+      ? added.length
+      : 0;
+  }
+
+  return {
+    approvedDeposits: approvedDeposits.length,
+    referralRecords,
+    qualifyingRecords,
+    commissionsAdded,
+    milestonesAdded,
+  };
+}
+
+
 /* =====================================================
    MSG91 OTP WIDGET
 ===================================================== */
@@ -4756,6 +4894,25 @@ async function applyDailyProfits() {
 
 initPersistentStorage()
   .then(async () => {
+    const referralUsers = read(USERS_FILE);
+    const referralDeposits = read(DEPOSITS_FILE);
+
+    const referralBackfillResult =
+      backfillReferralData(
+        referralUsers,
+        referralDeposits
+      );
+
+    write(
+      USERS_FILE,
+      referralUsers
+    );
+
+    console.log(
+      "REFERRAL HISTORICAL BACKFILL:",
+      JSON.stringify(referralBackfillResult)
+    );
+
     await applyDailyProfits();
     app.listen(
       PORT,
