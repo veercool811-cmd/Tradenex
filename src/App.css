@@ -9234,3 +9234,129 @@ html[data-tradenex-theme] .topbar {
   }
 }
 
+
+/* =====================================================
+   OFFER - BIG ANIMATED GIFT + CLEAN TEXT
+===================================================== */
+
+.live-offer-compact .live-offer-gift {
+  flex: 0 0 88px !important;
+  width: 88px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.live-offer-compact .live-offer-gift-box {
+  width: 72px !important;
+  height: 72px !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 46px !important;
+  transform-origin: center center;
+  animation:
+    giftBeat 1.15s ease-in-out infinite,
+    giftGlow 1.15s ease-in-out infinite;
+}
+
+/* Gift heartbeat */
+@keyframes giftBeat {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+  }
+
+  12% {
+    transform: scale(1.10) rotate(-2deg);
+  }
+
+  24% {
+    transform: scale(1.18) rotate(2deg);
+  }
+
+  36% {
+    transform: scale(1.08) rotate(-1deg);
+  }
+
+  48% {
+    transform: scale(1.02) rotate(0deg);
+  }
+}
+
+/* Golden glow follows the beat */
+@keyframes giftGlow {
+  0%, 100% {
+    filter:
+      drop-shadow(0 0 5px rgba(255,190,30,.35))
+      drop-shadow(0 0 12px rgba(255,150,0,.15));
+  }
+
+  24% {
+    filter:
+      drop-shadow(0 0 10px rgba(255,215,60,.75))
+      drop-shadow(0 0 25px rgba(255,150,0,.50));
+  }
+}
+
+/* Keep offer text straight and properly aligned */
+.live-offer-compact .live-offer-main {
+  flex: 1 1 auto !important;
+  min-width: 0 !important;
+  text-align: left !important;
+  display: flex !important;
+  flex-direction: column !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+}
+
+.live-offer-compact .live-offer-label {
+  white-space: nowrap !important;
+  transform: none !important;
+}
+
+.live-offer-compact .live-offer-main h2 {
+  width: 100% !important;
+  margin: 5px 0 !important;
+  line-height: 1.15 !important;
+  text-align: left !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  transform: none !important;
+}
+
+.live-offer-compact .live-offer-main p {
+  width: 100% !important;
+  margin: 0 !important;
+  line-height: 1.35 !important;
+  text-align: left !important;
+  white-space: normal !important;
+  word-break: normal !important;
+  transform: none !important;
+}
+
+/* Mobile */
+@media (max-width: 760px) {
+
+  .live-offer-compact .live-offer-gift {
+    flex: 0 0 68px !important;
+    width: 68px !important;
+  }
+
+  .live-offer-compact .live-offer-gift-box {
+    width: 60px !important;
+    height: 60px !important;
+    font-size: 38px !important;
+  }
+
+  .live-offer-compact .live-offer-main h2 {
+    font-size: 14px !important;
+    line-height: 1.2 !important;
+    margin: 3px 0 !important;
+  }
+
+  .live-offer-compact .live-offer-main p {
+    font-size: 9px !important;
+    line-height: 1.25 !important;
+  }
+}
+
