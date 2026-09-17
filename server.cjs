@@ -1602,6 +1602,41 @@ app.post(
           });
       }
 
+      const normalizedPhone =
+        phoneValue
+          .replace(/\D/g, "")
+          .replace(/^91/, "");
+
+      const existingMobile =
+        users.find(
+          (u) => {
+            const savedMobile =
+              String(
+                u.mobile ||
+                u.phone ||
+                ""
+              )
+                .replace(/\D/g, "")
+                .replace(/^91/, "");
+
+            return (
+              savedMobile &&
+              normalizedPhone &&
+              savedMobile === normalizedPhone
+            );
+          }
+        );
+
+      if (existingMobile) {
+        return res
+          .status(409)
+          .json({
+            success: false,
+            message:
+              "Mobile number already registered.",
+          });
+      }
+
       /*
         Referral code
       */
@@ -3670,11 +3705,61 @@ app.put(
       if (req.body?.name !== undefined)
         user.name = String(req.body.name).trim();
 
-      if (req.body?.email !== undefined)
-        user.email = String(req.body.email).trim();
+      if (req.body?.email !== undefined) {
+        const newEmail =
+          String(req.body.email).trim().toLowerCase();
 
-      if (req.body?.mobile !== undefined)
-        user.mobile = String(req.body.mobile).trim();
+        const duplicateEmail = users.find(
+          (u, i) =>
+            i !== index &&
+            String(u.email || "").trim().toLowerCase() === newEmail
+        );
+
+        if (duplicateEmail) {
+          return res.status(409).json({
+            success: false,
+            message:
+              "Email already registered to another user.",
+          });
+        }
+
+        user.email = newEmail;
+      }
+
+      if (req.body?.mobile !== undefined) {
+        const newMobile =
+          String(req.body.mobile)
+            .replace(/\D/g, "")
+            .replace(/^91/, "");
+
+        const duplicateMobile = users.find(
+          (u, i) => {
+            if (i === index) return false;
+
+            const savedMobile =
+              String(u.mobile || u.phone || "")
+                .replace(/\D/g, "")
+                .replace(/^91/, "");
+
+            return (
+              savedMobile &&
+              newMobile &&
+              savedMobile === newMobile
+            );
+          }
+        );
+
+        if (duplicateMobile) {
+          return res.status(409).json({
+            success: false,
+            message:
+              "Mobile number already registered to another user.",
+          });
+        }
+
+        user.mobile =
+          String(req.body.mobile).trim();
+      }
 
       if (req.body?.address !== undefined)
         user.address = String(req.body.address).trim();
@@ -3842,7 +3927,7 @@ app.put(
 /* ADMIN USER DELETE */
 app.delete(
   "/api/admin/users/:id",
-  (req, res) => {
+  async (req, res) => {
     try {
       const users = read(USERS_FILE);
       const index = users.findIndex(
@@ -3857,10 +3942,50 @@ app.delete(
       }
 
       const deletedUser = users[index];
+      const deletedUserId = String(deletedUser.id);
 
       users.splice(index, 1);
 
-      write(USERS_FILE, users);
+      /*
+        Remove deleted user from any referrer's referral list.
+      */
+      for (const referrer of users) {
+        if (Array.isArray(referrer.referrals)) {
+          referrer.referrals =
+            referrer.referrals.filter(
+              (ref) =>
+                String(ref.userId) !== deletedUserId
+            );
+
+          referrer.referralVolume =
+            referrer.referrals.reduce(
+              (total, ref) =>
+                total + Number(ref.qualifyingVolume || 0),
+              0
+            );
+        }
+      }
+
+      /*
+        Delete the user directly from PostgreSQL.
+        queuePersist() intentionally blocks empty arrays,
+        so DELETE must be handled explicitly here.
+      */
+      if (persistentReady) {
+        await persistQueue;
+
+        await pool.query(
+          "DELETE FROM users WHERE id = $1",
+          [deletedUserId]
+        );
+      }
+
+      persistentCache[USERS_FILE] = users;
+
+      fs.writeFileSync(
+        USERS_FILE,
+        JSON.stringify(users, null, 2)
+      );
 
       res.json({
         success: true,
