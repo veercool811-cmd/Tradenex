@@ -3604,6 +3604,259 @@ function Profile({
   const [loading, setLoading] =
     useState(false);
 
+  const [resetType, setResetType] =
+    useState("");
+
+  const [resetStep, setResetStep] =
+    useState("idle");
+
+  const [resetOtp, setResetOtp] =
+    useState("");
+
+  const [resetReqId, setResetReqId] =
+    useState("");
+
+  const [resetAccessToken, setResetAccessToken] =
+    useState("");
+
+  const [resetNewPassword, setResetNewPassword] =
+    useState("");
+
+  const [resetConfirmPassword, setResetConfirmPassword] =
+    useState("");
+
+  const [resetLoading, setResetLoading] =
+    useState(false);
+
+  const [resetMessage, setResetMessage] =
+    useState("");
+
+  const [resetError, setResetError] =
+    useState("");
+
+  function resetMobile() {
+    return String(
+      user?.mobile ||
+      user?.phone ||
+      ""
+    )
+      .replace(/\\D/g, "")
+      .replace(/^91/, "");
+  }
+
+  async function sendPasswordResetOtp(type) {
+    setResetType(type);
+    setResetStep("sending");
+    setResetOtp("");
+    setResetReqId("");
+    setResetAccessToken("");
+    setResetNewPassword("");
+    setResetConfirmPassword("");
+    setResetMessage("");
+    setResetError("");
+
+    const phone = resetMobile();
+
+    if (!/^\\d{10}$/.test(phone)) {
+      setResetStep("idle");
+      setResetError(
+        "Registered mobile number is not available."
+      );
+      return;
+    }
+
+    try {
+      setResetLoading(true);
+
+      await loadMSG91();
+
+      await new Promise((resolve, reject) => {
+        window.sendOtp(
+          "91" + phone,
+          (data) => {
+            const reqId =
+              data?.reqId ||
+              data?.requestId ||
+              data?.request_id ||
+              "";
+
+            setResetReqId(String(reqId));
+            resolve(data);
+          },
+          (error) => {
+            reject(
+              new Error(
+                typeof error === "string"
+                  ? error
+                  : "OTP send failed."
+              )
+            );
+          }
+        );
+      });
+
+      setResetStep("otp");
+      setResetMessage(
+        "OTP registered mobile number par bhej diya gaya hai."
+      );
+    } catch (err) {
+      setResetStep("idle");
+      setResetError(
+        err?.message ||
+        "OTP send failed."
+      );
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  async function verifyPasswordResetOtp() {
+    const phone = resetMobile();
+
+    if (!/^\\d{10}$/.test(phone)) {
+      setResetError(
+        "Registered mobile number is not available."
+      );
+      return;
+    }
+
+    if (!/^\\d{4,8}$/.test(
+      String(resetOtp).trim()
+    )) {
+      setResetError("Valid OTP enter karein.");
+      return;
+    }
+
+    try {
+      setResetLoading(true);
+      setResetError("");
+      setResetMessage("");
+
+      await loadMSG91();
+
+      const result =
+        await new Promise((resolve, reject) => {
+          window.verifyOtp(
+            String(resetOtp).trim(),
+            (data) => resolve(data),
+            (error) =>
+              reject(
+                new Error(
+                  typeof error === "string"
+                    ? error
+                    : "OTP verification failed."
+                )
+              ),
+            resetReqId || undefined
+          );
+        });
+
+      const accessToken =
+        findMSG91Token(result);
+
+      if (!accessToken) {
+        throw new Error(
+          "OTP verified but verification token नहीं मिला."
+        );
+      }
+
+      await api(
+        "/auth/verify-mobile",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            phone,
+            accessToken,
+          }),
+        }
+      );
+
+      setResetAccessToken(accessToken);
+      setResetStep("password");
+      setResetMessage(
+        "OTP verified. Ab naya password set karein."
+      );
+    } catch (err) {
+      setResetError(
+        err?.message ||
+        "OTP verification failed."
+      );
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
+  async function confirmPasswordReset() {
+    if (resetNewPassword.length < 6) {
+      setResetError(
+        "Password minimum 6 characters."
+      );
+      return;
+    }
+
+    if (
+      resetNewPassword !==
+      resetConfirmPassword
+    ) {
+      setResetError(
+        "New passwords match नहीं हैं."
+      );
+      return;
+    }
+
+    const phone = resetMobile();
+
+    try {
+      setResetLoading(true);
+      setResetError("");
+      setResetMessage("");
+
+      const result =
+        await api(
+          "/password-reset/confirm",
+          {
+            method: "POST",
+            body: JSON.stringify({
+              type: resetType,
+              phone,
+              accessToken: resetAccessToken,
+              newPassword: resetNewPassword,
+              confirmPassword:
+                resetConfirmPassword,
+            }),
+          }
+        );
+
+      setResetMessage(
+        result.message ||
+        "Password reset successfully."
+      );
+
+      setResetStep("idle");
+      setResetOtp("");
+      setResetReqId("");
+      setResetAccessToken("");
+      setResetNewPassword("");
+      setResetConfirmPassword("");
+
+      if (resetType === "login") {
+        localStorage.removeItem("tradenex_token");
+        localStorage.removeItem("tradenex_user");
+
+        setTimeout(() => {
+          window.location.reload();
+        }, 1200);
+      }
+    } catch (err) {
+      setResetError(
+        err?.message ||
+        "Password reset failed."
+      );
+    } finally {
+      setResetLoading(false);
+    }
+  }
+
   async function submit(e) {
     e.preventDefault();
 
@@ -4004,6 +4257,141 @@ function Settings() {
           <h3>
             💳 Transaction Password
           </h3>
+
+          <button
+            type="button"
+            className="secondary-btn"
+            disabled={resetLoading}
+            onClick={() =>
+              sendPasswordResetOtp("transaction")
+            }
+            style={{
+              marginBottom: "18px",
+              width: "100%",
+            }}
+          >
+            Forgot Transaction Password?
+          </button>
+
+          {resetType === "transaction" &&
+            resetStep !== "idle" && (
+              <div
+                className="panel-card"
+                style={{
+                  marginBottom: "20px",
+                }}
+              >
+                <h4>
+                  🔑 Reset Transaction Password
+                </h4>
+
+                <p>
+                  OTP aapke registered mobile
+                  number par bheja jayega.
+                </p>
+
+                {resetStep === "sending" && (
+                  <p>OTP sending...</p>
+                )}
+
+                {resetStep === "otp" && (
+                  <>
+                    <label>
+                      Enter OTP
+                    </label>
+
+                    <input
+                      inputMode="numeric"
+                      maxLength={8}
+                      placeholder="Enter OTP"
+                      value={resetOtp}
+                      onChange={(e) =>
+                        setResetOtp(
+                          e.target.value.replace(
+                            /\D/g,
+                            ""
+                          )
+                        )
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      disabled={resetLoading}
+                      onClick={
+                        verifyPasswordResetOtp
+                      }
+                    >
+                      {resetLoading
+                        ? "Verifying..."
+                        : "Verify OTP"}
+                    </button>
+                  </>
+                )}
+
+                {resetStep === "password" && (
+                  <>
+                    <label>
+                      New Transaction Password
+                    </label>
+
+                    <input
+                      type="password"
+                      placeholder="New password"
+                      value={resetNewPassword}
+                      onChange={(e) =>
+                        setResetNewPassword(
+                          e.target.value
+                        )
+                      }
+                    />
+
+                    <label>
+                      Confirm New Password
+                    </label>
+
+                    <input
+                      type="password"
+                      placeholder="Confirm password"
+                      value={
+                        resetConfirmPassword
+                      }
+                      onChange={(e) =>
+                        setResetConfirmPassword(
+                          e.target.value
+                        )
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      disabled={resetLoading}
+                      onClick={
+                        confirmPasswordReset
+                      }
+                    >
+                      {resetLoading
+                        ? "Resetting..."
+                        : "Reset Transaction Password"}
+                    </button>
+                  </>
+                )}
+
+                {resetMessage && (
+                  <div className="success-box">
+                    {resetMessage}
+                  </div>
+                )}
+
+                {resetError && (
+                  <div className="error-box">
+                    {resetError}
+                  </div>
+                )}
+              </div>
+            )}
 
           <div className="info-box">
             अगर Transaction
