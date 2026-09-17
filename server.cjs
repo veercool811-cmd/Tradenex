@@ -3944,6 +3944,42 @@ app.delete(
       const deletedUser = users[index];
       const deletedUserId = String(deletedUser.id);
 
+      /*
+        Reverse referral commissions earned from this user's
+        approved deposits before deleting the user.
+      */
+      const transactions = read(TRANSACTIONS_FILE);
+      const referralCommissionTransactions =
+        transactions.filter(
+          (t) =>
+            t.source === "referralCommission" &&
+            String(t.sourceUserId || "") === deletedUserId
+        );
+
+      for (const tx of referralCommissionTransactions) {
+        const referrer = users.find(
+          (u) =>
+            String(u.id) === String(tx.userId)
+        );
+
+        if (referrer) {
+          referrer.referralReward = Math.max(
+            0,
+            Number(referrer.referralReward || 0) -
+              Number(tx.amount || 0)
+          );
+        }
+      }
+
+      const cleanedTransactions =
+        transactions.filter(
+          (t) =>
+            !(
+              t.source === "referralCommission" &&
+              String(t.sourceUserId || "") === deletedUserId
+            )
+        );
+
       users.splice(index, 1);
 
       /*
@@ -3967,9 +4003,8 @@ app.delete(
       }
 
       /*
-        Delete the user directly from PostgreSQL.
-        queuePersist() intentionally blocks empty arrays,
-        so DELETE must be handled explicitly here.
+        Wait for older persistence operations, then remove the
+        deleted user directly from PostgreSQL.
       */
       if (persistentReady) {
         await persistQueue;
@@ -3986,6 +4021,22 @@ app.delete(
         USERS_FILE,
         JSON.stringify(users, null, 2)
       );
+
+      /*
+        Persist updated referrer reward balances.
+      */
+      write(USERS_FILE, users);
+
+      /*
+        Remove referral commission transactions generated
+        from the deleted user's deposits.
+      */
+      write(
+        TRANSACTIONS_FILE,
+        cleanedTransactions
+      );
+
+      await persistQueue;
 
       res.json({
         success: true,
