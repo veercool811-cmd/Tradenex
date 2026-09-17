@@ -4050,7 +4050,7 @@ function Profile({
    SETTINGS
 ===================================================== */
 
-function Settings() {
+function Settings({ user }) {
   const [form, setForm] =
     useState({
       oldLoginPassword: "",
@@ -5807,7 +5807,7 @@ export default function App() {
 
           {page ===
             "settings" && (
-            <Settings />
+            <Settings user={user} />
           )}
 
           {page === "support" && (
