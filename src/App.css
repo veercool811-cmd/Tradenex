@@ -9360,3 +9360,281 @@ html[data-tradenex-theme] .topbar {
   }
 }
 
+
+/* =====================================================
+   BIG PREMIUM GIFT
+===================================================== */
+
+.live-offer-compact .live-offer-gift {
+  flex: 0 0 120px !important;
+  width: 120px !important;
+  min-width: 120px !important;
+}
+
+.live-offer-compact .live-offer-gift-box {
+  width: 105px !important;
+  height: 105px !important;
+  font-size: 68px !important;
+  transform-origin: center center;
+  animation:
+    giftHeartbeat 1.45s cubic-bezier(.36,.07,.19,.97) infinite,
+    giftGoldenGlow 1.45s ease-in-out infinite;
+  will-change: transform, filter;
+}
+
+@keyframes giftHeartbeat {
+  0%, 100% {
+    transform: scale(1);
+  }
+
+  12% {
+    transform: scale(1.06);
+  }
+
+  24% {
+    transform: scale(1.18);
+  }
+
+  36% {
+    transform: scale(1.07);
+  }
+
+  48% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes giftGoldenGlow {
+  0%, 100% {
+    filter: drop-shadow(0 0 8px rgba(255,190,30,.35));
+  }
+
+  24% {
+    filter:
+      drop-shadow(0 0 12px rgba(255,210,60,.85))
+      drop-shadow(0 0 28px rgba(255,150,0,.55));
+  }
+}
+
+
+/* =====================================================
+   IPHONE-STYLE SMOOTH UI MOTION
+===================================================== */
+
+/* Sidebar buttons */
+.sidebar button,
+.sidebar a,
+.menu-item,
+.nav-item,
+.side-menu button,
+.side-menu a {
+  transition:
+    transform .32s cubic-bezier(.22,1,.36,1),
+    background .32s ease,
+    box-shadow .32s ease,
+    border-color .32s ease !important;
+  will-change: transform;
+}
+
+/* Soft slide when touching / hovering */
+.sidebar button:hover,
+.sidebar a:hover,
+.menu-item:hover,
+.nav-item:hover,
+.side-menu button:hover,
+.side-menu a:hover {
+  transform: translateX(5px);
+}
+
+/* iPhone-like press */
+.sidebar button:active,
+.sidebar a:active,
+.menu-item:active,
+.nav-item:active,
+.side-menu button:active,
+.side-menu a:active {
+  transform: translateX(8px) scale(.97) !important;
+  transition-duration: .08s !important;
+}
+
+
+/* =====================================================
+   PREMIUM CARDS - SOFT LIFT
+===================================================== */
+
+.wallet-stat,
+.wallet-stat-card,
+.stat-card,
+.dashboard-live-market,
+.transaction-panel,
+.wallet-portfolio,
+.wallet-recent,
+.wallet-banner,
+.market-chart-card,
+.market-side-card,
+.premium-hero {
+  transition:
+    transform .38s cubic-bezier(.22,1,.36,1),
+    box-shadow .38s ease,
+    border-color .38s ease !important;
+}
+
+.wallet-stat:hover,
+.wallet-stat-card:hover,
+.stat-card:hover,
+.dashboard-live-market:hover,
+.transaction-panel:hover,
+.wallet-portfolio:hover,
+.wallet-recent:hover,
+.wallet-banner:hover,
+.market-chart-card:hover,
+.market-side-card:hover {
+  transform: translateY(-3px);
+}
+
+
+/* =====================================================
+   BUTTON SMOOTH MOTION
+===================================================== */
+
+button,
+a.live-offer-button,
+.live-offer-button,
+.market-trade-btn,
+.market-full-btn {
+  -webkit-tap-highlight-color: transparent;
+  transition:
+    transform .28s cubic-bezier(.22,1,.36,1),
+    box-shadow .28s ease,
+    background .28s ease,
+    filter .28s ease !important;
+}
+
+button:hover,
+a.live-offer-button:hover,
+.live-offer-button:hover,
+.market-trade-btn:hover,
+.market-full-btn:hover {
+  transform: translateY(-2px);
+}
+
+button:active,
+a.live-offer-button:active,
+.live-offer-button:active,
+.market-trade-btn:active,
+.market-full-btn:active {
+  transform: scale(.96) !important;
+}
+
+
+/* =====================================================
+   SMOOTH MARKET CARDS
+===================================================== */
+
+.market-ticker-item {
+  transition:
+    transform .35s cubic-bezier(.22,1,.36,1),
+    background .3s ease,
+    border-color .3s ease,
+    box-shadow .3s ease !important;
+}
+
+.market-ticker-item:hover {
+  transform: translateY(-4px) scale(1.015);
+}
+
+.market-ticker-item:active {
+  transform: scale(.96) !important;
+}
+
+
+/* =====================================================
+   SOFT PAGE ENTRY
+===================================================== */
+
+.premium-dashboard > * {
+  animation: smoothPageEntry .55s cubic-bezier(.22,1,.36,1) both;
+}
+
+.premium-dashboard > *:nth-child(1) { animation-delay: .02s; }
+.premium-dashboard > *:nth-child(2) { animation-delay: .07s; }
+.premium-dashboard > *:nth-child(3) { animation-delay: .12s; }
+.premium-dashboard > *:nth-child(4) { animation-delay: .17s; }
+
+@keyframes smoothPageEntry {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+
+/* =====================================================
+   MOBILE - EXTRA SMOOTH
+===================================================== */
+
+@media (max-width: 760px) {
+
+  .live-offer-compact .live-offer-gift {
+    flex: 0 0 82px !important;
+    width: 82px !important;
+    min-width: 82px !important;
+  }
+
+  .live-offer-compact .live-offer-gift-box {
+    width: 78px !important;
+    height: 78px !important;
+    font-size: 50px !important;
+  }
+
+  .sidebar button:hover,
+  .sidebar a:hover,
+  .menu-item:hover,
+  .nav-item:hover,
+  .side-menu button:hover,
+  .side-menu a:hover {
+    transform: translateX(3px);
+  }
+
+  .wallet-stat:hover,
+  .wallet-stat-card:hover,
+  .stat-card:hover,
+  .dashboard-live-market:hover,
+  .transaction-panel:hover,
+  .wallet-portfolio:hover,
+  .wallet-recent:hover,
+  .wallet-banner:hover,
+  .market-chart-card:hover,
+  .market-side-card:hover {
+    transform: none;
+  }
+
+  /* Smooth horizontal swipe feel */
+  .market-ticker {
+    scroll-behavior: smooth;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .market-ticker-item {
+    scroll-snap-align: start;
+  }
+}
+
+
+/* Respect Android/iPhone reduced-motion preference */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
