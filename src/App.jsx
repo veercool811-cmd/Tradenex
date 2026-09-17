@@ -1244,80 +1244,380 @@ function TransactionTable({
    WALLET
 ===================================================== */
 
-function Wallet({ user }) {
+function Wallet({ user, data = {}, go }) {
+  const num = (v) => Number(v || 0);
+
+  const balance = num(
+    user?.balance ??
+    user?.walletBalance ??
+    data?.walletBalance
+  );
+
+  const deposit = num(
+    user?.totalDeposit ??
+    data?.totalDeposit
+  );
+
+  const profit = num(
+    user?.profit ??
+    data?.profit ??
+    Math.max(0, balance - deposit)
+  );
+
+  const referral = num(
+    user?.referralReward ??
+    data?.referralReward
+  );
+
+  const withdrawal = num(
+    user?.totalWithdrawal ??
+    user?.totalWithdrawals ??
+    data?.totalWithdrawal
+  );
+
+  const transactions = Array.isArray(data?.transactions)
+    ? data.transactions
+    : [];
+
+  const referrals = Array.isArray(data?.referrals)
+    ? data.referrals.length
+    : num(data?.referrals);
+
+  const totalValue = balance + profit + referral;
+
+  const balancePercent =
+    totalValue > 0 ? (balance / totalValue) * 100 : 0;
+
+  const profitPercent =
+    totalValue > 0 ? (profit / totalValue) * 100 : 0;
+
+  const referralPercent =
+    totalValue > 0 ? (referral / totalValue) * 100 : 0;
+
+  const accountStatus =
+    user?.status ||
+    user?.accountStatus ||
+    "Active";
+
+  const donutStyle = {
+    background: `conic-gradient(
+      #2787ff 0 ${balancePercent}%,
+      #9b5cff ${balancePercent}% ${balancePercent + profitPercent}%,
+      #d9a62e ${balancePercent + profitPercent}% ${balancePercent + profitPercent + referralPercent}%,
+      #0c2730 ${balancePercent + profitPercent + referralPercent}% 100%
+    )`,
+  };
+
   return (
-    <>
-      <div className="page-title">
-        <small>WALLET</small>
+    <div className="wallet-premium">
 
-        <h2>Wallet</h2>
-
-        <p>
-          Your current wallet
-          information.
-        </p>
-      </div>
-
-      <div className="stats-grid">
-        <div className="stat-card">
-          <span>💰</span>
-
-          <small>
-            Available Balance
-          </small>
-
-          <strong>
-            $
-            {Number(
-              user.balance || 0
-            ).toFixed(2)}
-          </strong>
+      <div className="wallet-page-head">
+        <div>
+          <span>WALLET</span>
+          <h1>Wallet</h1>
+          <p>Your current wallet information and profit summary.</p>
         </div>
 
-        <div className="stat-card">
-          <span>📥</span>
-
-          <small>
-            Total Deposit
-          </small>
-
-          <strong>
-            $
-            {Number(
-              user.totalDeposit || 0
-            ).toFixed(2)}
-          </strong>
-        </div>
-
-        <div className="stat-card">
-          <span>📈</span>
-
-          <small>Profit</small>
-
-          <strong>
-            $
-            {Number(
-              user.profit || 0
-            ).toFixed(2)}
-          </strong>
-        </div>
-
-        <div className="stat-card">
-          <span>🎁</span>
-
-          <small>
-            Referral Reward
-          </small>
-
-          <strong>
-            $
-            {Number(
-              user.referralReward || 0
-            ).toFixed(2)}
-          </strong>
+        <div className="wallet-live">
+          <i></i>
+          Live Account
         </div>
       </div>
-    </>
+
+      {/* ================= STATS ================= */}
+
+      <div className="wallet-stat-grid">
+
+        <div className="wallet-stat wallet-blue">
+          <div className="wallet-stat-icon">💰</div>
+          <div>
+            <small>Available Balance</small>
+            <strong>${balance.toFixed(2)}</strong>
+            <em>Current wallet balance</em>
+          </div>
+        </div>
+
+        <div className="wallet-stat wallet-green">
+          <div className="wallet-stat-icon">💼</div>
+          <div>
+            <small>Total Deposit</small>
+            <strong>${deposit.toFixed(2)}</strong>
+            <em>Total investment</em>
+          </div>
+        </div>
+
+        <div className="wallet-stat wallet-purple">
+          <div className="wallet-stat-icon">📊</div>
+          <div>
+            <small>Total Profit</small>
+            <strong>${profit.toFixed(2)}</strong>
+            <em>
+              {deposit > 0
+                ? `${((profit / deposit) * 100).toFixed(1)}% return`
+                : "No investment return yet"}
+            </em>
+          </div>
+        </div>
+
+        <div className="wallet-stat wallet-gold">
+          <div className="wallet-stat-icon">🎁</div>
+          <div>
+            <small>Referral Reward</small>
+            <strong>${referral.toFixed(2)}</strong>
+            <em>{referrals} referral{referrals === 1 ? "" : "s"}</em>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ================= PORTFOLIO ================= */}
+
+      <section className="wallet-portfolio">
+
+        <div className="wallet-section-head">
+          <div>
+            <h2>◉ Portfolio Overview</h2>
+            <p>Total wallet value distribution</p>
+          </div>
+
+          <span>Current Portfolio</span>
+        </div>
+
+        <div className="wallet-portfolio-body">
+
+          <div className="wallet-donut-wrap">
+            <div
+              className="wallet-donut"
+              style={donutStyle}
+            >
+              <div className="wallet-donut-inner">
+                <small>Total Value</small>
+                <strong>${totalValue.toFixed(2)}</strong>
+                <em>
+                  {deposit > 0
+                    ? `+${((profit / deposit) * 100).toFixed(1)}%`
+                    : "0.0%"}
+                </em>
+              </div>
+            </div>
+          </div>
+
+          <div className="wallet-distribution">
+
+            <div>
+              <i className="dot-blue"></i>
+              <span>Available Balance</span>
+              <strong>${balance.toFixed(2)}</strong>
+              <small>{balancePercent.toFixed(1)}%</small>
+            </div>
+
+            <div>
+              <i className="dot-purple"></i>
+              <span>Total Profit</span>
+              <strong>${profit.toFixed(2)}</strong>
+              <small>{profitPercent.toFixed(1)}%</small>
+            </div>
+
+            <div>
+              <i className="dot-gold"></i>
+              <span>Referral Reward</span>
+              <strong>${referral.toFixed(2)}</strong>
+              <small>{referralPercent.toFixed(1)}%</small>
+            </div>
+
+            <div>
+              <i className="dot-green"></i>
+              <span>Total Withdrawal</span>
+              <strong>${withdrawal.toFixed(2)}</strong>
+              <small>Withdrawn</small>
+            </div>
+
+          </div>
+
+        </div>
+
+        <div className="wallet-mini-stats">
+
+          <div>
+            <span>↗</span>
+            <small>Profit / Deposit</small>
+            <strong>
+              {deposit > 0
+                ? `${((profit / deposit) * 100).toFixed(2)}%`
+                : "0.00%"}
+            </strong>
+          </div>
+
+          <div>
+            <span>⇄</span>
+            <small>Total Transactions</small>
+            <strong>{transactions.length}</strong>
+          </div>
+
+          <div>
+            <span>♧</span>
+            <small>Referrals</small>
+            <strong>{referrals}</strong>
+          </div>
+
+          <div>
+            <span>✓</span>
+            <small>Account Status</small>
+            <strong className="wallet-status">{accountStatus}</strong>
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* ================= QUICK ACTIONS ================= */}
+
+      <section className="wallet-actions">
+
+        <div className="wallet-section-head">
+          <div>
+            <h2>▣ Quick Actions</h2>
+            <p>Manage your account easily and securely.</p>
+          </div>
+        </div>
+
+        <div className="wallet-action-grid">
+
+          <button
+            type="button"
+            onClick={() => go && go("deposit")}
+            className="action-blue"
+          >
+            <span>↓</span>
+            <b>Deposit</b>
+            <small>Add Funds →</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("withdraw")}
+            className="action-purple"
+          >
+            <span>↗</span>
+            <b>Withdraw</b>
+            <small>Withdraw Funds →</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("transactions")}
+            className="action-gold"
+          >
+            <span>⇄</span>
+            <b>Transactions</b>
+            <small>View Activity →</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("statement")}
+            className="action-green"
+          >
+            <span>▤</span>
+            <b>My Statement</b>
+            <small>View Statement →</small>
+          </button>
+
+        </div>
+
+      </section>
+
+      {/* ================= RECENT TRANSACTIONS ================= */}
+
+      <section className="wallet-recent">
+
+        <div className="wallet-section-head">
+          <div>
+            <h2>▣ Recent Transactions</h2>
+            <p>Your latest wallet activity.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => go && go("transactions")}
+          >
+            View All →
+          </button>
+        </div>
+
+        <div className="wallet-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {transactions.slice(0, 5).map((tx, index) => (
+                <tr key={tx.id || index}>
+                  <td>{index + 1}</td>
+
+                  <td>
+                    <span className="wallet-tx-icon">↓</span>
+                    {tx.type || "Transaction"}
+                  </td>
+
+                  <td>
+                    ${num(tx.amount).toFixed(2)}
+                  </td>
+
+                  <td>
+                    <span className="wallet-tx-status">
+                      {tx.status || "Approved"}
+                    </span>
+                  </td>
+
+                  <td>
+                    {tx.date ||
+                      tx.createdAt ||
+                      "—"}
+                  </td>
+                </tr>
+              ))}
+
+              {!transactions.length && (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="wallet-empty"
+                  >
+                    No transactions yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+      <section className="wallet-banner">
+        <div className="wallet-banner-logo">T</div>
+
+        <div>
+          <h2>Trade Smarter, Grow Faster</h2>
+          <p>Secure • Reliable • Global</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => go && go("live-trading")}
+        >
+          Start Trading →
+        </button>
+      </section>
+
+    </div>
   );
 }
 
@@ -5817,7 +6117,7 @@ export default function App() {
           )}
 
           {page === "wallet" && (
-            <Wallet user={user} />
+            <Wallet user={user} data={data} go={openPage} />
           )}
 
           {page ===
