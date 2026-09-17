@@ -7138,3 +7138,539 @@ article,
   background-color:transparent;
 }
 
+
+/* =========================================================
+   TRADENEX PREMIUM UI v3
+   Visual upgrade only — JSX / functionality untouched
+========================================================= */
+
+:root{
+  --tx-bg:#020812;
+  --tx-bg2:#041322;
+  --tx-panel:#071a2b;
+  --tx-panel2:#092239;
+  --tx-border:rgba(104,181,255,.13);
+  --tx-blue:#2878ff;
+  --tx-blue2:#5947ff;
+  --tx-cyan:#22c7ff;
+  --tx-green:#13c99a;
+  --tx-text:#f4f8ff;
+  --tx-muted:#71879d;
+}
+
+/* ---------- GLOBAL ---------- */
+
+html{
+  background:#020812 !important;
+}
+
+body{
+  background:
+    radial-gradient(circle at 80% 0%,rgba(35,104,220,.13),transparent 28%),
+    radial-gradient(circle at 25% 55%,rgba(0,154,220,.06),transparent 30%),
+    linear-gradient(135deg,#01060d,#031321 55%,#020812) !important;
+  color:var(--tx-text) !important;
+}
+
+.app-shell{
+  background:
+    radial-gradient(circle at 75% 5%,rgba(40,110,255,.07),transparent 25%),
+    linear-gradient(180deg,#020a13,#03111d) !important;
+}
+
+/* ---------- SIDEBAR ---------- */
+
+.sidebar{
+  background:
+    linear-gradient(180deg,#061a2c 0%,#031321 45%,#020d18 100%) !important;
+  border-right:1px solid rgba(83,166,235,.13) !important;
+  box-shadow:8px 0 35px rgba(0,0,0,.30) !important;
+}
+
+.sidebar-logo-img,
+.tradenex-logo-img,
+.tradenex-mark-img{
+  filter:drop-shadow(0 0 14px rgba(39,130,255,.20));
+}
+
+.menu-title{
+  color:#66829c !important;
+  letter-spacing:2px !important;
+  font-size:9px !important;
+  font-weight:700 !important;
+}
+
+.menu-item{
+  position:relative !important;
+  margin:5px 9px !important;
+  border-radius:11px !important;
+  border:1px solid transparent !important;
+  background:transparent !important;
+  transition:all .22s ease !important;
+  overflow:hidden;
+}
+
+.menu-item:hover{
+  transform:translateX(3px);
+  background:linear-gradient(100deg,rgba(38,111,255,.88),rgba(83,69,255,.82)) !important;
+  box-shadow:0 7px 22px rgba(37,89,255,.22) !important;
+}
+
+.menu-item.active,
+.menu-item.active:hover{
+  background:linear-gradient(105deg,#287aff,#5447ff) !important;
+  border-color:rgba(142,192,255,.18) !important;
+  box-shadow:
+    0 8px 25px rgba(38,91,255,.32),
+    inset 0 1px 0 rgba(255,255,255,.15) !important;
+}
+
+.menu-item.active::before{
+  content:"";
+  position:absolute;
+  left:0;
+  top:8px;
+  bottom:8px;
+  width:3px;
+  border-radius:0 4px 4px 0;
+  background:#fff;
+  box-shadow:0 0 12px rgba(255,255,255,.7);
+}
+
+.sidebar-bottom{
+  border-top:1px solid rgba(95,170,230,.08) !important;
+}
+
+/* ---------- TOP BAR ---------- */
+
+.topbar{
+  background:rgba(3,15,27,.76) !important;
+  backdrop-filter:blur(20px);
+  -webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(86,171,238,.10) !important;
+  box-shadow:0 5px 25px rgba(0,0,0,.12) !important;
+}
+
+.topbar-left{
+  color:#fff !important;
+}
+
+.page-title{
+  color:#f6f9ff !important;
+  font-weight:800 !important;
+  letter-spacing:-.5px !important;
+}
+
+.top-user{
+  color:#91a7bb !important;
+}
+
+.logout-btn{
+  background:linear-gradient(135deg,#286eff,#5547ff) !important;
+  border:0 !important;
+  box-shadow:0 7px 20px rgba(45,91,255,.25) !important;
+}
+
+/* ---------- CONTENT ---------- */
+
+.main-content{
+  background:transparent !important;
+}
+
+.content{
+  background:transparent !important;
+}
+
+/* ---------- PREMIUM DASHBOARD ---------- */
+
+.premium-dashboard{
+  background:
+    radial-gradient(circle at 80% 0%,rgba(31,116,255,.08),transparent 30%),
+    transparent !important;
+}
+
+.dashboard-grid,
+.stats-grid{
+  gap:14px !important;
+}
+
+/* ---------- STAT CARDS ---------- */
+
+.stat-card{
+  position:relative !important;
+  overflow:hidden !important;
+  background:
+    linear-gradient(145deg,rgba(12,40,62,.94),rgba(5,21,35,.97)) !important;
+  border:1px solid rgba(92,178,245,.14) !important;
+  border-radius:18px !important;
+  box-shadow:
+    0 14px 40px rgba(0,0,0,.23),
+    inset 0 1px 0 rgba(255,255,255,.035) !important;
+  transition:transform .25s ease,box-shadow .25s ease,border-color .25s ease !important;
+}
+
+.stat-card::after{
+  content:"";
+  position:absolute;
+  width:145px;
+  height:145px;
+  right:-55px;
+  bottom:-65px;
+  border-radius:50%;
+  background:rgba(42,112,255,.13);
+  box-shadow:0 0 45px rgba(42,112,255,.07);
+  pointer-events:none;
+}
+
+.stat-card:hover{
+  transform:translateY(-4px) !important;
+  border-color:rgba(72,159,255,.28) !important;
+  box-shadow:
+    0 20px 48px rgba(0,0,0,.30),
+    0 0 25px rgba(36,111,255,.07) !important;
+}
+
+/* Individual card accents */
+
+.stat-card:nth-child(2){
+  background:
+    linear-gradient(145deg,rgba(7,65,62,.92),rgba(4,31,37,.97)) !important;
+}
+
+.stat-card:nth-child(2)::after{
+  background:rgba(18,205,161,.12);
+}
+
+.stat-card:nth-child(3){
+  background:
+    linear-gradient(145deg,rgba(37,30,80,.92),rgba(13,16,42,.97)) !important;
+}
+
+.stat-card:nth-child(4){
+  background:
+    linear-gradient(145deg,rgba(8,53,69,.92),rgba(5,25,38,.97)) !important;
+}
+
+/* ---------- PANEL CARDS ---------- */
+
+.panel-card,
+.transaction-panel,
+.orderbook-panel,
+.trade-panel,
+.support-card,
+.why-card{
+  background:
+    linear-gradient(145deg,rgba(8,29,48,.91),rgba(4,17,29,.96)) !important;
+  border:1px solid var(--tx-border) !important;
+  border-radius:17px !important;
+  box-shadow:
+    0 15px 45px rgba(0,0,0,.20),
+    inset 0 1px 0 rgba(255,255,255,.025) !important;
+}
+
+.panel-head,
+.transaction-head{
+  border-bottom:1px solid rgba(88,169,225,.08) !important;
+}
+
+/* ---------- PREMIUM TABLE ---------- */
+
+.premium-table-wrap,
+.table-wrap{
+  background:rgba(5,20,33,.58) !important;
+  border:1px solid rgba(86,168,225,.10) !important;
+  border-radius:15px !important;
+  overflow:hidden !important;
+}
+
+.premium-table{
+  background:transparent !important;
+}
+
+.premium-table thead th{
+  color:#6f879d !important;
+  text-transform:uppercase !important;
+  letter-spacing:1px !important;
+  font-size:10px !important;
+}
+
+.premium-table tbody tr{
+  background:rgba(8,29,47,.50) !important;
+  transition:.2s ease;
+}
+
+.premium-table tbody tr:hover{
+  background:rgba(22,62,95,.42) !important;
+}
+
+/* ---------- BUTTONS ---------- */
+
+.primary-btn,
+.cta-button,
+.hero-primary-btn,
+.live-offer-button,
+.offer-popup-button{
+  background:linear-gradient(135deg,#2879ff,#5747ff) !important;
+  color:#fff !important;
+  border:0 !important;
+  box-shadow:
+    0 9px 25px rgba(42,91,255,.27),
+    inset 0 1px 0 rgba(255,255,255,.13) !important;
+  transition:all .22s ease !important;
+}
+
+.primary-btn:hover,
+.cta-button:hover,
+.hero-primary-btn:hover,
+.live-offer-button:hover,
+.offer-popup-button:hover{
+  transform:translateY(-2px) !important;
+  box-shadow:
+    0 13px 32px rgba(42,91,255,.38),
+    inset 0 1px 0 rgba(255,255,255,.16) !important;
+}
+
+.secondary-btn{
+  background:rgba(18,43,65,.72) !important;
+  color:#dceaff !important;
+  border:1px solid rgba(91,173,236,.16) !important;
+}
+
+/* ---------- INPUTS ---------- */
+
+input,
+select,
+textarea,
+.trade-input{
+  background:rgba(2,12,23,.78) !important;
+  color:#f3f7ff !important;
+  border:1px solid rgba(89,164,220,.15) !important;
+  border-radius:11px !important;
+  box-shadow:inset 0 1px 10px rgba(0,0,0,.12) !important;
+}
+
+input:focus,
+select:focus,
+textarea:focus,
+.trade-input:focus{
+  border-color:rgba(52,133,255,.65) !important;
+  box-shadow:
+    0 0 0 3px rgba(44,108,255,.09),
+    0 0 20px rgba(42,110,255,.07) !important;
+}
+
+/* ---------- WALLET / DEPOSIT ---------- */
+
+.deposit-wallet-card,
+.deposit-wallet-box,
+.deposit-qr-box,
+.available-box,
+.info-box,
+.success-box,
+.error-box{
+  background:
+    linear-gradient(145deg,rgba(8,31,51,.90),rgba(4,18,30,.96)) !important;
+  border:1px solid rgba(91,174,234,.13) !important;
+  border-radius:15px !important;
+}
+
+.deposit-network-badge{
+  background:rgba(36,113,255,.12) !important;
+  border:1px solid rgba(59,132,255,.20) !important;
+  color:#73b2ff !important;
+}
+
+/* ---------- LIVE TRADING ---------- */
+
+.trading-main,
+.trading-chart-panel,
+.live-chart-card{
+  background:
+    linear-gradient(145deg,#061b2d,#03111e) !important;
+  border:1px solid rgba(86,173,235,.13) !important;
+  border-radius:17px !important;
+}
+
+.market-strip{
+  background:rgba(3,16,28,.86) !important;
+  border:1px solid rgba(86,173,235,.09) !important;
+  border-radius:12px !important;
+}
+
+.trading-price{
+  color:#fff !important;
+  font-weight:900 !important;
+  text-shadow:0 0 18px rgba(65,164,255,.14);
+}
+
+.live-indicator{
+  filter:drop-shadow(0 0 7px rgba(21,221,161,.65));
+}
+
+/* ---------- PERFORMANCE ---------- */
+
+.performance-summary{
+  background:
+    linear-gradient(145deg,rgba(8,38,60,.88),rgba(4,19,31,.95)) !important;
+  border:1px solid rgba(83,171,235,.13) !important;
+  border-radius:17px !important;
+}
+
+.performance-value{
+  color:#fff !important;
+  font-weight:900 !important;
+  text-shadow:0 0 20px rgba(40,137,255,.14);
+}
+
+.positive{
+  color:#20d59f !important;
+}
+
+/* ---------- REFERRAL ---------- */
+
+.referral-code.big{
+  background:
+    linear-gradient(135deg,rgba(37,91,255,.16),rgba(92,66,255,.13)) !important;
+  border:1px solid rgba(86,126,255,.22) !important;
+  border-radius:14px !important;
+  box-shadow:0 10px 30px rgba(30,72,200,.10) !important;
+}
+
+/* ---------- OFFER ---------- */
+
+.live-offer-banner{
+  background:
+    linear-gradient(100deg,rgba(22,77,132,.88),rgba(48,39,126,.88)) !important;
+  border:1px solid rgba(99,174,255,.18) !important;
+  box-shadow:0 10px 35px rgba(35,83,190,.15) !important;
+}
+
+.offer-popup-overlay{
+  backdrop-filter:blur(8px);
+  -webkit-backdrop-filter:blur(8px);
+}
+
+.offer-popup{
+  background:
+    linear-gradient(145deg,#09243b,#061523) !important;
+  border:1px solid rgba(95,177,255,.20) !important;
+  box-shadow:0 30px 90px rgba(0,0,0,.50) !important;
+}
+
+/* ---------- AUTH / LOGIN ---------- */
+
+.auth-page{
+  background:
+    radial-gradient(circle at 50% 15%,rgba(37,110,255,.13),transparent 32%),
+    linear-gradient(145deg,#01070e,#031522) !important;
+}
+
+.auth-card{
+  background:rgba(5,23,39,.84) !important;
+  backdrop-filter:blur(22px);
+  -webkit-backdrop-filter:blur(22px);
+  border:1px solid rgba(91,176,238,.15) !important;
+  border-radius:22px !important;
+  box-shadow:0 30px 80px rgba(0,0,0,.38) !important;
+}
+
+.auth-subtitle{
+  color:#8196aa !important;
+}
+
+/* ---------- FAQ ---------- */
+
+.faq-item{
+  background:rgba(7,27,44,.76) !important;
+  border:1px solid rgba(87,168,225,.11) !important;
+  border-radius:13px !important;
+  transition:.2s ease;
+}
+
+.faq-item:hover{
+  border-color:rgba(64,144,229,.25) !important;
+  background:rgba(10,36,57,.88) !important;
+}
+
+/* ---------- MOBILE ---------- */
+
+@media(max-width:800px){
+
+  .topbar{
+    min-height:58px;
+  }
+
+  .main-content{
+    width:100%;
+  }
+
+  .dashboard-grid,
+  .stats-grid{
+    gap:11px !important;
+  }
+
+  .stat-card{
+    border-radius:15px !important;
+  }
+
+  .panel-card,
+  .transaction-panel,
+  .orderbook-panel,
+  .trade-panel{
+    border-radius:15px !important;
+  }
+
+  .menu-item{
+    margin-left:7px !important;
+    margin-right:7px !important;
+  }
+
+  input,
+  select,
+  textarea,
+  .trade-input{
+    min-height:44px;
+  }
+}
+
+/* ---------- SCROLLBAR ---------- */
+
+::-webkit-scrollbar{
+  width:6px;
+  height:6px;
+}
+
+::-webkit-scrollbar-track{
+  background:#020913;
+}
+
+::-webkit-scrollbar-thumb{
+  background:linear-gradient(180deg,#2879ff,#5747ff);
+  border-radius:20px;
+}
+
+/* ---------- TEXT POLISH ---------- */
+
+h1,h2,h3,h4,h5{
+  color:#f4f8ff !important;
+}
+
+button{
+  font-weight:700;
+}
+
+small,
+.field-help{
+  color:#71879d !important;
+}
+
+/* ---------- SUBTLE LIGHT ---------- */
+
+.stat-card,
+.panel-card,
+.transaction-panel,
+.orderbook-panel,
+.trade-panel{
+  isolation:isolate;
+}
+
