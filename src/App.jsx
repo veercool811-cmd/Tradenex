@@ -1006,22 +1006,19 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
   const profit = Math.max(0, balance - deposit);
   const withdrawal = num(data.totalWithdrawal || data.totalWithdrawals);
   const referralReward = num(data.referralReward);
-  const referrals = Array.isArray(data.referrals) ? data.referrals.length : num(data.referrals);
   const pending = num(data.pendingDeposit);
+
   const downloadStatementPDF = () => {
     const doc = new jsPDF();
     const transactions = Array.isArray(data.transactions) ? data.transactions : [];
 
     doc.setFontSize(20);
     doc.text("TRADEX - ACCOUNT STATEMENT", 20, 20);
-
     doc.setFontSize(11);
     doc.text(`User: ${user?.name || user?.username || user?.email || "User"}`, 20, 32);
     doc.text(`Date: ${new Date().toLocaleString()}`, 20, 40);
-
     doc.setFontSize(14);
     doc.text("Account Summary", 20, 55);
-
     doc.setFontSize(11);
     doc.text(`Total Deposit: $${deposit.toFixed(2)}`, 20, 66);
     doc.text(`Total Profit: $${profit.toFixed(2)}`, 20, 74);
@@ -1039,7 +1036,6 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
     doc.text("Amount", 75, y);
     doc.text("Status", 115, y);
     doc.text("Date", 150, y);
-
     y += 7;
 
     transactions.slice(0, 25).forEach((tx, i) => {
@@ -1047,7 +1043,6 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
         doc.addPage();
         y = 20;
       }
-
       doc.text(String(i + 1), 20, y);
       doc.text(String(tx.type || "Deposit").slice(0, 18), 32, y);
       doc.text(`$${num(tx.amount).toFixed(2)}`, 75, y);
@@ -1058,7 +1053,6 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
 
     doc.save(`Tradenex-Statement-${Date.now()}.pdf`);
   };
-
 
   return (
     <div className="premium-dashboard">
@@ -1073,19 +1067,17 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
       </div>
 
       {offer?.enabled && (
-        <section className="live-offer-banner">
+        <section className="live-offer-banner live-offer-compact">
 
-          <div className="live-offer-sparkles">✦　✦　✦</div>
+          <div className="live-offer-sparkles">✦ ✦</div>
 
           <div className="live-offer-gift">
             <div className="live-offer-gift-box">🎁</div>
           </div>
 
           <div className="live-offer-main">
-            <div className="live-offer-label">♛ &nbsp; LIMITED TIME OFFER</div>
-
+            <div className="live-offer-label">♛ LIMITED TIME OFFER</div>
             <h2>{offer.title || "Special Welcome Bonus!"}</h2>
-
             <p>{offer.message || "A special offer is available for you."}</p>
           </div>
 
@@ -1099,7 +1091,6 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
               })()}
             </strong>
             <b>USDT</b>
-            <small>BONUS</small>
           </div>
 
           {offer.buttonUrl ? (
@@ -1109,19 +1100,23 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
               target="_blank"
               rel="noopener noreferrer"
             >
-              🚀 &nbsp; {offer.buttonText || "Grab This Offer Now"} <span>→</span>
+              🚀 {offer.buttonText || "Grab Offer"} <span>→</span>
             </a>
           ) : (
             <button
               className="live-offer-button"
               onClick={() => setOffer(null)}
             >
-              🚀 &nbsp; {offer.buttonText || "Grab This Offer Now"} <span>→</span>
+              🚀 {offer.buttonText || "Grab Offer"} <span>→</span>
             </button>
           )}
-
         </section>
       )}
+
+      {/* =====================================================
+          LIVE MARKET
+      ===================================================== */}
+      <LiveMarket go={go} />
 
       <section className="transaction-panel">
         <div className="transaction-head">
@@ -1135,7 +1130,13 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
         <div className="premium-table-wrap">
           <table className="premium-table">
             <thead>
-              <tr><th>#</th><th>Type</th><th>Amount</th><th>Status</th><th>Date</th></tr>
+              <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
             </thead>
             <tbody>
               {(data.transactions || []).slice(0,5).map((tx,i) => (
@@ -1148,7 +1149,9 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
                 </tr>
               ))}
               {!(data.transactions || []).length && (
-                <tr><td colSpan="5" className="empty-row">No transactions yet.</td></tr>
+                <tr>
+                  <td colSpan="5" className="empty-row">No transactions yet.</td>
+                </tr>
               )}
             </tbody>
           </table>
@@ -1168,9 +1171,199 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
       </div>
 
       {pending > 0 && (
-        <div className="premium-pending">⏳ Pending Deposit: ${pending.toFixed(2)}</div>
+        <div className="premium-pending">
+          ⏳ Pending Deposit: ${pending.toFixed(2)}
+        </div>
       )}
     </div>
+  );
+}
+
+/* =====================================================
+   DASHBOARD LIVE MARKET
+===================================================== */
+
+function LiveMarket({ go }) {
+  const baseMarkets = [
+    { symbol: "BTC/USDT", name: "Bitcoin", price: 104582.42, change: 2.84 },
+    { symbol: "ETH/USDT", name: "Ethereum", price: 3824.16, change: 1.72 },
+    { symbol: "BNB/USDT", name: "BNB", price: 928.34, change: 0.94 },
+    { symbol: "SOL/USDT", name: "Solana", price: 238.71, change: 3.26 },
+    { symbol: "XRP/USDT", name: "XRP", price: 2.914, change: -0.68 },
+    { symbol: "ADA/USDT", name: "Cardano", price: 0.8241, change: 1.18 }
+  ];
+
+  const [markets, setMarkets] = React.useState(baseMarkets);
+  const [selected, setSelected] = React.useState(0);
+  const [pulse, setPulse] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setMarkets(prev =>
+        prev.map(item => {
+          const movement = (Math.random() - 0.48) * 0.0018;
+          const price = Math.max(0.0001, item.price * (1 + movement));
+          const change = item.change + movement * 35;
+
+          return {
+            ...item,
+            price,
+            change
+          };
+        })
+      );
+
+      setPulse(Date.now());
+    }, 1800);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const active = markets[selected];
+
+  const chartPoints = Array.from({ length: 30 }, (_, i) => {
+    const wave =
+      Math.sin(i * 0.65 + pulse / 2200) * 10 +
+      Math.sin(i * 0.19) * 7 +
+      i * 0.32;
+    return 42 + wave;
+  });
+
+  const points = chartPoints
+    .map((y, i) => `${(i / 29) * 100},${y}`)
+    .join(" ");
+
+  return (
+    <section className="dashboard-live-market">
+
+      <div className="market-head">
+        <div>
+          <span className="market-kicker">
+            <i></i> LIVE MARKET
+          </span>
+          <h2>Market Overview</h2>
+          <p>Real-time market-style dashboard feed</p>
+        </div>
+
+        <button
+          className="market-trade-btn"
+          onClick={() => go && go("live-trading")}
+        >
+          Open Live Trading <span>↗</span>
+        </button>
+      </div>
+
+      <div className="market-ticker">
+        {markets.map((m, i) => (
+          <button
+            key={m.symbol}
+            className={`market-ticker-item ${selected === i ? "active" : ""}`}
+            onClick={() => setSelected(i)}
+          >
+            <span className="ticker-symbol">{m.symbol}</span>
+            <strong>
+              {m.price >= 1000
+                ? `$${m.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                : `$${m.price.toFixed(4)}`}
+            </strong>
+            <small className={m.change >= 0 ? "up" : "down"}>
+              {m.change >= 0 ? "▲" : "▼"} {Math.abs(m.change).toFixed(2)}%
+            </small>
+          </button>
+        ))}
+      </div>
+
+      <div className="market-main">
+
+        <div className="market-chart-card">
+          <div className="market-chart-top">
+            <div>
+              <span>{active.name}</span>
+              <h3>
+                {active.price >= 1000
+                  ? `$${active.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                  : `$${active.price.toFixed(4)}`}
+              </h3>
+            </div>
+
+            <span className={`market-live-change ${active.change >= 0 ? "up" : "down"}`}>
+              {active.change >= 0 ? "+" : ""}
+              {active.change.toFixed(2)}%
+            </span>
+          </div>
+
+          <div className="market-chart">
+            <div className="chart-grid"></div>
+            <svg viewBox="0 0 100 60" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="marketGlow" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopOpacity=".38" />
+                  <stop offset="100%" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+
+              <polygon
+                className="market-area"
+                points={`0,60 ${points} 100,60`}
+              />
+
+              <polyline
+                className="market-line"
+                points={points}
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+
+            <div className="market-live-dot"></div>
+          </div>
+
+          <div className="chart-time">
+            <span>1H</span>
+            <span>4H</span>
+            <span className="selected">1D</span>
+            <span>1W</span>
+            <span>1M</span>
+          </div>
+        </div>
+
+        <div className="market-side-card">
+          <div className="side-card-title">
+            <span>MARKET STATUS</span>
+            <b><i></i> LIVE</b>
+          </div>
+
+          <div className="market-stat">
+            <span>24H Change</span>
+            <strong className={active.change >= 0 ? "up" : "down"}>
+              {active.change >= 0 ? "+" : ""}
+              {active.change.toFixed(2)}%
+            </strong>
+          </div>
+
+          <div className="market-stat">
+            <span>Market</span>
+            <strong>Crypto</strong>
+          </div>
+
+          <div className="market-stat">
+            <span>Pair</span>
+            <strong>{active.symbol}</strong>
+          </div>
+
+          <div className="market-status-bar">
+            <div></div>
+          </div>
+
+          <button
+            className="market-full-btn"
+            onClick={() => go && go("live-trading")}
+          >
+            View Full Market
+          </button>
+        </div>
+
+      </div>
+    </section>
   );
 }
 
