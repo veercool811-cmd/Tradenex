@@ -2809,6 +2809,167 @@ app.put(
 );
 
 /* =====================================================
+   OTP PASSWORD RESET
+===================================================== */
+
+function normalizeIndianMobile(value) {
+  return String(value || "")
+    .replace(/\D/g, "")
+    .replace(/^91/, "");
+}
+
+app.post(
+  "/api/password-reset/confirm",
+  auth,
+  async (req, res) => {
+    try {
+      const user = req.user;
+
+      const type =
+        String(req.body?.type || "").trim().toLowerCase();
+
+      const phone =
+        normalizeIndianMobile(req.body?.phone);
+
+      const accessToken =
+        clean(req.body?.accessToken);
+
+      const newPassword =
+        String(req.body?.newPassword || "");
+
+      const confirmPassword =
+        String(req.body?.confirmPassword || "");
+
+      if (
+        type !== "login" &&
+        type !== "transaction"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Invalid password reset type.",
+        });
+      }
+
+      const registeredPhone =
+        normalizeIndianMobile(
+          user.mobile || user.phone
+        );
+
+      if (
+        !registeredPhone ||
+        !phone ||
+        registeredPhone !== phone
+      ) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "OTP must be verified using your registered mobile number.",
+        });
+      }
+
+      if (!accessToken) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "OTP verification token required.",
+        });
+      }
+
+      if (newPassword.length < 6) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Password minimum 6 characters.",
+        });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "New passwords do not match.",
+        });
+      }
+
+      /*
+        Verify the MSG91 OTP access token on the server.
+        Password is changed only after this verification succeeds.
+      */
+      const verification =
+        await verifyMSG91AccessToken(
+          accessToken
+        );
+
+      if (!verification.success) {
+        return res.status(401).json({
+          success: false,
+          message:
+            verification.message ||
+            "OTP verification failed.",
+        });
+      }
+
+      const users = read(USERS_FILE);
+
+      const index =
+        users.findIndex(
+          (u) =>
+            String(u.id) ===
+            String(user.id)
+        );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      if (type === "transaction") {
+        users[index].transactionPasswordHash =
+          hash(newPassword);
+      } else {
+        users[index].passwordHash =
+          hash(newPassword);
+
+        /*
+          Invalidate existing login sessions after
+          a login-password reset.
+        */
+        users[index].sessionToken = "";
+      }
+
+      write(
+        USERS_FILE,
+        users
+      );
+
+      return res.json({
+        success: true,
+        message:
+          type === "transaction"
+            ? "Transaction password reset successfully."
+            : "Login password reset successfully.",
+        user:
+          publicUser(users[index]),
+      });
+    } catch (error) {
+      console.error(
+        "OTP PASSWORD RESET ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message:
+          "OTP password reset failed.",
+      });
+    }
+  }
+);
+
+/* =====================================================
    FORGOT PASSWORD
 ===================================================== */
 
