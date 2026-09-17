@@ -3763,7 +3763,7 @@ function Profile({
    SETTINGS
 ===================================================== */
 
-function Settings({ user }) {
+function Settings({ user, theme, setTheme }) {
   const [form, setForm] =
     useState({
       oldLoginPassword: "",
@@ -4161,6 +4161,72 @@ function Settings({ user }) {
 
   return (
     <>
+      <div className="theme-studio">
+        <div className="theme-studio-head">
+          <div>
+            <small>APPEARANCE</small>
+            <h2>Theme Studio</h2>
+            <p>Apne Tradenex interface ka look choose karein.</p>
+          </div>
+          <span className="theme-current">
+            {theme === "modern-blue" && "Modern Blue"}
+            {theme === "dark-purple" && "Dark Purple"}
+            {theme === "black-gold" && "Black & Gold"}
+            {theme === "cyan-futuristic" && "Cyan Futuristic"}
+          </span>
+        </div>
+
+        <div className="theme-grid">
+          <button
+            type="button"
+            className={`theme-card modern-blue ${theme === "modern-blue" ? "selected" : ""}`}
+            onClick={() => setTheme("modern-blue")}
+          >
+            <span className="theme-preview">
+              <i></i><i></i><i></i>
+            </span>
+            <strong>Modern Blue</strong>
+            <small>Clean • Premium • Professional</small>
+          </button>
+
+          <button
+            type="button"
+            className={`theme-card dark-purple ${theme === "dark-purple" ? "selected" : ""}`}
+            onClick={() => setTheme("dark-purple")}
+          >
+            <span className="theme-preview">
+              <i></i><i></i><i></i>
+            </span>
+            <strong>Dark Purple</strong>
+            <small>Deep • Elegant • Luxury</small>
+          </button>
+
+          <button
+            type="button"
+            className={`theme-card black-gold ${theme === "black-gold" ? "selected" : ""}`}
+            onClick={() => setTheme("black-gold")}
+          >
+            <span className="theme-preview">
+              <i></i><i></i><i></i>
+            </span>
+            <strong>Black &amp; Gold</strong>
+            <small>Luxury • Bold • Exclusive</small>
+          </button>
+
+          <button
+            type="button"
+            className={`theme-card cyan-futuristic ${theme === "cyan-futuristic" ? "selected" : ""}`}
+            onClick={() => setTheme("cyan-futuristic")}
+          >
+            <span className="theme-preview">
+              <i></i><i></i><i></i>
+            </span>
+            <strong>Cyan Futuristic</strong>
+            <small>Tech • Neon • Futuristic</small>
+          </button>
+        </div>
+      </div>
+
       <div className="page-title">
         <small>
           SETTINGS
@@ -5218,6 +5284,14 @@ export default function App() {
   const [user, setUser] =
     useState(null);
 
+  const [theme, setTheme] =
+    useState(() => localStorage.getItem("tradenex_theme") || "modern-blue");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-tradenex-theme", theme);
+    localStorage.setItem("tradenex_theme", theme);
+  }, [theme]);
+
   const [showLanding, setShowLanding] =
     useState(true);
 
@@ -5808,7 +5882,7 @@ export default function App() {
 
           {page ===
             "settings" && (
-            <Settings user={user} />
+            <Settings user={user} theme={theme} setTheme={setTheme} />
           )}
 
           {page === "support" && (
