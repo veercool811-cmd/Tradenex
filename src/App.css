@@ -8094,3 +8094,59 @@ html[data-tradenex-theme] .sidebar a.active {
   }
 }
 
+
+/* =========================================================
+   TRADENEX — TRUE BLACK BACKGROUND
+========================================================= */
+
+html,
+body,
+#root {
+  background: #000000 !important;
+}
+
+html[data-tradenex-theme] body {
+  background: #000000 !important;
+}
+
+html[data-tradenex-theme] #root {
+  background: #000000 !important;
+}
+
+html[data-tradenex-theme] .app-shell {
+  background: #000000 !important;
+  min-height: 100vh;
+}
+
+html[data-tradenex-theme] .content {
+  background: #000000 !important;
+}
+
+html[data-tradenex-theme] .tu-main {
+  background: #000000 !important;
+}
+
+html[data-tradenex-theme] .tu-content {
+  background: #000000 !important;
+}
+
+/* Black glass panels */
+html[data-tradenex-theme] .theme-studio,
+html[data-tradenex-theme] .tu-card,
+html[data-tradenex-theme] .panel-card,
+html[data-tradenex-theme] .stat-card,
+html[data-tradenex-theme] .balance-card {
+  background: rgba(8, 8, 8, 0.96) !important;
+}
+
+/* Sidebar stays dark */
+html[data-tradenex-theme] .sidebar,
+html[data-tradenex-theme] aside {
+  background: #050505 !important;
+}
+
+/* Topbar stays black */
+html[data-tradenex-theme] .topbar {
+  background: #000000 !important;
+}
+
