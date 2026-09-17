@@ -4194,6 +4194,141 @@ function Settings() {
             🔐 Login Password
           </h3>
 
+          <button
+            type="button"
+            className="secondary-btn"
+            disabled={resetLoading}
+            onClick={() =>
+              sendPasswordResetOtp("login")
+            }
+            style={{
+              marginBottom: "18px",
+              width: "100%",
+            }}
+          >
+            Forgot Login Password?
+          </button>
+
+          {resetType === "login" &&
+            resetStep !== "idle" && (
+              <div
+                className="panel-card"
+                style={{
+                  marginBottom: "20px",
+                }}
+              >
+                <h4>
+                  🔑 Reset Login Password
+                </h4>
+
+                <p>
+                  OTP aapke registered mobile
+                  number par bheja jayega.
+                </p>
+
+                {resetStep === "sending" && (
+                  <p>OTP sending...</p>
+                )}
+
+                {resetStep === "otp" && (
+                  <>
+                    <label>
+                      Enter OTP
+                    </label>
+
+                    <input
+                      inputMode="numeric"
+                      maxLength={8}
+                      placeholder="Enter OTP"
+                      value={resetOtp}
+                      onChange={(e) =>
+                        setResetOtp(
+                          e.target.value.replace(
+                            /\D/g,
+                            ""
+                          )
+                        )
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      disabled={resetLoading}
+                      onClick={
+                        verifyPasswordResetOtp
+                      }
+                    >
+                      {resetLoading
+                        ? "Verifying..."
+                        : "Verify OTP"}
+                    </button>
+                  </>
+                )}
+
+                {resetStep === "password" && (
+                  <>
+                    <label>
+                      New Login Password
+                    </label>
+
+                    <input
+                      type="password"
+                      placeholder="New password"
+                      value={resetNewPassword}
+                      onChange={(e) =>
+                        setResetNewPassword(
+                          e.target.value
+                        )
+                      }
+                    />
+
+                    <label>
+                      Confirm New Password
+                    </label>
+
+                    <input
+                      type="password"
+                      placeholder="Confirm password"
+                      value={
+                        resetConfirmPassword
+                      }
+                      onChange={(e) =>
+                        setResetConfirmPassword(
+                          e.target.value
+                        )
+                      }
+                    />
+
+                    <button
+                      type="button"
+                      className="primary-btn"
+                      disabled={resetLoading}
+                      onClick={
+                        confirmPasswordReset
+                      }
+                    >
+                      {resetLoading
+                        ? "Resetting..."
+                        : "Reset Login Password"}
+                    </button>
+                  </>
+                )}
+
+                {resetMessage && (
+                  <div className="success-box">
+                    {resetMessage}
+                  </div>
+                )}
+
+                {resetError && (
+                  <div className="error-box">
+                    {resetError}
+                  </div>
+                )}
+              </div>
+            )}
+
           <label>
             Old Login Password
           </label>
