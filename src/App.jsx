@@ -4859,6 +4859,10 @@ function Settings({ user, theme, setTheme }) {
       setResetError("");
       setResetMessage("");
 
+      if (typeof window.verifyOtp !== "function") {
+        throw new Error("MSG91 OTP verification service is not ready.");
+      }
+
       const result = await new Promise((resolve, reject) => {
         window.verifyOtp(
           otp,
@@ -4868,19 +4872,55 @@ function Settings({ user, theme, setTheme }) {
               new Error(
                 typeof error === "string"
                   ? error
-                  : "OTP verification failed."
+                  : error?.message || "OTP verification failed."
               )
             );
           }
         );
       });
 
-      const accessToken =
-        result?.accessToken ||
-        result?.token ||
-        result?.verificationToken ||
-        result?.verification_token ||
-        "";
+      function findMSG91Token(value) {
+        if (!value) return "";
+
+        if (typeof value === "string") {
+          const text = value.trim();
+
+          if (
+            /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(text)
+          ) {
+            return text;
+          }
+
+          return "";
+        }
+
+        if (typeof value !== "object") return "";
+
+        const preferredKeys = [
+          "accessToken",
+          "access_token",
+          "token",
+          "jwt",
+          "jwtToken",
+          "jwt_token",
+          "verificationToken",
+          "verification_token",
+        ];
+
+        for (const key of preferredKeys) {
+          const found = findMSG91Token(value[key]);
+          if (found) return found;
+        }
+
+        for (const key of Object.keys(value)) {
+          const found = findMSG91Token(value[key]);
+          if (found) return found;
+        }
+
+        return "";
+      }
+
+      const accessToken = findMSG91Token(result);
 
       if (!accessToken) {
         setResetError(
