@@ -1074,6 +1074,9 @@ function publicUser(user) {
     country:
       user.country || "",
 
+    profilePhoto:
+      user.profilePhoto || "",
+
     balance:
       number(user.balance),
 
@@ -2554,6 +2557,73 @@ app.post(
   "/api/profile",
   auth,
   profileHandler
+);
+
+app.post(
+  "/api/profile/photo",
+  auth,
+  upload.single("photo"),
+  (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({
+          success: false,
+          message: "Please select a JPG, PNG or WEBP image.",
+        });
+      }
+
+      const users = read(USERS_FILE);
+
+      const index = users.findIndex(
+        (u) => u.id === req.user.id
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      const oldPhoto = users[index].profilePhoto;
+
+      users[index].profilePhoto =
+        "/uploads/" + req.file.filename;
+
+      write(USERS_FILE, users);
+
+      if (
+        oldPhoto &&
+        oldPhoto.startsWith("/uploads/")
+      ) {
+        const oldFile = path.join(
+          UPLOAD_DIR,
+          path.basename(oldPhoto)
+        );
+
+        if (fs.existsSync(oldFile)) {
+          try {
+            fs.unlinkSync(oldFile);
+          } catch (e) {
+            console.log("Old profile photo cleanup skipped:", e.message);
+          }
+        }
+      }
+
+      res.json({
+        success: true,
+        message: "Profile photo updated successfully.",
+        user: publicUser(users[index]),
+      });
+    } catch (error) {
+      console.error("PROFILE PHOTO ERROR:", error);
+
+      res.status(500).json({
+        success: false,
+        message: "Unable to upload profile photo.",
+      });
+    }
+  }
 );
 
 app.put(
