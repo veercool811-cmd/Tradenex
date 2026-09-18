@@ -10298,3 +10298,224 @@ a.live-offer-button:active,
   }
 }
 
+
+/* =====================================================
+   SETTINGS SECURITY CENTER
+===================================================== */
+
+.settings-feature-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.settings-feature-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: linear-gradient(
+    135deg,
+    rgba(80, 120, 255, 0.06),
+    rgba(180, 80, 255, 0.05),
+    rgba(0, 220, 255, 0.04)
+  );
+}
+
+.settings-section-title {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 20px;
+}
+
+.settings-section-title h3 {
+  margin: 0 0 5px;
+}
+
+.settings-section-title p {
+  margin: 0;
+  opacity: 0.7;
+  font-size: 13px;
+}
+
+.settings-feature-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #4d5cff, #b04cff);
+  box-shadow: 0 0 25px rgba(120, 80, 255, 0.35);
+  font-size: 22px;
+}
+
+.security-status-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.security-status-item {
+  padding: 16px;
+  border: 1px solid rgba(100, 170, 255, 0.18);
+  border-radius: 14px;
+  background: rgba(20, 30, 60, 0.45);
+}
+
+.security-status-item span {
+  display: block;
+  font-size: 12px;
+  opacity: 0.65;
+  margin-bottom: 7px;
+}
+
+.security-status-item strong {
+  font-size: 14px;
+}
+
+.status-good {
+  color: #55e6a5;
+}
+
+.status-warning {
+  color: #ffc857;
+}
+
+.warning-box {
+  position: relative;
+  margin-top: 15px;
+  padding: 14px 16px;
+  border-radius: 13px;
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  background: rgba(255, 170, 0, 0.08);
+  color: #ffd875;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.settings-toggle-list {
+  position: relative;
+  display: grid;
+  gap: 10px;
+}
+
+.settings-toggle-row {
+  position: relative;
+  display: flex !important;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+  padding: 15px 16px;
+  border-radius: 14px;
+  border: 1px solid rgba(100, 170, 255, 0.15);
+  background: rgba(20, 30, 60, 0.38);
+  cursor: pointer;
+}
+
+.settings-toggle-row > span {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.settings-toggle-row small {
+  opacity: 0.6;
+  font-size: 11px;
+}
+
+.settings-toggle-row input[type="checkbox"] {
+  width: 20px !important;
+  height: 20px !important;
+  min-width: 20px;
+  accent-color: #8d55ff;
+}
+
+.settings-preference-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 15px;
+  margin-bottom: 15px;
+}
+
+.settings-preference-grid select {
+  width: 100%;
+  padding: 13px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(120, 150, 255, 0.2);
+  background: rgba(20, 25, 50, 0.8);
+  color: inherit;
+  outline: none;
+}
+
+.security-action-grid {
+  position: relative;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.password-strength-card {
+  margin: -3px 0 16px;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(20, 30, 60, 0.55);
+  border: 1px solid rgba(100, 150, 255, 0.16);
+}
+
+.password-strength-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  margin-bottom: 8px;
+}
+
+.password-strength-head strong {
+  color: #a970ff;
+}
+
+.password-strength-bars {
+  display: flex;
+  gap: 4px;
+  margin-bottom: 7px;
+}
+
+.password-strength-bars span {
+  height: 4px;
+  flex: 1;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.1);
+  transition: 0.2s ease;
+}
+
+.password-strength-bars span.active {
+  background: linear-gradient(90deg, #5665ff, #bd55ff);
+  box-shadow: 0 0 8px rgba(150, 80, 255, 0.4);
+}
+
+.password-strength-card small {
+  opacity: 0.55;
+  font-size: 10px;
+}
+
+@media (max-width: 700px) {
+  .security-status-grid,
+  .settings-preference-grid,
+  .security-action-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-section-title {
+    align-items: flex-start;
+  }
+
+  .settings-feature-icon {
+    width: 42px;
+    height: 42px;
+    font-size: 19px;
+  }
+}
+

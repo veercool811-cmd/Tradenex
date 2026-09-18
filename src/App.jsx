@@ -4618,6 +4618,37 @@ function Settings({ user, theme, setTheme }) {
   const [resetMessage, setResetMessage] = useState("");
   const [resetError, setResetError] = useState("");
 
+  const [notificationPrefs, setNotificationPrefs] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("tradenex_notification_prefs") ||
+          '{"login":true,"deposit":true,"withdrawal":true,"transaction":true}'
+      );
+    } catch {
+      return {
+        login: true,
+        deposit: true,
+        withdrawal: true,
+        transaction: true,
+      };
+    }
+  });
+
+  const [accountPrefs, setAccountPrefs] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("tradenex_account_prefs") ||
+          '{"currency":"USD","dateFormat":"DD/MM/YYYY","autoRefresh":true}'
+      );
+    } catch {
+      return {
+        currency: "USD",
+        dateFormat: "DD/MM/YYYY",
+        autoRefresh: true,
+      };
+    }
+  });
+
   function resetMobile() {
     return String(
       user?.mobile ||
@@ -4630,6 +4661,50 @@ function Settings({ user, theme, setTheme }) {
 
   const registeredMobile = resetMobile();
   const hasRegisteredMobile = /^\d{10}$/.test(registeredMobile);
+
+  const maskedMobile = hasRegisteredMobile
+    ? "******" + registeredMobile.slice(-4)
+    : "Not registered";
+
+  function getPasswordStrength(password) {
+    const value = String(password || "");
+
+    if (!value) {
+      return {
+        label: "Not entered",
+        score: 0,
+      };
+    }
+
+    let score = 0;
+
+    if (value.length >= 6) score++;
+    if (value.length >= 10) score++;
+    if (/[A-Z]/.test(value)) score++;
+    if (/[a-z]/.test(value)) score++;
+    if (/\d/.test(value)) score++;
+    if (/[^A-Za-z0-9]/.test(value)) score++;
+
+    if (score <= 2) return { label: "Weak", score };
+    if (score <= 4) return { label: "Medium", score };
+    return { label: "Strong", score };
+  }
+
+  function saveNotificationPrefs(next) {
+    setNotificationPrefs(next);
+    localStorage.setItem(
+      "tradenex_notification_prefs",
+      JSON.stringify(next)
+    );
+  }
+
+  function saveAccountPrefs(next) {
+    setAccountPrefs(next);
+    localStorage.setItem(
+      "tradenex_account_prefs",
+      JSON.stringify(next)
+    );
+  }
 
   async function submitPasswordSettings(e) {
     e.preventDefault();
@@ -5021,6 +5096,36 @@ function Settings({ user, theme, setTheme }) {
             }
           />
 
+          {form.newLoginPassword && (
+            <div className="password-strength-card">
+              <div className="password-strength-head">
+                <span>Password Strength</span>
+                <strong>
+                  {getPasswordStrength(form.newLoginPassword).label}
+                </strong>
+              </div>
+
+              <div className="password-strength-bars">
+                {[1, 2, 3, 4, 5, 6].map((bar) => (
+                  <span
+                    key={bar}
+                    className={
+                      bar <=
+                      getPasswordStrength(form.newLoginPassword).score
+                        ? "active"
+                        : ""
+                    }
+                  />
+                ))}
+              </div>
+
+              <small>
+                Use at least 6 characters. A stronger password uses
+                uppercase, lowercase, numbers and symbols.
+              </small>
+            </div>
+          )}
+
           <label>Confirm New Login Password</label>
           <input
             type="password"
@@ -5202,6 +5307,36 @@ function Settings({ user, theme, setTheme }) {
             }
           />
 
+          {form.newTransactionPassword && (
+            <div className="password-strength-card">
+              <div className="password-strength-head">
+                <span>Password Strength</span>
+                <strong>
+                  {getPasswordStrength(form.newTransactionPassword).label}
+                </strong>
+              </div>
+
+              <div className="password-strength-bars">
+                {[1, 2, 3, 4, 5, 6].map((bar) => (
+                  <span
+                    key={bar}
+                    className={
+                      bar <=
+                      getPasswordStrength(form.newTransactionPassword).score
+                        ? "active"
+                        : ""
+                    }
+                  />
+                ))}
+              </div>
+
+              <small>
+                Keep your Transaction Password different from your
+                Login Password.
+              </small>
+            </div>
+          )}
+
           <label>Confirm New Transaction Password</label>
 
           <input
@@ -5357,6 +5492,190 @@ function Settings({ user, theme, setTheme }) {
               : "Save Password Changes"}
           </button>
         </form>
+      </div>
+
+      <div className="panel-card settings-feature-card">
+        <div className="settings-section-title">
+          <div className="settings-feature-icon">🛡️</div>
+          <div>
+            <h3>Security Overview</h3>
+            <p>Review the security status of your Tradenex account.</p>
+          </div>
+        </div>
+
+        <div className="security-status-grid">
+          <div className="security-status-item">
+            <span>Registered Mobile</span>
+            <strong className={hasRegisteredMobile ? "status-good" : "status-warning"}>
+              {hasRegisteredMobile ? maskedMobile : "Not Registered"}
+            </strong>
+          </div>
+
+          <div className="security-status-item">
+            <span>OTP Recovery</span>
+            <strong className={hasRegisteredMobile ? "status-good" : "status-warning"}>
+              {hasRegisteredMobile ? "Available" : "Unavailable"}
+            </strong>
+          </div>
+
+          <div className="security-status-item">
+            <span>Login Password</span>
+            <strong className="status-good">Protected</strong>
+          </div>
+
+          <div className="security-status-item">
+            <span>Transaction Password</span>
+            <strong className="status-good">Protected</strong>
+          </div>
+        </div>
+
+        {!hasRegisteredMobile && (
+          <div className="warning-box">
+            <strong>Mobile verification required</strong>
+            <br />
+            No registered mobile number is available for OTP recovery.
+            Add and verify your mobile number in Profile to enable
+            password recovery.
+          </div>
+        )}
+      </div>
+
+      <div className="panel-card settings-feature-card">
+        <div className="settings-section-title">
+          <div className="settings-feature-icon">🔔</div>
+          <div>
+            <h3>Notification Preferences</h3>
+            <p>Choose which account notifications you want to receive.</p>
+          </div>
+        </div>
+
+        <div className="settings-toggle-list">
+          {[
+            ["login", "Login Alerts", "Get notified about account logins."],
+            ["deposit", "Deposit Alerts", "Get notified about deposit activity."],
+            ["withdrawal", "Withdrawal Alerts", "Get notified about withdrawal activity."],
+            ["transaction", "Transaction Alerts", "Get notified about important transactions."],
+          ].map(([key, title, description]) => (
+            <label className="settings-toggle-row" key={key}>
+              <span>
+                <strong>{title}</strong>
+                <small>{description}</small>
+              </span>
+
+              <input
+                type="checkbox"
+                checked={Boolean(notificationPrefs[key])}
+                onChange={(e) =>
+                  saveNotificationPrefs({
+                    ...notificationPrefs,
+                    [key]: e.target.checked,
+                  })
+                }
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel-card settings-feature-card">
+        <div className="settings-section-title">
+          <div className="settings-feature-icon">⚙️</div>
+          <div>
+            <h3>Account Preferences</h3>
+            <p>Customize how account information is displayed.</p>
+          </div>
+        </div>
+
+        <div className="settings-preference-grid">
+          <div>
+            <label>Display Currency</label>
+            <select
+              value={accountPrefs.currency}
+              onChange={(e) =>
+                saveAccountPrefs({
+                  ...accountPrefs,
+                  currency: e.target.value,
+                })
+              }
+            >
+              <option value="USD">USD — US Dollar</option>
+              <option value="INR">INR — Indian Rupee</option>
+              <option value="USDT">USDT — Tether</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Date Format</label>
+            <select
+              value={accountPrefs.dateFormat}
+              onChange={(e) =>
+                saveAccountPrefs({
+                  ...accountPrefs,
+                  dateFormat: e.target.value,
+                })
+              }
+            >
+              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+            </select>
+          </div>
+        </div>
+
+        <label className="settings-toggle-row">
+          <span>
+            <strong>Auto Refresh</strong>
+            <small>Keep account data updated automatically when supported.</small>
+          </span>
+
+          <input
+            type="checkbox"
+            checked={Boolean(accountPrefs.autoRefresh)}
+            onChange={(e) =>
+              saveAccountPrefs({
+                ...accountPrefs,
+                autoRefresh: e.target.checked,
+              })
+            }
+          />
+        </label>
+      </div>
+
+      <div className="panel-card settings-feature-card">
+        <div className="settings-section-title">
+          <div className="settings-feature-icon">🚨</div>
+          <div>
+            <h3>Security Actions</h3>
+            <p>Quick actions for protecting your account.</p>
+          </div>
+        </div>
+
+        <div className="security-action-grid">
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => {
+              localStorage.removeItem("tradenex_token");
+              localStorage.removeItem("tradenex_user");
+              window.location.reload();
+            }}
+          >
+            Log Out Current Session
+          </button>
+
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => {
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              });
+            }}
+          >
+            Review Security Settings
+          </button>
+        </div>
       </div>
 
       <div className="panel-card">
