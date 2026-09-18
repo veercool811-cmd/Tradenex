@@ -965,6 +965,55 @@ function backfillReferralData(users, deposits) {
    MSG91 OTP WIDGET
 ===================================================== */
 
+
+function extractVerifiedIndianMobile(value) {
+  const seen = new Set();
+
+  function walk(node, depth = 0) {
+    if (!node || depth > 8) return "";
+
+    if (typeof node !== "object") return "";
+
+    if (seen.has(node)) return "";
+    seen.add(node);
+
+    const preferredKeys = [
+      "mobile",
+      "phone",
+      "msisdn",
+      "mobileNumber",
+      "phoneNumber",
+      "mobile_number",
+      "phone_number",
+    ];
+
+    for (const key of preferredKeys) {
+      const raw = node[key];
+
+      if (
+        typeof raw === "string" ||
+        typeof raw === "number"
+      ) {
+        const normalized =
+          normalizeIndianMobile(raw);
+
+        if (/^[6-9]\d{9}$/.test(normalized)) {
+          return normalized;
+        }
+      }
+    }
+
+    for (const key of Object.keys(node)) {
+      const found = walk(node[key], depth + 1);
+      if (found) return found;
+    }
+
+    return "";
+  }
+
+  return walk(value);
+}
+
 async function verifyMSG91AccessToken(accessToken) {
   const authKey =
     String(process.env.MSG91_AUTHKEY || "").trim();
@@ -1036,9 +1085,13 @@ async function verifyMSG91AccessToken(accessToken) {
     );
   }
 
+  const verifiedPhone =
+    extractVerifiedIndianMobile(data);
+
   return {
     success: true,
     data,
+    verifiedPhone,
   };
 }
 
@@ -2888,13 +2941,16 @@ function normalizeIndianMobile(value) {
     .replace(/^91/, "");
 }
 
+/*
+   SECURE OTP PASSWORD RESET
+
+   The reset endpoint is intentionally NOT protected by auth.
+   MSG91 verification is the authentication factor for this flow.
+*/
 app.post(
   "/api/password-reset/confirm",
-  auth,
   async (req, res) => {
     try {
-      const user = req.user;
-
       const type =
         String(req.body?.type || "").trim().toLowerCase();
 
@@ -2916,60 +2972,44 @@ app.post(
       ) {
         return res.status(400).json({
           success: false,
-          message:
-            "Invalid password reset type.",
+          message: "Invalid password reset type.",
         });
       }
 
-      const registeredPhone =
-        normalizeIndianMobile(
-          user.mobile || user.phone
-        );
-
-      if (
-        !registeredPhone ||
-        !phone ||
-        registeredPhone !== phone
-      ) {
+      if (!/^[6-9]\d{9}$/.test(phone)) {
         return res.status(400).json({
           success: false,
-          message:
-            "OTP must be verified using your registered mobile number.",
+          message: "Valid registered mobile number required.",
         });
       }
 
       if (!accessToken) {
         return res.status(400).json({
           success: false,
-          message:
-            "OTP verification token required.",
+          message: "OTP verification token required.",
         });
       }
 
       if (newPassword.length < 6) {
         return res.status(400).json({
           success: false,
-          message:
-            "Password minimum 6 characters.",
+          message: "Password minimum 6 characters.",
         });
       }
 
       if (newPassword !== confirmPassword) {
         return res.status(400).json({
           success: false,
-          message:
-            "New passwords do not match.",
+          message: "New passwords do not match.",
         });
       }
 
       /*
-        Verify the MSG91 OTP access token on the server.
-        Password is changed only after this verification succeeds.
+        Verify the MSG91 access token server-side.
+        Do not trust the frontend's OTP result alone.
       */
       const verification =
-        await verifyMSG91AccessToken(
-          accessToken
-        );
+        await verifyMSG91AccessToken(accessToken);
 
       if (!verification.success) {
         return res.status(401).json({
@@ -2980,19 +3020,52 @@ app.post(
         });
       }
 
-      const users = read(USERS_FILE);
-
-      const index =
-        users.findIndex(
-          (u) =>
-            String(u.id) ===
-            String(user.id)
+      /*
+        SECURITY:
+        The phone supplied by the browser is NOT trusted.
+        MSG91 must confirm the same mobile number.
+      */
+      const verifiedPhone =
+        normalizeIndianMobile(
+          verification.verifiedPhone
         );
 
-      if (index === -1) {
-        return res.status(404).json({
+      if (
+        !verifiedPhone ||
+        verifiedPhone !== phone
+      ) {
+        return res.status(401).json({
           success: false,
-          message: "User not found.",
+          message:
+            "OTP mobile verification could not be confirmed.",
+        });
+      }
+
+      const users = read(USERS_FILE);
+
+      /*
+        IMPORTANT:
+        Bind the reset to the registered mobile number.
+        We do not use email + password as a reset mechanism.
+      */
+      const index =
+        users.findIndex((u) => {
+          const registeredPhone =
+            normalizeIndianMobile(
+              u.mobile || u.phone
+            );
+
+          return (
+            String(registeredPhone) ===
+            String(phone)
+          );
+        });
+
+      if (index === -1) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "No account is registered with this mobile number.",
         });
       }
 
@@ -3004,16 +3077,13 @@ app.post(
           hash(newPassword);
 
         /*
-          Invalidate existing login sessions after
-          a login-password reset.
+          Invalidate the current login session after
+          login-password recovery.
         */
         users[index].sessionToken = "";
       }
 
-      write(
-        USERS_FILE,
-        users
-      );
+      write(USERS_FILE, users);
 
       return res.json({
         success: true,
@@ -3021,8 +3091,6 @@ app.post(
           type === "transaction"
             ? "Transaction password reset successfully."
             : "Login password reset successfully.",
-        user:
-          publicUser(users[index]),
       });
     } catch (error) {
       console.error(
@@ -3032,118 +3100,17 @@ app.post(
 
       return res.status(500).json({
         success: false,
-        message:
-          "OTP password reset failed.",
+        message: "OTP password reset failed.",
       });
     }
   }
 );
 
-/* =====================================================
-   FORGOT PASSWORD
-===================================================== */
-
-app.post(
-  "/api/forgot-password",
-  (req, res) => {
-    try {
-      const {
-        type,
-        email,
-        newPassword,
-      } = req.body;
-
-      const users =
-        read(USERS_FILE);
-
-      const cleanEmail =
-        clean(email)
-          .toLowerCase();
-
-      const index =
-        users.findIndex(
-          (u) =>
-            String(
-              u.email || ""
-            ).toLowerCase() ===
-            cleanEmail
-        );
-
-      if (index === -1) {
-        return res
-          .status(404)
-          .json({
-            success: false,
-            message:
-              "Account not found.",
-          });
-      }
-
-      if (
-        String(
-          newPassword || ""
-        ).length < 6
-      ) {
-        return res
-          .status(400)
-          .json({
-            success: false,
-            message:
-              "Password minimum 6 characters.",
-          });
-      }
-
-      if (
-        type ===
-        "transaction"
-      ) {
-        users[index]
-          .transactionPasswordHash =
-          hash(
-            newPassword
-          );
-      } else {
-        users[index]
-          .passwordHash =
-          hash(
-            newPassword
-          );
-
-        users[index]
-          .sessionToken =
-          "";
-      }
-
-      write(
-        USERS_FILE,
-        users
-      );
-
-      res.json({
-        success: true,
-
-        message:
-          type ===
-          "transaction"
-            ? "Transaction password reset successfully."
-            : "Login password reset successfully.",
-      });
-    } catch (error) {
-      console.error(
-        "FORGOT PASSWORD ERROR:",
-        error
-      );
-
-      res
-        .status(500)
-        .json({
-          success: false,
-          message:
-            "Password reset failed.",
-        });
-    }
-  }
-);
+/*
+   SECURITY:
+   The old /api/forgot-password endpoint has intentionally
+   been removed. Password recovery must go through MSG91 OTP.
+*/
 
 /* =====================================================
    DEPOSIT
