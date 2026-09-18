@@ -4097,6 +4097,70 @@ function Profile({
   const [loading, setLoading] =
     useState(false);
 
+  async function submit(e) {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+    setLoading(true);
+
+    try {
+      const token =
+        localStorage.getItem("tradenex_token");
+
+      const response = await fetch(
+        `${API_BASE}/api/profile`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            firstName: form.firstName,
+            lastName: form.lastName,
+            mobile: form.mobile,
+            address: form.address,
+            country: form.country,
+          }),
+        }
+      );
+
+      const result =
+        await response.json();
+
+      if (!response.ok || !result.success) {
+        throw new Error(
+          result.message ||
+          "Unable to update profile."
+        );
+      }
+
+      setMessage(
+        result.message ||
+        "Profile updated successfully."
+      );
+
+      if (result.user) {
+        localStorage.setItem(
+          "tradenex_user",
+          JSON.stringify(result.user)
+        );
+      }
+
+      if (refresh) {
+        await refresh();
+      }
+    } catch (err) {
+      setError(
+        err.message ||
+        "Unable to update profile."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
 
   return (
     <>
