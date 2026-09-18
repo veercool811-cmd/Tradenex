@@ -4594,142 +4594,29 @@ function Profile({
 ===================================================== */
 
 function Settings({ user, theme, setTheme }) {
-  const [form, setForm] =
-    useState({
-      oldLoginPassword: "",
-      newLoginPassword: "",
-      confirmLoginPassword:
-        "",
+  const [form, setForm] = useState({
+    oldLoginPassword: "",
+    newLoginPassword: "",
+    confirmLoginPassword: "",
+    oldTransactionPassword: "",
+    newTransactionPassword: "",
+    confirmTransactionPassword: "",
+  });
 
-      oldTransactionPassword:
-        "",
-      newTransactionPassword:
-        "",
-      confirmTransactionPassword:
-        "",
-    });
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  const [message, setMessage] =
-    useState("");
-
-  const [error, setError] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  async function submit(e) {
-    e.preventDefault();
-
-    setMessage("");
-    setError("");
-
-    if (
-      form.newLoginPassword &&
-      form.newLoginPassword !==
-        form.confirmLoginPassword
-    ) {
-      setError(
-        "New login passwords match नहीं हैं."
-      );
-      return;
-    }
-
-    if (
-      form.newTransactionPassword &&
-      form.newTransactionPassword !==
-        form.confirmTransactionPassword
-    ) {
-      setError(
-        "New transaction passwords match नहीं हैं."
-      );
-      return;
-    }
-
-    if (
-      !form.newLoginPassword &&
-      !form.newTransactionPassword
-    ) {
-      setError(
-        "कम से कम एक password change/create करें."
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    try {
-      const data = await api(
-        "/settings",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            oldPassword:
-              form.oldLoginPassword,
-
-            newPassword:
-              form.newLoginPassword,
-
-            oldTransactionPassword:
-              form.oldTransactionPassword,
-
-            newTransactionPassword:
-              form.newTransactionPassword,
-          }),
-        }
-      );
-
-      setMessage(data.message);
-
-      setForm({
-        oldLoginPassword: "",
-        newLoginPassword: "",
-        confirmLoginPassword:
-          "",
-
-        oldTransactionPassword:
-          "",
-        newTransactionPassword:
-          "",
-        confirmTransactionPassword:
-          "",
-      });
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  const [resetType, setResetType] =
-    useState("");
-
-  const [resetStep, setResetStep] =
-    useState("idle");
-
-  const [resetOtp, setResetOtp] =
-    useState("");
-
-  const [resetReqId, setResetReqId] =
-    useState("");
-
-  const [resetAccessToken, setResetAccessToken] =
-    useState("");
-
-  const [resetNewPassword, setResetNewPassword] =
-    useState("");
-
-  const [resetConfirmPassword, setResetConfirmPassword] =
-    useState("");
-
-  const [resetLoading, setResetLoading] =
-    useState(false);
-
-  const [resetMessage, setResetMessage] =
-    useState("");
-
-  const [resetError, setResetError] =
-    useState("");
+  const [resetType, setResetType] = useState("");
+  const [resetStep, setResetStep] = useState("idle");
+  const [resetOtp, setResetOtp] = useState("");
+  const [resetReqId, setResetReqId] = useState("");
+  const [resetAccessToken, setResetAccessToken] = useState("");
+  const [resetNewPassword, setResetNewPassword] = useState("");
+  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetMessage, setResetMessage] = useState("");
+  const [resetError, setResetError] = useState("");
 
   function resetMobile() {
     return String(
@@ -4741,7 +4628,95 @@ function Settings({ user, theme, setTheme }) {
       .replace(/^91/, "");
   }
 
+  const registeredMobile = resetMobile();
+  const hasRegisteredMobile = /^\d{10}$/.test(registeredMobile);
+
+  async function submitPasswordSettings(e) {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+
+    const newLogin = String(form.newLoginPassword || "");
+    const confirmLogin = String(form.confirmLoginPassword || "");
+    const newTransaction = String(form.newTransactionPassword || "");
+    const confirmTransaction = String(
+      form.confirmTransactionPassword || ""
+    );
+
+    if (newLogin && newLogin !== confirmLogin) {
+      setError("New login passwords do not match.");
+      return;
+    }
+
+    if (newTransaction && newTransaction !== confirmTransaction) {
+      setError("New transaction passwords do not match.");
+      return;
+    }
+
+    if (!newLogin && !newTransaction) {
+      setError("Please enter at least one new password.");
+      return;
+    }
+
+    if (newLogin && newLogin.length < 6) {
+      setError("Login password must be at least 6 characters.");
+      return;
+    }
+
+    if (newTransaction && newTransaction.length < 6) {
+      setError("Transaction password must be at least 6 characters.");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const data = await api("/settings", {
+        method: "POST",
+        body: JSON.stringify({
+          oldPassword: form.oldLoginPassword,
+          newPassword: newLogin,
+          oldTransactionPassword:
+            form.oldTransactionPassword,
+          newTransactionPassword: newTransaction,
+        }),
+      });
+
+      setMessage(
+        data?.message ||
+          "Password settings updated successfully."
+      );
+
+      setForm({
+        oldLoginPassword: "",
+        newLoginPassword: "",
+        confirmLoginPassword: "",
+        oldTransactionPassword: "",
+        newTransactionPassword: "",
+        confirmTransactionPassword: "",
+      });
+    } catch (err) {
+      setError(
+        err?.message ||
+          "Unable to update password settings."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
   async function sendPasswordResetOtp(type) {
+    if (!hasRegisteredMobile) {
+      setResetType("");
+      setResetStep("idle");
+      setResetMessage("");
+      setResetError(
+        "No registered mobile number is available for OTP recovery. Add and verify a mobile number in your Profile."
+      );
+      return;
+    }
+
     setResetType(type);
     setResetStep("sending");
     setResetOtp("");
@@ -4752,24 +4727,13 @@ function Settings({ user, theme, setTheme }) {
     setResetMessage("");
     setResetError("");
 
-    const phone = resetMobile();
-
-    if (!/^\\d{10}$/.test(phone)) {
-      setResetStep("idle");
-      setResetError(
-        "Registered mobile number is not available."
-      );
-      return;
-    }
-
     try {
       setResetLoading(true);
-
       await loadMSG91();
 
       await new Promise((resolve, reject) => {
         window.sendOtp(
-          "91" + phone,
+          "91" + registeredMobile,
           (data) => {
             const reqId =
               data?.reqId ||
@@ -4794,13 +4758,13 @@ function Settings({ user, theme, setTheme }) {
 
       setResetStep("otp");
       setResetMessage(
-        "OTP registered mobile number par bhej diya gaya hai."
+        "OTP has been sent to your registered mobile number."
       );
     } catch (err) {
       setResetStep("idle");
       setResetError(
         err?.message ||
-        "OTP send failed."
+          "OTP could not be sent."
       );
     } finally {
       setResetLoading(false);
@@ -4808,19 +4772,10 @@ function Settings({ user, theme, setTheme }) {
   }
 
   async function verifyPasswordResetOtp() {
-    const phone = resetMobile();
+    const otp = String(resetOtp).trim();
 
-    if (!/^\\d{10}$/.test(phone)) {
-      setResetError(
-        "Registered mobile number is not available."
-      );
-      return;
-    }
-
-    if (!/^\\d{4,8}$/.test(
-      String(resetOtp).trim()
-    )) {
-      setResetError("Valid OTP enter karein.");
+    if (!/^\d{4,8}$/.test(otp)) {
+      setResetError("Please enter a valid OTP.");
       return;
     }
 
@@ -4829,54 +4784,45 @@ function Settings({ user, theme, setTheme }) {
       setResetError("");
       setResetMessage("");
 
-      await loadMSG91();
-
-      const result =
-        await new Promise((resolve, reject) => {
-          window.verifyOtp(
-            String(resetOtp).trim(),
-            (data) => resolve(data),
-            (error) =>
-              reject(
-                new Error(
-                  typeof error === "string"
-                    ? error
-                    : "OTP verification failed."
-                )
-              ),
-            resetReqId || undefined
-          );
-        });
+      const result = await new Promise((resolve, reject) => {
+        window.verifyOtp(
+          otp,
+          (data) => resolve(data),
+          (error) => {
+            reject(
+              new Error(
+                typeof error === "string"
+                  ? error
+                  : "OTP verification failed."
+              )
+            );
+          }
+        );
+      });
 
       const accessToken =
-        findMSG91Token(result);
+        result?.accessToken ||
+        result?.token ||
+        result?.verificationToken ||
+        result?.verification_token ||
+        "";
 
       if (!accessToken) {
-        throw new Error(
-          "OTP verified but verification token नहीं मिला."
+        setResetError(
+          "OTP verified, but the verification token was not received."
         );
+        return;
       }
 
-      await api(
-        "/auth/verify-mobile",
-        {
-          method: "POST",
-          body: JSON.stringify({
-            phone,
-            accessToken,
-          }),
-        }
-      );
-
-      setResetAccessToken(accessToken);
+      setResetAccessToken(String(accessToken));
       setResetStep("password");
       setResetMessage(
-        "OTP verified. Ab naya password set karein."
+        "OTP verified. You can now set a new password."
       );
     } catch (err) {
       setResetError(
         err?.message ||
-        "OTP verification failed."
+          "OTP verification failed."
       );
     } finally {
       setResetLoading(false);
@@ -4884,52 +4830,53 @@ function Settings({ user, theme, setTheme }) {
   }
 
   async function confirmPasswordReset() {
-    if (resetNewPassword.length < 6) {
+    const newPassword = String(resetNewPassword || "");
+    const confirmPassword = String(
+      resetConfirmPassword || ""
+    );
+
+    if (newPassword.length < 6) {
       setResetError(
-        "Password minimum 6 characters."
+        "New password must be at least 6 characters."
       );
       return;
     }
 
-    if (
-      resetNewPassword !==
-      resetConfirmPassword
-    ) {
-      setResetError(
-        "New passwords match नहीं हैं."
-      );
+    if (newPassword !== confirmPassword) {
+      setResetError("New passwords do not match.");
       return;
     }
 
-    const phone = resetMobile();
+    if (!resetAccessToken) {
+      setResetError(
+        "Password reset verification has expired. Please request a new OTP."
+      );
+      return;
+    }
 
     try {
       setResetLoading(true);
       setResetError("");
       setResetMessage("");
 
-      const result =
-        await api(
-          "/password-reset/confirm",
-          {
-            method: "POST",
-            body: JSON.stringify({
-              type: resetType,
-              phone,
-              accessToken: resetAccessToken,
-              newPassword: resetNewPassword,
-              confirmPassword:
-                resetConfirmPassword,
-            }),
-          }
-        );
+      const data = await api("/password-reset/confirm", {
+        method: "POST",
+        body: JSON.stringify({
+          type: resetType,
+          phone: registeredMobile,
+          accessToken: resetAccessToken,
+          newPassword,
+          confirmPassword,
+        }),
+      });
 
       setResetMessage(
-        result.message ||
-        "Password reset successfully."
+        data?.message ||
+          "Password reset successfully."
       );
 
       setResetStep("idle");
+      setResetType("");
       setResetOtp("");
       setResetReqId("");
       setResetAccessToken("");
@@ -4947,191 +4894,189 @@ function Settings({ user, theme, setTheme }) {
     } catch (err) {
       setResetError(
         err?.message ||
-        "Password reset failed."
+          "Unable to reset password."
       );
     } finally {
       setResetLoading(false);
     }
   }
 
-  async function submit(e) {
-    e.preventDefault();
-
-    setMessage("");
-    setError("");
-    setLoading(true);
-
-    try {
-      const data = await api(
-        "/profile",
-        {
-          method: "POST",
-          body: JSON.stringify(
-            form
-          ),
-        }
-      );
-
-      localStorage.setItem(
-        "tradenex_user",
-        JSON.stringify(data.user)
-      );
-
-      setMessage(data.message);
-
-      if (refresh) {
-        refresh();
-      }
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  }
-
   return (
     <>
-      <div className="theme-studio">
-        <div className="theme-studio-head">
-          <div>
-            <small>APPEARANCE</small>
-            <h2>Theme Studio</h2>
-            <p>Apne Tradenex interface ka look choose karein.</p>
+      <div className="panel-card">
+        <div className="theme-studio">
+          <div className="theme-studio-head">
+            <div>
+              <h3>Theme Studio</h3>
+              <p>
+                Choose the look and feel of your Tradenex interface.
+              </p>
+            </div>
+
+            <span className="theme-current">
+              {theme === "modern-blue" && "Modern Blue"}
+              {theme === "dark-purple" && "Dark Purple"}
+              {theme === "black-gold" && "Black & Gold"}
+              {theme === "cyan-futuristic" && "Cyan Futuristic"}
+            </span>
           </div>
-          <span className="theme-current">
-            {theme === "modern-blue" && "Modern Blue"}
-            {theme === "dark-purple" && "Dark Purple"}
-            {theme === "black-gold" && "Black & Gold"}
-            {theme === "cyan-futuristic" && "Cyan Futuristic"}
-          </span>
-        </div>
 
-        <div className="theme-grid">
-          <button
-            type="button"
-            className={`theme-card modern-blue ${theme === "modern-blue" ? "selected" : ""}`}
-            onClick={() => setTheme("modern-blue")}
-          >
-            <span className="theme-preview">
-              <i></i><i></i><i></i>
-            </span>
-            <strong>Modern Blue</strong>
-            <small>Clean • Premium • Professional</small>
-          </button>
+          <div className="theme-grid">
+            <button
+              type="button"
+              className={`theme-card modern-blue ${
+                theme === "modern-blue" ? "selected" : ""
+              }`}
+              onClick={() => setTheme("modern-blue")}
+            >
+              <span className="theme-preview" />
+              <strong>Modern Blue</strong>
+              <small>Clean professional interface</small>
+            </button>
 
-          <button
-            type="button"
-            className={`theme-card dark-purple ${theme === "dark-purple" ? "selected" : ""}`}
-            onClick={() => setTheme("dark-purple")}
-          >
-            <span className="theme-preview">
-              <i></i><i></i><i></i>
-            </span>
-            <strong>Dark Purple</strong>
-            <small>Deep • Elegant • Luxury</small>
-          </button>
+            <button
+              type="button"
+              className={`theme-card dark-purple ${
+                theme === "dark-purple" ? "selected" : ""
+              }`}
+              onClick={() => setTheme("dark-purple")}
+            >
+              <span className="theme-preview" />
+              <strong>Dark Purple</strong>
+              <small>Premium dark interface</small>
+            </button>
 
-          <button
-            type="button"
-            className={`theme-card black-gold ${theme === "black-gold" ? "selected" : ""}`}
-            onClick={() => setTheme("black-gold")}
-          >
-            <span className="theme-preview">
-              <i></i><i></i><i></i>
-            </span>
-            <strong>Black &amp; Gold</strong>
-            <small>Luxury • Bold • Exclusive</small>
-          </button>
+            <button
+              type="button"
+              className={`theme-card black-gold ${
+                theme === "black-gold" ? "selected" : ""
+              }`}
+              onClick={() => setTheme("black-gold")}
+            >
+              <span className="theme-preview" />
+              <strong>Black & Gold</strong>
+              <small>Luxury premium interface</small>
+            </button>
 
-          <button
-            type="button"
-            className={`theme-card cyan-futuristic ${theme === "cyan-futuristic" ? "selected" : ""}`}
-            onClick={() => setTheme("cyan-futuristic")}
-          >
-            <span className="theme-preview">
-              <i></i><i></i><i></i>
-            </span>
-            <strong>Cyan Futuristic</strong>
-            <small>Tech • Neon • Futuristic</small>
-          </button>
+            <button
+              type="button"
+              className={`theme-card cyan-futuristic ${
+                theme === "cyan-futuristic" ? "selected" : ""
+              }`}
+              onClick={() => setTheme("cyan-futuristic")}
+            >
+              <span className="theme-preview" />
+              <strong>Cyan Futuristic</strong>
+              <small>Modern technology interface</small>
+            </button>
+          </div>
         </div>
       </div>
-
-      <div className="page-title">
-        <small>
-          SETTINGS
-        </small>
-
-        <h2>
-          Password Settings
-        </h2>
-
-        <p>
-          Login और Transaction
-          password अलग-अलग होते
-          हैं।
-        </p>
-      </div>
-
-      {message && (
-        <div className="success-box">
-          {message}
-        </div>
-      )}
-
-      {error && (
-        <div className="error-box">
-          {error}
-        </div>
-      )}
 
       <div className="panel-card">
-        <form onSubmit={submit}>
-          <h3>
-            🔐 Login Password
-          </h3>
+        <h3>Security & Passwords</h3>
+        <p>
+          Login and Transaction passwords are separate.
+          Keep both passwords private and secure.
+        </p>
 
-          <button
-            type="button"
-            className="secondary-btn"
-            disabled={resetLoading}
-            onClick={() =>
-              sendPasswordResetOtp("login")
+        {message && (
+          <div className="success-box">
+            {message}
+          </div>
+        )}
+
+        {error && (
+          <div className="error-box">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={submitPasswordSettings}>
+          <h4>Login Password</h4>
+
+          <label>Current Login Password</label>
+          <input
+            type="password"
+            placeholder="Enter current login password"
+            value={form.oldLoginPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                oldLoginPassword: e.target.value,
+              })
             }
-            style={{
-              marginBottom: "18px",
-              width: "100%",
-            }}
-          >
-            Forgot Login Password?
-          </button>
+          />
+
+          <label>New Login Password</label>
+          <input
+            type="password"
+            placeholder="Enter new login password"
+            value={form.newLoginPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                newLoginPassword: e.target.value,
+              })
+            }
+          />
+
+          <label>Confirm New Login Password</label>
+          <input
+            type="password"
+            placeholder="Confirm new login password"
+            value={form.confirmLoginPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                confirmLoginPassword: e.target.value,
+              })
+            }
+          />
+
+          <div className="password-recovery-card">
+            <div>
+              <strong>Forgot your login password?</strong>
+              <p>
+                {hasRegisteredMobile
+                  ? "Use OTP verification with your registered mobile number."
+                  : "OTP recovery is unavailable because no registered mobile number is available."}
+              </p>
+            </div>
+
+            {hasRegisteredMobile && (
+              <button
+                type="button"
+                className="secondary-btn"
+                disabled={resetLoading}
+                onClick={() =>
+                  sendPasswordResetOtp("login")
+                }
+              >
+                Forgot Login Password?
+              </button>
+            )}
+          </div>
 
           {resetType === "login" &&
             resetStep !== "idle" && (
               <div
                 className="panel-card"
-                style={{
-                  marginBottom: "20px",
-                }}
+                style={{ marginBottom: "20px" }}
               >
-                <h4>
-                  🔑 Reset Login Password
-                </h4>
+                <h4>Reset Login Password</h4>
 
                 <p>
-                  OTP aapke registered mobile
-                  number par bheja jayega.
+                  OTP will be sent to your registered mobile number.
                 </p>
 
                 {resetStep === "sending" && (
-                  <p>OTP sending...</p>
+                  <p>Sending OTP...</p>
                 )}
 
                 {resetStep === "otp" && (
                   <>
-                    <label>
-                      Enter OTP
-                    </label>
+                    <label>Enter OTP</label>
 
                     <input
                       inputMode="numeric"
@@ -5165,13 +5110,11 @@ function Settings({ user, theme, setTheme }) {
 
                 {resetStep === "password" && (
                   <>
-                    <label>
-                      New Login Password
-                    </label>
+                    <label>New Login Password</label>
 
                     <input
                       type="password"
-                      placeholder="New password"
+                      placeholder="Enter new password"
                       value={resetNewPassword}
                       onChange={(e) =>
                         setResetNewPassword(
@@ -5180,16 +5123,12 @@ function Settings({ user, theme, setTheme }) {
                       }
                     />
 
-                    <label>
-                      Confirm New Password
-                    </label>
+                    <label>Confirm New Password</label>
 
                     <input
                       type="password"
-                      placeholder="Confirm password"
-                      value={
-                        resetConfirmPassword
-                      }
+                      placeholder="Confirm new password"
+                      value={resetConfirmPassword}
                       onChange={(e) =>
                         setResetConfirmPassword(
                           e.target.value
@@ -5226,111 +5165,101 @@ function Settings({ user, theme, setTheme }) {
               </div>
             )}
 
-          <label>
-            Old Login Password
-          </label>
+          <h4>Transaction Password</h4>
+
+          <div className="info-box">
+            If you are creating a Transaction Password for the first time,
+            leave the Current Transaction Password field empty.
+          </div>
+
+          <label>Current Transaction Password</label>
 
           <input
             type="password"
-            placeholder="Old login password"
-            value={
-              form.oldLoginPassword
-            }
+            placeholder="Enter current transaction password"
+            value={form.oldTransactionPassword}
             onChange={(e) =>
               setForm({
                 ...form,
-                oldLoginPassword:
+                oldTransactionPassword:
                   e.target.value,
               })
             }
           />
 
-          <label>
-            New Login Password
-          </label>
+          <label>New Transaction Password</label>
 
           <input
             type="password"
-            placeholder="New login password"
-            value={
-              form.newLoginPassword
-            }
+            placeholder="Create new transaction password"
+            value={form.newTransactionPassword}
             onChange={(e) =>
               setForm({
                 ...form,
-                newLoginPassword:
+                newTransactionPassword:
                   e.target.value,
               })
             }
           />
 
-          <label>
-            Confirm New Login
-            Password
-          </label>
+          <label>Confirm New Transaction Password</label>
 
           <input
             type="password"
-            placeholder="Confirm new login password"
-            value={
-              form.confirmLoginPassword
-            }
+            placeholder="Confirm new transaction password"
+            value={form.confirmTransactionPassword}
             onChange={(e) =>
               setForm({
                 ...form,
-                confirmLoginPassword:
+                confirmTransactionPassword:
                   e.target.value,
               })
             }
           />
 
-          <hr />
+          <div className="password-recovery-card">
+            <div>
+              <strong>Forgot your Transaction Password?</strong>
+              <p>
+                {hasRegisteredMobile
+                  ? "Reset it securely using OTP verification."
+                  : "OTP recovery is unavailable because no registered mobile number is available."}
+              </p>
+            </div>
 
-          <h3>
-            💳 Transaction Password
-          </h3>
-
-          <button
-            type="button"
-            className="secondary-btn"
-            disabled={resetLoading}
-            onClick={() =>
-              sendPasswordResetOtp("transaction")
-            }
-            style={{
-              marginBottom: "18px",
-              width: "100%",
-            }}
-          >
-            Forgot Transaction Password?
-          </button>
+            {hasRegisteredMobile && (
+              <button
+                type="button"
+                className="secondary-btn"
+                disabled={resetLoading}
+                onClick={() =>
+                  sendPasswordResetOtp("transaction")
+                }
+              >
+                Forgot Transaction Password?
+              </button>
+            )}
+          </div>
 
           {resetType === "transaction" &&
             resetStep !== "idle" && (
               <div
                 className="panel-card"
-                style={{
-                  marginBottom: "20px",
-                }}
+                style={{ marginBottom: "20px" }}
               >
-                <h4>
-                  🔑 Reset Transaction Password
-                </h4>
+                <h4>Reset Transaction Password</h4>
 
                 <p>
-                  OTP aapke registered mobile
-                  number par bheja jayega.
+                  OTP will be sent to your registered mobile number.
                 </p>
 
                 {resetStep === "sending" && (
-                  <p>OTP sending...</p>
+                  <p>Sending OTP...</p>
                 )}
 
                 {resetStep === "otp" && (
                   <>
-                    <label>
-                      Enter OTP
-                    </label>
+                    <label>Enter OTP</label>
 
                     <input
                       inputMode="numeric"
@@ -5364,13 +5293,11 @@ function Settings({ user, theme, setTheme }) {
 
                 {resetStep === "password" && (
                   <>
-                    <label>
-                      New Transaction Password
-                    </label>
+                    <label>New Transaction Password</label>
 
                     <input
                       type="password"
-                      placeholder="New password"
+                      placeholder="Enter new password"
                       value={resetNewPassword}
                       onChange={(e) =>
                         setResetNewPassword(
@@ -5379,16 +5306,12 @@ function Settings({ user, theme, setTheme }) {
                       }
                     />
 
-                    <label>
-                      Confirm New Password
-                    </label>
+                    <label>Confirm New Password</label>
 
                     <input
                       type="password"
-                      placeholder="Confirm password"
-                      value={
-                        resetConfirmPassword
-                      }
+                      placeholder="Confirm new password"
+                      value={resetConfirmPassword}
                       onChange={(e) =>
                         setResetConfirmPassword(
                           e.target.value
@@ -5425,74 +5348,6 @@ function Settings({ user, theme, setTheme }) {
               </div>
             )}
 
-          <div className="info-box">
-            अगर Transaction
-            Password पहली बार बना
-            रहे हैं तो Old
-            Transaction Password
-            खाली छोड़ दें।
-          </div>
-
-          <label>
-            Old Transaction
-            Password
-          </label>
-
-          <input
-            type="password"
-            placeholder="Old transaction password"
-            value={
-              form.oldTransactionPassword
-            }
-            onChange={(e) =>
-              setForm({
-                ...form,
-                oldTransactionPassword:
-                  e.target.value,
-              })
-            }
-          />
-
-          <label>
-            Create / New
-            Transaction Password
-          </label>
-
-          <input
-            type="password"
-            placeholder="Create new transaction password"
-            value={
-              form.newTransactionPassword
-            }
-            onChange={(e) =>
-              setForm({
-                ...form,
-                newTransactionPassword:
-                  e.target.value,
-              })
-            }
-          />
-
-          <label>
-            Confirm Transaction
-            Password
-          </label>
-
-          <input
-            type="password"
-            placeholder="Confirm transaction password"
-            value={
-              form.confirmTransactionPassword
-            }
-            onChange={(e) =>
-              setForm({
-                ...form,
-                confirmTransactionPassword:
-                  e.target.value,
-              })
-            }
-          />
-
           <button
             className="primary-btn"
             disabled={loading}
@@ -5506,21 +5361,12 @@ function Settings({ user, theme, setTheme }) {
 
       <div className="panel-card">
         <div className="info-box">
-          <strong>
-            ध्यान दें:
-          </strong>
-
+          <strong>Security Notice</strong>
           <br />
-
-          Login password और
-          Transaction password
-          अलग रहेंगे।
-
+          Your Login Password and Transaction Password
+          are separate.
           <br />
-
-          Withdrawal के समय केवल
-          Transaction Password
-          इस्तेमाल होगा।
+          Withdrawals require your Transaction Password.
         </div>
       </div>
     </>
