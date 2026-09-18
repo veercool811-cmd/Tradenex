@@ -4071,31 +4071,49 @@ function Referrals({
 function Profile({
   user,
   refresh,
+  go,
 }) {
-  const [form, setForm] =
-    useState({
-      firstName:
-        user.firstName || "",
-      lastName:
-        user.lastName || "",
-      mobile:
-        user.mobile ||
-        user.phone ||
-        "",
-      address:
-        user.address || "",
-      country:
-        user.country || "",
-    });
+  const [form, setForm] = useState({
+    firstName: user.firstName || "",
+    lastName: user.lastName || "",
+    mobile: user.mobile || user.phone || "",
+    address: user.address || "",
+    country: user.country || "",
+  });
 
-  const [message, setMessage] =
-    useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState(false);
 
-  const [error, setError] =
-    useState("");
+  const photoUrl = user.profilePhoto
+    ? user.profilePhoto.startsWith("http")
+      ? user.profilePhoto
+      : `${API.replace(/\/api$/, "")}${user.profilePhoto}`
+    : "";
 
-  const [loading, setLoading] =
-    useState(false);
+  const fullName =
+    `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+    user.name ||
+    "Tradenex User";
+
+  const initials =
+    fullName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((x) => x[0].toUpperCase())
+      .join("") || "TU";
+
+  const memberSince = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString(
+        undefined,
+        {
+          month: "short",
+          year: "numeric",
+        }
+      )
+    : "Active member";
 
   async function submit(e) {
     e.preventDefault();
@@ -4105,41 +4123,16 @@ function Profile({
     setLoading(true);
 
     try {
-      const token =
-        localStorage.getItem("tradenex_token");
-
-      const response = await fetch(
-        `${API}/api/profile`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            firstName: form.firstName,
-            lastName: form.lastName,
-            mobile: form.mobile,
-            address: form.address,
-            country: form.country,
-          }),
-        }
-      );
-
-      const result =
-        await response.json();
-
-      if (!response.ok || !result.success) {
-        throw new Error(
-          result.message ||
-          "Unable to update profile."
-        );
-      }
-
-      setMessage(
-        result.message ||
-        "Profile updated successfully."
-      );
+      const result = await api("/profile", {
+        method: "POST",
+        body: JSON.stringify({
+          firstName: form.firstName,
+          lastName: form.lastName,
+          mobile: form.mobile,
+          address: form.address,
+          country: form.country,
+        }),
+      });
 
       if (result.user) {
         localStorage.setItem(
@@ -4147,6 +4140,11 @@ function Profile({
           JSON.stringify(result.user)
         );
       }
+
+      setMessage(
+        result.message ||
+        "Profile updated successfully."
+      );
 
       if (refresh) {
         await refresh();
@@ -4161,158 +4159,433 @@ function Profile({
     }
   }
 
+  async function uploadPhoto(e) {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    setMessage("");
+    setError("");
+
+    if (![
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/jpg",
+    ].includes(file.type)) {
+      setError("Only JPG, PNG or WEBP images are allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Profile photo must be smaller than 10 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setPhotoLoading(true);
+
+    try {
+      const fd = new FormData();
+      fd.append("photo", file);
+
+      const result = await api("/profile/photo", {
+        method: "POST",
+        body: fd,
+      });
+
+      if (result.user) {
+        localStorage.setItem(
+          "tradenex_user",
+          JSON.stringify(result.user)
+        );
+      }
+
+      setMessage(
+        result.message ||
+        "Profile photo updated successfully."
+      );
+
+      if (refresh) {
+        await refresh();
+      }
+    } catch (err) {
+      setError(
+        err.message ||
+        "Unable to upload profile photo."
+      );
+    } finally {
+      setPhotoLoading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function copyReferral() {
+    if (!user.referralCode) return;
+
+    try {
+      await navigator.clipboard.writeText(
+        user.referralCode
+      );
+      setMessage("Referral code copied.");
+      setError("");
+    } catch {
+      setError("Unable to copy referral code.");
+    }
+  }
 
   return (
-    <>
-      <div className="page-title">
-        <small>PROFILE</small>
+    <div className="profile-premium">
 
-        <h2>
-          My Profile
-        </h2>
+      <div className="profile-hero">
+        <div className="profile-hero-glow" />
 
-        <p>
-          Manage your personal
-          information.
-        </p>
+        <div className="profile-avatar-wrap">
+          <div className="profile-avatar">
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt="Profile"
+              />
+            ) : (
+              <span>{initials}</span>
+            )}
+          </div>
+
+          <label className="profile-camera">
+            {photoLoading ? "…" : "📷"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={uploadPhoto}
+              disabled={photoLoading}
+              hidden
+            />
+          </label>
+        </div>
+
+        <div className="profile-hero-info">
+          <div className="profile-kicker">
+            TRADENEX ACCOUNT
+          </div>
+
+          <h1>{fullName}</h1>
+
+          <p>{user.email || "Email not available"}</p>
+
+          <div className="profile-badges">
+            <span className="profile-status">
+              <i />
+              Active Account
+            </span>
+
+            <span>
+              Member since {memberSince}
+            </span>
+          </div>
+        </div>
+
+        <div className="profile-hero-action">
+          <button
+            type="button"
+            onClick={() => go && go("settings")}
+          >
+            🔐 Security
+          </button>
+        </div>
       </div>
 
       {message && (
-        <div className="success-box">
-          {message}
+        <div className="profile-alert profile-alert-success">
+          ✓ {message}
         </div>
       )}
 
       {error && (
-        <div className="error-box">
-          {error}
+        <div className="profile-alert profile-alert-error">
+          ⚠ {error}
         </div>
       )}
 
-      <div className="panel-card">
-        <form onSubmit={submit}>
-          <div className="two-col">
+      <div className="profile-grid">
+
+        <section className="profile-card profile-main-card">
+          <div className="profile-card-head">
             <div>
-              <label>
-                First Name
-              </label>
-
-              <input
-                value={
-                  form.firstName
-                }
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    firstName:
-                      e.target.value,
-                  })
-                }
-              />
+              <small>PERSONAL INFORMATION</small>
+              <h2>Profile Details</h2>
             </div>
-
-            <div>
-              <label>
-                Last Name
-              </label>
-
-              <input
-                value={
-                  form.lastName
-                }
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    lastName:
-                      e.target.value,
-                  })
-                }
-              />
-            </div>
+            <span className="profile-card-icon">✦</span>
           </div>
 
-          <label>
-            Mobile
-          </label>
+          <form onSubmit={submit}>
 
-          <input
-            value={form.mobile}
-            onChange={(e) =>
-              setForm({
-                ...form,
-                mobile:
-                  e.target.value,
-              })
-            }
-          />
+            <div className="profile-form-grid">
+              <div className="profile-field">
+                <label>First Name</label>
+                <input
+                  value={form.firstName}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      firstName: e.target.value,
+                    })
+                  }
+                  placeholder="First name"
+                />
+              </div>
 
-          <label>
-            Email
-          </label>
+              <div className="profile-field">
+                <label>Last Name</label>
+                <input
+                  value={form.lastName}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      lastName: e.target.value,
+                    })
+                  }
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
 
-          <input
-            value={user.email}
-            disabled
-          />
+            <div className="profile-field">
+              <label>Mobile Number</label>
+              <input
+                value={form.mobile}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    mobile: e.target.value,
+                  })
+                }
+                placeholder="Mobile number"
+              />
+            </div>
 
-          <label>
-            Address
-          </label>
+            <div className="profile-field">
+              <label>Email Address</label>
+              <div className="profile-readonly">
+                <span>✉</span>
+                <input
+                  value={user.email || ""}
+                  disabled
+                />
+                <b>Verified</b>
+              </div>
+            </div>
 
-          <textarea
-            rows="4"
-            value={
-              form.address
-            }
-            onChange={(e) =>
-              setForm({
-                ...form,
-                address:
-                  e.target.value,
-              })
-            }
-          />
+            <div className="profile-field">
+              <label>Address</label>
+              <textarea
+                rows="4"
+                value={form.address}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    address: e.target.value,
+                  })
+                }
+                placeholder="Enter your address"
+              />
+            </div>
 
-          <label>
-            Country
-          </label>
+            <div className="profile-field">
+              <label>Country</label>
+              <input
+                value={form.country}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    country: e.target.value,
+                  })
+                }
+                placeholder="Country"
+              />
+            </div>
 
-          <input
-            value={
-              form.country
-            }
-            onChange={(e) =>
-              setForm({
-                ...form,
-                country:
-                  e.target.value,
-              })
-            }
-          />
+            <button
+              className="profile-save-btn"
+              type="submit"
+              disabled={loading}
+            >
+              {loading
+                ? "Saving Profile..."
+                : "Save Profile →"}
+            </button>
+          </form>
+        </section>
 
-          <label>
-            Your Referral Code
-          </label>
+        <aside className="profile-side">
 
-          <input
-            value={
-              user.referralCode ||
-              ""
-            }
-            disabled
-          />
+          <section className="profile-card profile-account-card">
+            <div className="profile-card-head">
+              <div>
+                <small>ACCOUNT OVERVIEW</small>
+                <h2>Account Info</h2>
+              </div>
+            </div>
+
+            <div className="profile-info-row">
+              <span>Account Status</span>
+              <strong className="profile-green">
+                ● Active
+              </strong>
+            </div>
+
+            <div className="profile-info-row">
+              <span>Member Since</span>
+              <strong>{memberSince}</strong>
+            </div>
+
+            <div className="profile-info-row">
+              <span>Wallet Balance</span>
+              <strong>
+                ${Number(
+                  user.balance || 0
+                ).toLocaleString(
+                  undefined,
+                  {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }
+                )}
+              </strong>
+            </div>
+          </section>
+
+          <section className="profile-card profile-referral-card">
+            <div className="profile-card-head">
+              <div>
+                <small>REFERRAL PROGRAM</small>
+                <h2>Your Referral</h2>
+              </div>
+              <span className="profile-card-icon">↗</span>
+            </div>
+
+            <p>
+              Share your referral code and track
+              your referral activity from the
+              Referrals section.
+            </p>
+
+            <div className="profile-referral-code">
+              <span>
+                {user.referralCode || "Not available"}
+              </span>
+
+              <button
+                type="button"
+                onClick={copyReferral}
+                disabled={!user.referralCode}
+              >
+                Copy
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="profile-secondary-btn"
+              onClick={() => go && go("referrals")}
+            >
+              Open Referrals →
+            </button>
+          </section>
+
+          <section className="profile-card profile-security-card">
+            <div className="profile-security-icon">
+              🔐
+            </div>
+
+            <div>
+              <small>ACCOUNT SECURITY</small>
+              <h3>Protect your account</h3>
+              <p>
+                Manage login and transaction
+                password settings.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => go && go("settings")}
+            >
+              Security Settings →
+            </button>
+          </section>
+
+        </aside>
+      </div>
+
+      <section className="profile-quick-actions">
+        <div className="profile-section-title">
+          <small>QUICK ACTIONS</small>
+          <h2>Manage Your Account</h2>
+        </div>
+
+        <div className="profile-action-grid">
 
           <button
-            className="primary-btn"
-            disabled={loading}
+            type="button"
+            onClick={() => go && go("statement")}
           >
-            {loading
-              ? "Saving..."
-              : "Save Profile"}
+            <span>▣</span>
+            <b>My Statement</b>
+            <small>View & download</small>
           </button>
-        </form>
-      </div>
-    </>
+
+          <button
+            type="button"
+            onClick={() => go && go("wallet")}
+          >
+            <span>◈</span>
+            <b>Wallet</b>
+            <small>View balance</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("transactions")}
+          >
+            <span>↕</span>
+            <b>Transactions</b>
+            <small>Account activity</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("support")}
+          >
+            <span>◉</span>
+            <b>Support</b>
+            <small>Get assistance</small>
+          </button>
+
+        </div>
+      </section>
+
+      <section className="profile-safe-banner">
+        <div className="profile-safe-icon">✓</div>
+
+        <div>
+          <strong>Your Information is Safe</strong>
+          <p>
+            Your account information is handled
+            through your secure Tradenex account.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => go && go("settings")}
+        >
+          Security →
+        </button>
+      </section>
+
+    </div>
   );
 }
 
@@ -6434,6 +6707,7 @@ export default function App() {
             <Profile
               user={user}
               refresh={loadUser}
+              go={openPage}
             />
           )}
 
