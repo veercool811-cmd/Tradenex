@@ -4109,7 +4109,7 @@ function Profile({
         localStorage.getItem("tradenex_token");
 
       const response = await fetch(
-        `${API_BASE}/api/profile`,
+        `${API}/api/profile`,
         {
           method: "POST",
           headers: {
