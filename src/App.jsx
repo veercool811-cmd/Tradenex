@@ -4607,16 +4607,6 @@ function Settings({ user, theme, setTheme }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
-  const [resetType, setResetType] = useState("");
-  const [resetStep, setResetStep] = useState("idle");
-  const [resetOtp, setResetOtp] = useState("");
-  const [resetReqId, setResetReqId] = useState("");
-  const [resetAccessToken, setResetAccessToken] = useState("");
-  const [resetNewPassword, setResetNewPassword] = useState("");
-  const [resetConfirmPassword, setResetConfirmPassword] = useState("");
-  const [resetLoading, setResetLoading] = useState(false);
-  const [resetMessage, setResetMessage] = useState("");
-  const [resetError, setResetError] = useState("");
 
   const [notificationPrefs, setNotificationPrefs] = useState(() => {
     try {
@@ -4649,23 +4639,6 @@ function Settings({ user, theme, setTheme }) {
     }
   });
 
-  function resetMobile() {
-    return String(
-      user?.mobile ||
-      user?.phone ||
-      ""
-    )
-      .replace(/\D/g, "")
-      .replace(/^91/, "");
-  }
-
-  const registeredMobile = resetMobile();
-  const hasRegisteredMobile = /^\d{10}$/.test(registeredMobile);
-
-  const maskedMobile = hasRegisteredMobile
-    ? "******" + registeredMobile.slice(-4)
-    : "Not registered";
-
   function getPasswordStrength(password) {
     const value = String(password || "");
 
@@ -4688,6 +4661,18 @@ function Settings({ user, theme, setTheme }) {
     if (score <= 2) return { label: "Weak", score };
     if (score <= 4) return { label: "Medium", score };
     return { label: "Strong", score };
+  }
+
+  function isStrongPassword(password) {
+    const value = String(password || "");
+
+    return (
+      value.length >= 8 &&
+      /[A-Z]/.test(value) &&
+      /[a-z]/.test(value) &&
+      /\d/.test(value) &&
+      /[^A-Za-z0-9]/.test(value)
+    );
   }
 
   function saveNotificationPrefs(next) {
@@ -4734,13 +4719,17 @@ function Settings({ user, theme, setTheme }) {
       return;
     }
 
-    if (newLogin && newLogin.length < 6) {
-      setError("Login password must be at least 6 characters.");
+    if (newLogin && !isStrongPassword(newLogin)) {
+      setError(
+        "Login password must be at least 8 characters and include uppercase, lowercase, number and special character."
+      );
       return;
     }
 
-    if (newTransaction && newTransaction.length < 6) {
-      setError("Transaction password must be at least 6 characters.");
+    if (newTransaction && !isStrongPassword(newTransaction)) {
+      setError(
+        "Transaction password must be at least 8 characters and include uppercase, lowercase, number and special character."
+      );
       return;
     }
 
@@ -4752,9 +4741,11 @@ function Settings({ user, theme, setTheme }) {
         body: JSON.stringify({
           oldPassword: form.oldLoginPassword,
           newPassword: newLogin,
+          confirmNewPassword: confirmLogin,
           oldTransactionPassword:
             form.oldTransactionPassword,
           newTransactionPassword: newTransaction,
+          confirmTransactionPassword: confirmTransaction,
         }),
       });
 
@@ -4778,241 +4769,6 @@ function Settings({ user, theme, setTheme }) {
       );
     } finally {
       setLoading(false);
-    }
-  }
-
-  async function sendPasswordResetOtp(type) {
-    if (!hasRegisteredMobile) {
-      setResetType("");
-      setResetStep("idle");
-      setResetMessage("");
-      setResetError(
-        "No registered mobile number is available for OTP recovery. Add and verify a mobile number in your Profile."
-      );
-      return;
-    }
-
-    setResetType(type);
-    setResetStep("sending");
-    setResetOtp("");
-    setResetReqId("");
-    setResetAccessToken("");
-    setResetNewPassword("");
-    setResetConfirmPassword("");
-    setResetMessage("");
-    setResetError("");
-
-    try {
-      setResetLoading(true);
-      await loadMSG91();
-
-      await new Promise((resolve, reject) => {
-        window.sendOtp(
-          "91" + registeredMobile,
-          (data) => {
-            const reqId =
-              data?.reqId ||
-              data?.requestId ||
-              data?.request_id ||
-              "";
-
-            setResetReqId(String(reqId));
-            resolve(data);
-          },
-          (error) => {
-            reject(
-              new Error(
-                typeof error === "string"
-                  ? error
-                  : "OTP send failed."
-              )
-            );
-          }
-        );
-      });
-
-      setResetStep("otp");
-      setResetMessage(
-        "OTP has been sent to your registered mobile number."
-      );
-    } catch (err) {
-      setResetStep("idle");
-      setResetError(
-        err?.message ||
-          "OTP could not be sent."
-      );
-    } finally {
-      setResetLoading(false);
-    }
-  }
-
-  async function verifyPasswordResetOtp() {
-    const otp = String(resetOtp).trim();
-
-    if (!/^\d{4,8}$/.test(otp)) {
-      setResetError("Please enter a valid OTP.");
-      return;
-    }
-
-    try {
-      setResetLoading(true);
-      setResetError("");
-      setResetMessage("");
-
-      if (typeof window.verifyOtp !== "function") {
-        throw new Error("MSG91 OTP verification service is not ready.");
-      }
-
-      const result = await new Promise((resolve, reject) => {
-        window.verifyOtp(
-          otp,
-          (data) => resolve(data),
-          (error) => {
-            reject(
-              new Error(
-                typeof error === "string"
-                  ? error
-                  : error?.message || "OTP verification failed."
-              )
-            );
-          }
-        );
-      });
-
-      function findMSG91Token(value) {
-        if (!value) return "";
-
-        if (typeof value === "string") {
-          const text = value.trim();
-
-          if (
-            /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(text)
-          ) {
-            return text;
-          }
-
-          return "";
-        }
-
-        if (typeof value !== "object") return "";
-
-        const preferredKeys = [
-          "accessToken",
-          "access_token",
-          "token",
-          "jwt",
-          "jwtToken",
-          "jwt_token",
-          "verificationToken",
-          "verification_token",
-        ];
-
-        for (const key of preferredKeys) {
-          const found = findMSG91Token(value[key]);
-          if (found) return found;
-        }
-
-        for (const key of Object.keys(value)) {
-          const found = findMSG91Token(value[key]);
-          if (found) return found;
-        }
-
-        return "";
-      }
-
-      const accessToken = findMSG91Token(result);
-
-      if (!accessToken) {
-        setResetError(
-          "OTP verified, but the verification token was not received."
-        );
-        return;
-      }
-
-      setResetAccessToken(String(accessToken));
-      setResetStep("password");
-      setResetMessage(
-        "OTP verified. You can now set a new password."
-      );
-    } catch (err) {
-      setResetError(
-        err?.message ||
-          "OTP verification failed."
-      );
-    } finally {
-      setResetLoading(false);
-    }
-  }
-
-  async function confirmPasswordReset() {
-    const newPassword = String(resetNewPassword || "");
-    const confirmPassword = String(
-      resetConfirmPassword || ""
-    );
-
-    if (newPassword.length < 6) {
-      setResetError(
-        "New password must be at least 6 characters."
-      );
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setResetError("New passwords do not match.");
-      return;
-    }
-
-    if (!resetAccessToken) {
-      setResetError(
-        "Password reset verification has expired. Please request a new OTP."
-      );
-      return;
-    }
-
-    try {
-      setResetLoading(true);
-      setResetError("");
-      setResetMessage("");
-
-      const data = await api("/password-reset/confirm", {
-        method: "POST",
-        body: JSON.stringify({
-          type: resetType,
-          phone: registeredMobile,
-          accessToken: resetAccessToken,
-          newPassword,
-          confirmPassword,
-        }),
-      });
-
-      setResetMessage(
-        data?.message ||
-          "Password reset successfully."
-      );
-
-      setResetStep("idle");
-      setResetType("");
-      setResetOtp("");
-      setResetReqId("");
-      setResetAccessToken("");
-      setResetNewPassword("");
-      setResetConfirmPassword("");
-
-      if (resetType === "login") {
-        localStorage.removeItem("tradenex_token");
-        localStorage.removeItem("tradenex_user");
-
-        setTimeout(() => {
-          window.location.reload();
-        }, 1200);
-      }
-    } catch (err) {
-      setResetError(
-        err?.message ||
-          "Unable to reset password."
-      );
-    } finally {
-      setResetLoading(false);
     }
   }
 
@@ -5160,8 +4916,7 @@ function Settings({ user, theme, setTheme }) {
               </div>
 
               <small>
-                Use at least 6 characters. A stronger password uses
-                uppercase, lowercase, numbers and symbols.
+                Use at least 8 characters with uppercase, lowercase, numbers and symbols.
               </small>
             </div>
           )}
@@ -5179,136 +4934,6 @@ function Settings({ user, theme, setTheme }) {
             }
           />
 
-          <div className="password-recovery-card">
-            <div>
-              <strong>Forgot your login password?</strong>
-              <p>
-                {hasRegisteredMobile
-                  ? "Use OTP verification with your registered mobile number."
-                  : "OTP recovery is unavailable because no registered mobile number is available."}
-              </p>
-            </div>
-
-            {hasRegisteredMobile && (
-              <button
-                type="button"
-                className="secondary-btn"
-                disabled={resetLoading}
-                onClick={() =>
-                  sendPasswordResetOtp("login")
-                }
-              >
-                Forgot Login Password?
-              </button>
-            )}
-          </div>
-
-          {resetType === "login" &&
-            resetStep !== "idle" && (
-              <div
-                className="panel-card"
-                style={{ marginBottom: "20px" }}
-              >
-                <h4>Reset Login Password</h4>
-
-                <p>
-                  OTP will be sent to your registered mobile number.
-                </p>
-
-                {resetStep === "sending" && (
-                  <p>Sending OTP...</p>
-                )}
-
-                {resetStep === "otp" && (
-                  <>
-                    <label>Enter OTP</label>
-
-                    <input
-                      inputMode="numeric"
-                      maxLength={8}
-                      placeholder="Enter OTP"
-                      value={resetOtp}
-                      onChange={(e) =>
-                        setResetOtp(
-                          e.target.value.replace(
-                            /\D/g,
-                            ""
-                          )
-                        )
-                      }
-                    />
-
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      disabled={resetLoading}
-                      onClick={
-                        verifyPasswordResetOtp
-                      }
-                    >
-                      {resetLoading
-                        ? "Verifying..."
-                        : "Verify OTP"}
-                    </button>
-                  </>
-                )}
-
-                {resetStep === "password" && (
-                  <>
-                    <label>New Login Password</label>
-
-                    <input
-                      type="password"
-                      placeholder="Enter new password"
-                      value={resetNewPassword}
-                      onChange={(e) =>
-                        setResetNewPassword(
-                          e.target.value
-                        )
-                      }
-                    />
-
-                    <label>Confirm New Password</label>
-
-                    <input
-                      type="password"
-                      placeholder="Confirm new password"
-                      value={resetConfirmPassword}
-                      onChange={(e) =>
-                        setResetConfirmPassword(
-                          e.target.value
-                        )
-                      }
-                    />
-
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      disabled={resetLoading}
-                      onClick={
-                        confirmPasswordReset
-                      }
-                    >
-                      {resetLoading
-                        ? "Resetting..."
-                        : "Reset Login Password"}
-                    </button>
-                  </>
-                )}
-
-                {resetMessage && (
-                  <div className="success-box">
-                    {resetMessage}
-                  </div>
-                )}
-
-                {resetError && (
-                  <div className="error-box">
-                    {resetError}
-                  </div>
-                )}
-              </div>
-            )}
 
           <h4>Transaction Password</h4>
 
@@ -5392,136 +5017,6 @@ function Settings({ user, theme, setTheme }) {
             }
           />
 
-          <div className="password-recovery-card">
-            <div>
-              <strong>Forgot your Transaction Password?</strong>
-              <p>
-                {hasRegisteredMobile
-                  ? "Reset it securely using OTP verification."
-                  : "OTP recovery is unavailable because no registered mobile number is available."}
-              </p>
-            </div>
-
-            {hasRegisteredMobile && (
-              <button
-                type="button"
-                className="secondary-btn"
-                disabled={resetLoading}
-                onClick={() =>
-                  sendPasswordResetOtp("transaction")
-                }
-              >
-                Forgot Transaction Password?
-              </button>
-            )}
-          </div>
-
-          {resetType === "transaction" &&
-            resetStep !== "idle" && (
-              <div
-                className="panel-card"
-                style={{ marginBottom: "20px" }}
-              >
-                <h4>Reset Transaction Password</h4>
-
-                <p>
-                  OTP will be sent to your registered mobile number.
-                </p>
-
-                {resetStep === "sending" && (
-                  <p>Sending OTP...</p>
-                )}
-
-                {resetStep === "otp" && (
-                  <>
-                    <label>Enter OTP</label>
-
-                    <input
-                      inputMode="numeric"
-                      maxLength={8}
-                      placeholder="Enter OTP"
-                      value={resetOtp}
-                      onChange={(e) =>
-                        setResetOtp(
-                          e.target.value.replace(
-                            /\D/g,
-                            ""
-                          )
-                        )
-                      }
-                    />
-
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      disabled={resetLoading}
-                      onClick={
-                        verifyPasswordResetOtp
-                      }
-                    >
-                      {resetLoading
-                        ? "Verifying..."
-                        : "Verify OTP"}
-                    </button>
-                  </>
-                )}
-
-                {resetStep === "password" && (
-                  <>
-                    <label>New Transaction Password</label>
-
-                    <input
-                      type="password"
-                      placeholder="Enter new password"
-                      value={resetNewPassword}
-                      onChange={(e) =>
-                        setResetNewPassword(
-                          e.target.value
-                        )
-                      }
-                    />
-
-                    <label>Confirm New Password</label>
-
-                    <input
-                      type="password"
-                      placeholder="Confirm new password"
-                      value={resetConfirmPassword}
-                      onChange={(e) =>
-                        setResetConfirmPassword(
-                          e.target.value
-                        )
-                      }
-                    />
-
-                    <button
-                      type="button"
-                      className="primary-btn"
-                      disabled={resetLoading}
-                      onClick={
-                        confirmPasswordReset
-                      }
-                    >
-                      {resetLoading
-                        ? "Resetting..."
-                        : "Reset Transaction Password"}
-                    </button>
-                  </>
-                )}
-
-                {resetMessage && (
-                  <div className="success-box">
-                    {resetMessage}
-                  </div>
-                )}
-
-                {resetError && (
-                  <div className="error-box">
-                    {resetError}
-                  </div>
-                )}
-              </div>
-            )}
 
           <button
             className="primary-btn"
@@ -5545,20 +5040,6 @@ function Settings({ user, theme, setTheme }) {
 
         <div className="security-status-grid">
           <div className="security-status-item">
-            <span>Registered Mobile</span>
-            <strong className={hasRegisteredMobile ? "status-good" : "status-warning"}>
-              {hasRegisteredMobile ? maskedMobile : "Not Registered"}
-            </strong>
-          </div>
-
-          <div className="security-status-item">
-            <span>OTP Recovery</span>
-            <strong className={hasRegisteredMobile ? "status-good" : "status-warning"}>
-              {hasRegisteredMobile ? "Available" : "Unavailable"}
-            </strong>
-          </div>
-
-          <div className="security-status-item">
             <span>Login Password</span>
             <strong className="status-good">Protected</strong>
           </div>
@@ -5567,17 +5048,17 @@ function Settings({ user, theme, setTheme }) {
             <span>Transaction Password</span>
             <strong className="status-good">Protected</strong>
           </div>
-        </div>
 
-        {!hasRegisteredMobile && (
-          <div className="warning-box">
-            <strong>Mobile verification required</strong>
-            <br />
-            No registered mobile number is available for OTP recovery.
-            Add and verify your mobile number in Profile to enable
-            password recovery.
+          <div className="security-status-item">
+            <span>Password Security</span>
+            <strong className="status-good">Strong Rules</strong>
           </div>
-        )}
+
+          <div className="security-status-item">
+            <span>Session Security</span>
+            <strong className="status-good">Protected</strong>
+          </div>        </div>
+
       </div>
 
       <div className="panel-card settings-feature-card">
