@@ -1085,8 +1085,47 @@ async function verifyMSG91AccessToken(accessToken) {
     );
   }
 
-  const verifiedPhone =
+  let verifiedPhone =
     extractVerifiedIndianMobile(data);
+
+  /*
+    MSG91 may return verified user information in different
+    response shapes. If the mobile is not present there,
+    use the already MSG91-validated JWT payload as a fallback.
+
+    IMPORTANT:
+    This fallback is used only AFTER MSG91 successfully
+    validates the access token above.
+  */
+  if (!verifiedPhone) {
+    try {
+      const parts = token.split(".");
+
+      if (parts.length === 3) {
+        const payload = JSON.parse(
+          Buffer.from(
+            parts[1]
+              .replace(/-/g, "+")
+              .replace(/_/g, "/"),
+            "base64"
+          ).toString("utf8")
+        );
+
+        verifiedPhone =
+          extractVerifiedIndianMobile(payload);
+      }
+    } catch (jwtError) {
+      console.warn(
+        "MSG91 JWT mobile extraction skipped:",
+        jwtError?.message || "Invalid JWT payload"
+      );
+    }
+  }
+
+  console.log(
+    "MSG91 VERIFIED MOBILE FOUND:",
+    verifiedPhone ? "YES" : "NO"
+  );
 
   return {
     success: true,
