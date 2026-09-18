@@ -2746,6 +2746,18 @@ app.put(
    PASSWORD SETTINGS
 ===================================================== */
 
+function isStrongPassword(value) {
+  const password = String(value || "");
+
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[a-z]/.test(password) &&
+    /\d/.test(password) &&
+    /[^A-Za-z0-9]/.test(password)
+  );
+}
+
 function passwordHandler(
   req,
   res
@@ -2845,16 +2857,13 @@ function passwordHandler(
         });
     }
 
-    if (
-      finalNewLogin.length <
-      6
-    ) {
+    if (!isStrongPassword(finalNewLogin)) {
       return res
         .status(400)
         .json({
           success: false,
           message:
-            "New login password minimum 6 characters.",
+            "Login password must be at least 8 characters and include uppercase, lowercase, number and special character.",
         });
     }
 
@@ -2890,16 +2899,13 @@ function passwordHandler(
       }
     }
 
-    if (
-      finalNewTransaction.length <
-      6
-    ) {
+    if (!isStrongPassword(finalNewTransaction)) {
       return res
         .status(400)
         .json({
           success: false,
           message:
-            "Transaction password minimum 6 characters.",
+            "Transaction password must be at least 8 characters and include uppercase, lowercase, number and special character.",
         });
     }
 
