@@ -2987,7 +2987,6 @@ app.post(
     try {
       const {
         type,
-        currentPassword,
         newPassword,
         confirmPassword,
         captchaAnswer,
@@ -3001,16 +3000,6 @@ app.post(
         return res.status(400).json({
           success: false,
           message: "Invalid password type.",
-        });
-      }
-
-      if (!currentPassword) {
-        return res.status(400).json({
-          success: false,
-          message:
-            type === "login"
-              ? "Current transaction password is required."
-              : "Current login password is required.",
         });
       }
 
@@ -3073,34 +3062,8 @@ app.post(
       const user = users[index];
 
       if (type === "login") {
-        if (
-          !user.transactionPasswordHash ||
-          user.transactionPasswordHash !==
-            hash(currentPassword)
-        ) {
-          return res.status(400).json({
-            success: false,
-            message:
-              "Current transaction password is incorrect.",
-          });
-        }
-
         user.passwordHash = hash(newPassword);
-
-        /* Invalidate existing login session after recovery. */
-        user.sessionToken = "";
       } else {
-        if (
-          user.passwordHash !==
-          hash(currentPassword)
-        ) {
-          return res.status(400).json({
-            success: false,
-            message:
-              "Current login password is incorrect.",
-          });
-        }
-
         user.transactionPasswordHash =
           hash(newPassword);
       }
