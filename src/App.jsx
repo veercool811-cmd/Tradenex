@@ -4743,7 +4743,6 @@ function Settings({ user, theme, setTheme }) {
 
   const [forgotOpen, setForgotOpen] = useState(false);
   const [forgotType, setForgotType] = useState("login");
-  const [forgotCurrentPassword, setForgotCurrentPassword] = useState("");
   const [forgotNewPassword, setForgotNewPassword] = useState("");
   const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
   const [forgotCaptchaToken, setForgotCaptchaToken] = useState("");
@@ -4751,7 +4750,6 @@ function Settings({ user, theme, setTheme }) {
   const [forgotCaptchaAnswer, setForgotCaptchaAnswer] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotCaptchaLoading, setForgotCaptchaLoading] = useState(false);
-  const [showForgotCurrent, setShowForgotCurrent] = useState(false);
   const [showForgotNew, setShowForgotNew] = useState(false);
   const [showForgotConfirm, setShowForgotConfirm] = useState(false);
 
@@ -4846,7 +4844,6 @@ function Settings({ user, theme, setTheme }) {
     setMessage("");
     setError("");
     setForgotType("login");
-    setForgotCurrentPassword("");
     setForgotNewPassword("");
     setForgotConfirmPassword("");
     setForgotCaptchaAnswer("");
@@ -4866,15 +4863,6 @@ function Settings({ user, theme, setTheme }) {
 
     setMessage("");
     setError("");
-
-    if (!forgotCurrentPassword) {
-      setError(
-        forgotType === "login"
-          ? "Enter your current transaction password."
-          : "Enter your current login password."
-      );
-      return;
-    }
 
     if (!forgotNewPassword || !forgotConfirmPassword) {
       setError("Enter new password and confirm password.");
@@ -4905,7 +4893,6 @@ function Settings({ user, theme, setTheme }) {
         method: "POST",
         body: JSON.stringify({
           type: forgotType,
-          currentPassword: forgotCurrentPassword,
           newPassword: forgotNewPassword,
           confirmPassword: forgotConfirmPassword,
           captchaToken: forgotCaptchaToken,
@@ -4918,7 +4905,6 @@ function Settings({ user, theme, setTheme }) {
           "Password reset successfully."
       );
 
-      setForgotCurrentPassword("");
       setForgotNewPassword("");
       setForgotConfirmPassword("");
       setForgotCaptchaAnswer("");
@@ -5154,7 +5140,6 @@ function Settings({ user, theme, setTheme }) {
               value={forgotType}
               onChange={(e) => {
                 setForgotType(e.target.value);
-                setForgotCurrentPassword("");
                 setError("");
               }}
               disabled={forgotLoading}
@@ -5177,64 +5162,6 @@ function Settings({ user, theme, setTheme }) {
               {forgotType === "login"
                 ? "To reset your Login Password, enter your current Transaction Password."
                 : "To reset your Transaction Password, enter your current Login Password."}
-            </div>
-
-            <label>
-              {forgotType === "login"
-                ? "Current Transaction Password"
-                : "Current Login Password"}
-            </label>
-
-            <div
-              style={{
-                position: "relative",
-              }}
-            >
-              <input
-                type={
-                  showForgotCurrent
-                    ? "text"
-                    : "password"
-                }
-                placeholder={
-                  forgotType === "login"
-                    ? "Enter current transaction password"
-                    : "Enter current login password"
-                }
-                value={forgotCurrentPassword}
-                onChange={(e) =>
-                  setForgotCurrentPassword(
-                    e.target.value
-                  )
-                }
-                disabled={forgotLoading}
-                required
-                style={{
-                  paddingRight: "52px",
-                }}
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  setShowForgotCurrent(
-                    !showForgotCurrent
-                  )
-                }
-                disabled={forgotLoading}
-                style={{
-                  position: "absolute",
-                  right: "10px",
-                  top: "50%",
-                  transform: "translateY(-50%)",
-                  background: "transparent",
-                  border: 0,
-                  cursor: "pointer",
-                  fontSize: "18px",
-                }}
-              >
-                {showForgotCurrent ? "🙈" : "👁️"}
-              </button>
             </div>
 
             <label>New Password</label>
