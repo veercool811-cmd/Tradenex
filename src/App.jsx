@@ -5894,6 +5894,10 @@ function Support({
     setChatSending(true);
     setError("");
 
+    if (typeof playTradenexNotificationSound === "function") {
+      playTradenexNotificationSound();
+    }
+
     try {
       const data = await api(
         `/support/${selectedTicket.id}/reply`,
@@ -5906,10 +5910,6 @@ function Support({
       );
 
       if (data.ticket) {
-        if (typeof playTradenexNotificationSound === "function") {
-          playTradenexNotificationSound();
-        }
-
         setSelectedTicket(data.ticket);
 
         setTickets((prev) =>
@@ -7026,25 +7026,53 @@ function LandingPage({ onLogin }) {
 ===================================================== */
 
 
-function playTradenexNotificationSound() {
+let tradenexAudioContext = null;
+
+function unlockTradenexAudio() {
   try {
     const AudioCtx =
       window.AudioContext ||
       window.webkitAudioContext;
 
-    if (!AudioCtx) return;
+    if (!AudioCtx) return null;
 
-    const ctx = new AudioCtx();
+    if (!tradenexAudioContext) {
+      tradenexAudioContext = new AudioCtx();
+    }
+
+    if (tradenexAudioContext.state === "suspended") {
+      tradenexAudioContext.resume().catch(() => {});
+    }
+
+    return tradenexAudioContext;
+  } catch {
+    return null;
+  }
+}
+
+function playTradenexNotificationSound() {
+  try {
+    const ctx = unlockTradenexAudio();
+
+    if (!ctx) return;
+
+    const now = ctx.currentTime;
 
     const playTone = (frequency, start, duration) => {
       const oscillator = ctx.createOscillator();
       const gain = ctx.createGain();
 
       oscillator.type = "sine";
-      oscillator.frequency.value = frequency;
+      oscillator.frequency.setValueAtTime(
+        frequency,
+        start
+      );
 
       gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(0.18, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(
+        0.28,
+        start + 0.025
+      );
       gain.gain.exponentialRampToValueAtTime(
         0.0001,
         start + duration
@@ -7054,41 +7082,17 @@ function playTradenexNotificationSound() {
       gain.connect(ctx.destination);
 
       oscillator.start(start);
-      oscillator.stop(start + duration);
+      oscillator.stop(start + duration + 0.02);
     };
 
-    if (ctx.state === "suspended") {
-      ctx.resume().then(() => {
-        const now = ctx.currentTime;
-        playTone(880, now, 0.16);
-        playTone(1174, now + 0.13, 0.22);
-      });
-    } else {
-      const now = ctx.currentTime;
-      playTone(880, now, 0.16);
-      playTone(1174, now + 0.13, 0.22);
-    }
-
-    setTimeout(() => {
-      try {
-        ctx.close();
-      } catch {}
-    }, 1000);
-  } catch (error) {
-    console.log("Notification sound skipped:", error);
+    playTone(880, now, 0.16);
+    playTone(1174, now + 0.14, 0.24);
+  } catch (err) {
+    console.warn(
+      "Tradenex notification sound failed:",
+      err
+    );
   }
-}
-
-function compareVersions(a, b) {
-  const pa = String(a).split(".").map(Number);
-  const pb = String(b).split(".").map(Number);
-  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
-    const x = pa[i] || 0;
-    const y = pb[i] || 0;
-    if (x > y) return 1;
-    if (x < y) return -1;
-  }
-  return 0;
 }
 
 export default function App() {
@@ -7473,28 +7477,7 @@ export default function App() {
     );
 
     const unlockAudio = () => {
-      try {
-        const AudioCtx =
-          window.AudioContext ||
-          window.webkitAudioContext;
-
-        if (!AudioCtx) return;
-
-        const ctx = new AudioCtx();
-
-        if (
-          ctx.state ===
-          "suspended"
-        ) {
-          ctx.resume().catch(() => {});
-        }
-
-        setTimeout(() => {
-          try {
-            ctx.close();
-          } catch {}
-        }, 500);
-      } catch {}
+      unlockTradenexAudio();
     };
 
     window.addEventListener(
