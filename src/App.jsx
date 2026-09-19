@@ -5796,6 +5796,50 @@ function Support({
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [chatInput, setChatInput] = useState("");
   const [chatSending, setChatSending] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
+
+  async function loadChatUnread() {
+    try {
+      const data = await api("/notifications");
+      const list = Array.isArray(data.notifications)
+        ? data.notifications
+        : [];
+
+      const unreadSupport = list.filter(
+        (item) =>
+          item &&
+          item.type === "support" &&
+          !item.read
+      );
+
+      setChatUnread(unreadSupport.length);
+      return unreadSupport;
+    } catch (err) {
+      console.log("Support unread check skipped:", err);
+      return [];
+    }
+  }
+
+  async function clearChatUnread() {
+    try {
+      const unreadSupport = await loadChatUnread();
+
+      await Promise.all(
+        unreadSupport
+          .filter((item) => item.id)
+          .map((item) =>
+            api(`/notifications/${item.id}/read`, {
+              method: "PUT",
+            })
+          )
+      );
+
+      setChatUnread(0);
+    } catch (err) {
+      console.log("Support unread clear skipped:", err);
+      setChatUnread(0);
+    }
+  }
 
   async function loadTickets() {
     try {
@@ -5817,6 +5861,13 @@ function Support({
 
   useEffect(() => {
     loadTickets();
+    loadChatUnread();
+
+    const timer = setInterval(() => {
+      loadChatUnread();
+    }, 5000);
+
+    return () => clearInterval(timer);
   }, []);
 
   useEffect(() => {
@@ -5894,8 +5945,8 @@ function Support({
     setChatSending(true);
     setError("");
 
-    if (typeof playTradenexNotificationSound === "function") {
-      playTradenexNotificationSound();
+    if (typeof playTradenexChatSound === "function") {
+      playTradenexChatSound();
     }
 
     try {
@@ -6313,6 +6364,7 @@ function Support({
                 : [];
 
               if (list.length) {
+                await clearChatUnread();
                 openChat(list[0]);
               } else {
                 window.dispatchEvent(
@@ -6328,26 +6380,52 @@ function Support({
           aria-label="Open Support Chat"
           style={{
             position: "fixed",
-            right: "18px",
-            bottom: "20px",
+            right: "125px",
+            bottom: "24px",
             zIndex: 100000,
-            width: "58px",
-            height: "58px",
-            border: "1px solid rgba(255,255,255,.18)",
+            width: "82px",
+            height: "82px",
+            border: "2px solid rgba(255,255,255,.22)",
             borderRadius: "50%",
             background:
               "linear-gradient(135deg,#1265ff,#00aeea)",
             color: "#fff",
-            fontSize: "25px",
+            fontSize: "34px",
             cursor: "pointer",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             boxShadow:
-              "0 12px 35px rgba(0,100,255,.40)",
+              "0 14px 42px rgba(0,100,255,.48)",
+            position: "fixed",
           }}
         >
           💬
+
+          {chatUnread > 0 && (
+            <span
+              style={{
+                position: "absolute",
+                top: "-4px",
+                right: "-4px",
+                minWidth: "27px",
+                height: "27px",
+                padding: "0 7px",
+                borderRadius: "999px",
+                background: "#ff304f",
+                border: "3px solid #07111f",
+                color: "#fff",
+                fontSize: "13px",
+                fontWeight: 900,
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                boxShadow: "0 5px 16px rgba(255,48,79,.45)",
+              }}
+            >
+              {chatUnread > 99 ? "99+" : chatUnread}
+            </span>
+          )}
         </button>
       )}
 
@@ -7026,73 +7104,34 @@ function LandingPage({ onLogin }) {
 ===================================================== */
 
 
-let tradenexAudioContext = null;
-
-function unlockTradenexAudio() {
+function playTradenexAudio(file) {
   try {
-    const AudioCtx =
-      window.AudioContext ||
-      window.webkitAudioContext;
+    const audio = new Audio(file);
+    audio.volume = 0.8;
+    audio.currentTime = 0;
 
-    if (!AudioCtx) return null;
+    const promise = audio.play();
 
-    if (!tradenexAudioContext) {
-      tradenexAudioContext = new AudioCtx();
+    if (promise && typeof promise.catch === "function") {
+      promise.catch((err) => {
+        console.warn("Tradenex audio playback failed:", err);
+      });
     }
-
-    if (tradenexAudioContext.state === "suspended") {
-      tradenexAudioContext.resume().catch(() => {});
-    }
-
-    return tradenexAudioContext;
-  } catch {
-    return null;
+  } catch (err) {
+    console.warn("Tradenex audio failed:", err);
   }
 }
 
+function unlockTradenexAudio() {
+  return true;
+}
+
+function playTradenexChatSound() {
+  playTradenexAudio("/tradenex-chat-bell.wav");
+}
+
 function playTradenexNotificationSound() {
-  try {
-    const ctx = unlockTradenexAudio();
-
-    if (!ctx) return;
-
-    const now = ctx.currentTime;
-
-    const playTone = (frequency, start, duration) => {
-      const oscillator = ctx.createOscillator();
-      const gain = ctx.createGain();
-
-      oscillator.type = "sine";
-      oscillator.frequency.setValueAtTime(
-        frequency,
-        start
-      );
-
-      gain.gain.setValueAtTime(0.0001, start);
-      gain.gain.exponentialRampToValueAtTime(
-        0.28,
-        start + 0.025
-      );
-      gain.gain.exponentialRampToValueAtTime(
-        0.0001,
-        start + duration
-      );
-
-      oscillator.connect(gain);
-      gain.connect(ctx.destination);
-
-      oscillator.start(start);
-      oscillator.stop(start + duration + 0.02);
-    };
-
-    playTone(880, now, 0.16);
-    playTone(1174, now + 0.14, 0.24);
-  } catch (err) {
-    console.warn(
-      "Tradenex notification sound failed:",
-      err
-    );
-  }
+  playTradenexAudio("/tradenex-notification-bell.wav");
 }
 
 export default function App() {
@@ -7759,7 +7798,13 @@ export default function App() {
       {/* MAIN */}
 
       <main className="main-content">
-        <header className="topbar">
+        <header
+          className="topbar"
+          style={{
+            position: "relative",
+            zIndex: 300000,
+          }}
+        >
           <div className="topbar-left">
             <button
               className="hamburger-btn"
@@ -7853,14 +7898,14 @@ export default function App() {
             {notificationOpen && (
               <div
                 style={{
-                  position: "absolute",
-                  top: "54px",
-                  right: "0",
+                  position: "fixed",
+                  top: "74px",
+                  right: "14px",
                   width:
                     "min(380px, calc(100vw - 28px))",
-                  maxHeight: "430px",
+                  maxHeight: "min(520px, calc(100vh - 92px))",
                   overflowY: "auto",
-                  zIndex: 9999,
+                  zIndex: 200000,
                   borderRadius: "18px",
                   border:
                     "1px solid rgba(255,255,255,.12)",
