@@ -6275,7 +6275,7 @@ function Support() {
             backdropFilter: "blur(8px)",
             display: "flex",
             alignItems: "center",
-            justifyContent: "center",
+            justifyContent: "flex-end",
             padding: "16px",
           }}
         >
