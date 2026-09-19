@@ -5779,6 +5779,7 @@ function Settings({ user, theme, setTheme }) {
 function Support({
   openTicketId = null,
   onTicketOpened = null,
+  floatingOnly = false,
 }) {
   const [form, setForm] = useState({
     category: "General",
@@ -5905,6 +5906,10 @@ function Support({
       );
 
       if (data.ticket) {
+        if (typeof playTradenexNotificationSound === "function") {
+          playTradenexNotificationSound();
+        }
+
         setSelectedTicket(data.ticket);
 
         setTickets((prev) =>
@@ -5924,6 +5929,16 @@ function Support({
       setChatSending(false);
     }
   }
+
+  useEffect(() => {
+    if (!selectedTicket) return;
+
+    const timer = setInterval(() => {
+      refreshChat();
+    }, 5000);
+
+    return () => clearInterval(timer);
+  }, [selectedTicket?.id]);
 
   async function refreshChat() {
     try {
@@ -6286,6 +6301,56 @@ function Support({
         )}
       </div>
 
+
+      {floatingOnly && !selectedTicket && (
+        <button
+          type="button"
+          onClick={async () => {
+            try {
+              const data = await api("/support");
+              const list = Array.isArray(data.support)
+                ? data.support
+                : [];
+
+              if (list.length) {
+                openChat(list[0]);
+              } else {
+                window.dispatchEvent(
+                  new CustomEvent("tradenex-page", {
+                    detail: "support",
+                  })
+                );
+              }
+            } catch (err) {
+              console.error("Floating support error:", err);
+            }
+          }}
+          aria-label="Open Support Chat"
+          style={{
+            position: "fixed",
+            right: "18px",
+            bottom: "20px",
+            zIndex: 100000,
+            width: "58px",
+            height: "58px",
+            border: "1px solid rgba(255,255,255,.18)",
+            borderRadius: "50%",
+            background:
+              "linear-gradient(135deg,#1265ff,#00aeea)",
+            color: "#fff",
+            fontSize: "25px",
+            cursor: "pointer",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            boxShadow:
+              "0 12px 35px rgba(0,100,255,.40)",
+          }}
+        >
+          💬
+        </button>
+      )}
+
       {selectedTicket && (
         <div
           onClick={(e) => {
@@ -6296,21 +6361,22 @@ function Support({
           style={{
             position: "fixed",
             inset: 0,
-            zIndex: 9999,
+            zIndex: 100001,
             background:
-              "rgba(3,8,18,.72)",
-            backdropFilter: "blur(8px)",
+              "rgba(3,8,18,.38)",
+            backdropFilter: "blur(3px)",
             display: "flex",
-            alignItems: "center",
+            alignItems: "flex-end",
             justifyContent: "flex-end",
             padding: "16px",
+            pointerEvents: "auto",
           }}
         >
           <div
             style={{
-              width: "100%",
-              maxWidth: "520px",
-              height: "min(720px, 90vh)",
+              width: "min(430px, calc(100vw - 24px))",
+              maxWidth: "430px",
+              height: "min(620px, calc(100vh - 100px))",
               display: "flex",
               flexDirection: "column",
               overflow: "hidden",
@@ -6321,6 +6387,7 @@ function Support({
                 "1px solid rgba(255,255,255,.12)",
               boxShadow:
                 "0 30px 90px rgba(0,0,0,.45)",
+              marginBottom: "2px",
             }}
           >
             <div
@@ -8086,21 +8153,18 @@ export default function App() {
             <Settings user={user} theme={theme} setTheme={setTheme} />
           )}
 
-          {page === "support" && (
-            <Support
-              openTicketId={
-                supportOpenTicketId
-              }
-              onTicketOpened={() =>
-                setSupportOpenTicketId(null)
-              }
-            />
-          )}
-
           {page === "faq" && (
             <FAQ />
           )}
         </section>
+
+        <Support
+          openTicketId={supportOpenTicketId}
+          onTicketOpened={() =>
+            setSupportOpenTicketId(null)
+          }
+          floatingOnly={page !== "support"}
+        />
       </main>
     </div>
   );
