@@ -6580,9 +6580,12 @@ function Support() {
                 placeholder="Write a message..."
                 disabled={chatSending}
                 style={{
-                  flex: 1,
+                  flex: "1 1 auto",
+                  width: "auto",
                   margin: 0,
                   minWidth: 0,
+                  minHeight: "46px",
+                  boxSizing: "border-box",
                 }}
               />
 
@@ -6594,8 +6597,12 @@ function Support() {
                   !chatInput.trim()
                 }
                 style={{
+                  width: "auto",
                   minWidth: "82px",
+                  flex: "0 0 82px",
+                  marginTop: 0,
                   padding: "10px 13px",
+                  whiteSpace: "nowrap",
                 }}
               >
                 {chatSending
