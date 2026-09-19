@@ -2952,6 +2952,182 @@ app.post(
   passwordHandler
 );
 
+
+/* =====================================================
+   AUTHENTICATED PASSWORD RECOVERY FROM SETTINGS
+===================================================== */
+
+const passwordRecoveryCaptchas = new Map();
+
+app.get(
+  "/api/password-recovery/captcha",
+  auth,
+  (req, res) => {
+    const a = Math.floor(Math.random() * 9) + 1;
+    const b = Math.floor(Math.random() * 9) + 1;
+    const token = crypto.randomBytes(24).toString("hex");
+
+    passwordRecoveryCaptchas.set(token, {
+      answer: String(a + b),
+      expiresAt: Date.now() + 5 * 60 * 1000,
+    });
+
+    return res.json({
+      success: true,
+      token,
+      question: `${a} + ${b} = ?`,
+    });
+  }
+);
+
+app.post(
+  "/api/password-recovery",
+  auth,
+  (req, res) => {
+    try {
+      const {
+        type,
+        currentPassword,
+        newPassword,
+        confirmPassword,
+        captchaAnswer,
+        captchaToken,
+      } = req.body || {};
+
+      if (
+        type !== "login" &&
+        type !== "transaction"
+      ) {
+        return res.status(400).json({
+          success: false,
+          message: "Invalid password type.",
+        });
+      }
+
+      if (!currentPassword) {
+        return res.status(400).json({
+          success: false,
+          message:
+            type === "login"
+              ? "Current transaction password is required."
+              : "Current login password is required.",
+        });
+      }
+
+      if (!newPassword || !confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "New password and confirmation are required.",
+        });
+      }
+
+      if (newPassword !== confirmPassword) {
+        return res.status(400).json({
+          success: false,
+          message: "New passwords do not match.",
+        });
+      }
+
+      if (!isStrongPassword(newPassword)) {
+        return res.status(400).json({
+          success: false,
+          message:
+            "Password must be at least 8 characters and include uppercase, lowercase, number and special character.",
+        });
+      }
+
+      const captcha =
+        passwordRecoveryCaptchas.get(captchaToken);
+
+      if (
+        !captcha ||
+        Date.now() > captcha.expiresAt ||
+        String(captchaAnswer || "").trim() !==
+          captcha.answer
+      ) {
+        if (captchaToken) {
+          passwordRecoveryCaptchas.delete(captchaToken);
+        }
+
+        return res.status(400).json({
+          success: false,
+          message: "Invalid or expired captcha.",
+        });
+      }
+
+      passwordRecoveryCaptchas.delete(captchaToken);
+
+      const users = read(USERS_FILE);
+
+      const index = users.findIndex(
+        (u) => u.id === req.user.id
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "User not found.",
+        });
+      }
+
+      const user = users[index];
+
+      if (type === "login") {
+        if (
+          !user.transactionPasswordHash ||
+          user.transactionPasswordHash !==
+            hash(currentPassword)
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Current transaction password is incorrect.",
+          });
+        }
+
+        user.passwordHash = hash(newPassword);
+
+        /* Invalidate existing login session after recovery. */
+        user.sessionToken = "";
+      } else {
+        if (
+          user.passwordHash !==
+          hash(currentPassword)
+        ) {
+          return res.status(400).json({
+            success: false,
+            message:
+              "Current login password is incorrect.",
+          });
+        }
+
+        user.transactionPasswordHash =
+          hash(newPassword);
+      }
+
+      write(USERS_FILE, users);
+
+      return res.json({
+        success: true,
+        message:
+          type === "login"
+            ? "Login password reset successfully."
+            : "Transaction password reset successfully.",
+      });
+    } catch (error) {
+      console.error(
+        "SETTINGS PASSWORD RECOVERY ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Password recovery failed.",
+      });
+    }
+  }
+);
+
 app.put(
   "/api/user/:id/passwords",
   auth,
