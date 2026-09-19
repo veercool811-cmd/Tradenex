@@ -5777,35 +5777,27 @@ function Settings({ user, theme, setTheme }) {
 ===================================================== */
 
 function Support() {
-  const [form, setForm] =
-    useState({
-      category: "General",
-      subject: "",
-      message: "",
-    });
+  const [form, setForm] = useState({
+    category: "General",
+    subject: "",
+    message: "",
+  });
 
-  const [message, setMessage] =
-    useState("");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [tickets, setTickets] = useState([]);
+  const [loadingTickets, setLoadingTickets] = useState(true);
 
-  const [error, setError] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [tickets, setTickets] =
-    useState([]);
-
-  const [loadingTickets, setLoadingTickets] =
-    useState(true);
+  const [selectedTicket, setSelectedTicket] = useState(null);
+  const [chatInput, setChatInput] = useState("");
+  const [chatSending, setChatSending] = useState(false);
 
   async function loadTickets() {
     try {
       setLoadingTickets(true);
 
-      const data = await api(
-        "/support"
-      );
+      const data = await api("/support");
 
       setTickets(
         Array.isArray(data.support)
@@ -5813,10 +5805,7 @@ function Support() {
           : []
       );
     } catch (err) {
-      console.error(
-        "Support history error:",
-        err
-      );
+      console.error("Support history error:", err);
     } finally {
       setLoadingTickets(false);
     }
@@ -5834,15 +5823,12 @@ function Support() {
     setLoading(true);
 
     try {
-      const data = await api(
-        "/support",
-        {
-          method: "POST",
-          body: JSON.stringify(form),
-        }
-      );
+      const data = await api("/support", {
+        method: "POST",
+        body: JSON.stringify(form),
+      });
 
-      setMessage(data.message);
+      setMessage(data.message || "Support ticket created successfully.");
 
       setForm({
         category: "General",
@@ -5858,15 +5844,96 @@ function Support() {
     }
   }
 
+  function openChat(ticket) {
+    setSelectedTicket(ticket);
+    setChatInput("");
+  }
+
+  function closeChat() {
+    setSelectedTicket(null);
+    setChatInput("");
+  }
+
+  async function sendChatMessage(e) {
+    e.preventDefault();
+
+    const text = chatInput.trim();
+
+    if (!text || !selectedTicket || chatSending) {
+      return;
+    }
+
+    setChatSending(true);
+    setError("");
+
+    try {
+      const data = await api(
+        `/support/${selectedTicket.id}/reply`,
+        {
+          method: "POST",
+          body: JSON.stringify({
+            reply: text,
+          }),
+        }
+      );
+
+      if (data.ticket) {
+        setSelectedTicket(data.ticket);
+
+        setTickets((prev) =>
+          prev.map((ticket) =>
+            String(ticket.id) ===
+            String(data.ticket.id)
+              ? data.ticket
+              : ticket
+          )
+        );
+      }
+
+      setChatInput("");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setChatSending(false);
+    }
+  }
+
+  async function refreshChat() {
+    try {
+      const data = await api("/support");
+
+      const updatedTickets = Array.isArray(data.support)
+        ? data.support
+        : [];
+
+      setTickets(updatedTickets);
+
+      if (selectedTicket) {
+        const updated = updatedTickets.find(
+          (ticket) =>
+            String(ticket.id) ===
+            String(selectedTicket.id)
+        );
+
+        if (updated) {
+          setSelectedTicket(updated);
+        }
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+  }
+
   return (
     <>
       <div className="page-title">
-        <small>SUPPORT</small>
+        <small>SUPPORT CENTER</small>
 
-        <h2>Support</h2>
+        <h2>Tradenex Support</h2>
 
         <p>
-          Contact Tradenex support.
+          Raise a support ticket and chat directly
+          with the Tradenex support team.
         </p>
       </div>
 
@@ -5882,11 +5949,65 @@ function Support() {
         </div>
       )}
 
-      <div className="panel-card">
+      <div
+        className="panel-card"
+        style={{
+          background:
+            "linear-gradient(135deg, rgba(18,32,58,.98), rgba(10,18,34,.98))",
+          border:
+            "1px solid rgba(255,255,255,.09)",
+          borderRadius: "22px",
+          padding: "24px",
+          boxShadow:
+            "0 18px 50px rgba(0,0,0,.20)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "14px",
+            marginBottom: "22px",
+          }}
+        >
+          <div
+            style={{
+              width: "52px",
+              height: "52px",
+              borderRadius: "16px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background:
+                "linear-gradient(135deg,#1769ff,#00b8ff)",
+              color: "#fff",
+              fontSize: "23px",
+              boxShadow:
+                "0 10px 30px rgba(23,105,255,.30)",
+            }}
+          >
+            💬
+          </div>
+
+          <div>
+            <h3 style={{ margin: 0 }}>
+              Create Support Ticket
+            </h3>
+
+            <p
+              style={{
+                margin: "5px 0 0",
+                opacity: .72,
+              }}
+            >
+              Our support team will reply inside your
+              ticket chat.
+            </p>
+          </div>
+        </div>
+
         <form onSubmit={submit}>
-          <label>
-            Category
-          </label>
+          <label>Category</label>
 
           <select
             value={form.category}
@@ -5904,12 +6025,10 @@ function Support() {
             <option>Technical</option>
           </select>
 
-          <label>
-            Subject
-          </label>
+          <label>Subject</label>
 
           <input
-            placeholder="Subject"
+            placeholder="Enter ticket subject"
             value={form.subject}
             onChange={(e) =>
               setForm({
@@ -5920,13 +6039,11 @@ function Support() {
             required
           />
 
-          <label>
-            Message
-          </label>
+          <label>Message</label>
 
           <textarea
-            rows="7"
-            placeholder="Write your message"
+            rows="6"
+            placeholder="Describe your issue..."
             value={form.message}
             onChange={(e) =>
               setForm({
@@ -5940,90 +6057,555 @@ function Support() {
           <button
             className="primary-btn"
             disabled={loading}
+            type="submit"
           >
             {loading
-              ? "Sending..."
-              : "Submit Support Request"}
+              ? "Creating Ticket..."
+              : "Create Support Ticket"}
           </button>
         </form>
       </div>
 
-      <div className="panel-card">
-        <div className="page-title">
-          <small>HISTORY</small>
-          <h2>My Support Tickets</h2>
+      <div className="panel-card" style={{ marginTop: "20px" }}>
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            marginBottom: "18px",
+          }}
+        >
+          <div>
+            <small>SUPPORT HISTORY</small>
+
+            <h2 style={{ margin: "4px 0 0" }}>
+              My Support Tickets
+            </h2>
+          </div>
+
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={loadTickets}
+            disabled={loadingTickets}
+          >
+            ↻ Refresh
+          </button>
         </div>
 
         {loadingTickets ? (
-          <p>Loading support tickets...</p>
+          <div
+            style={{
+              padding: "30px 10px",
+              textAlign: "center",
+              opacity: .7,
+            }}
+          >
+            Loading support tickets...
+          </div>
         ) : !tickets.length ? (
-          <p>No support tickets yet.</p>
+          <div
+            style={{
+              padding: "35px 15px",
+              textAlign: "center",
+              opacity: .7,
+            }}
+          >
+            <div style={{ fontSize: "38px" }}>💬</div>
+
+            <h3>No support tickets yet</h3>
+
+            <p>
+              Create your first ticket above to contact
+              Tradenex support.
+            </p>
+          </div>
         ) : (
-          tickets.map((ticket) => (
+          tickets.map((ticket) => {
+            const replies = Array.isArray(ticket.replies)
+              ? ticket.replies
+              : [];
+
+            const lastReply =
+              replies.length > 0
+                ? replies[replies.length - 1]
+                : null;
+
+            const hasAdminReply =
+              lastReply?.sender === "admin";
+
+            return (
+              <div
+                key={ticket.id}
+                className="support-card"
+                style={{
+                  marginBottom: "14px",
+                  padding: "18px",
+                  borderRadius: "18px",
+                  border:
+                    "1px solid rgba(255,255,255,.08)",
+                  background:
+                    "rgba(255,255,255,.025)",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    justifyContent: "space-between",
+                    gap: "14px",
+                    alignItems: "flex-start",
+                  }}
+                >
+                  <div style={{ minWidth: 0 }}>
+                    <strong
+                      style={{
+                        fontSize: "16px",
+                        display: "block",
+                      }}
+                    >
+                      {ticket.subject}
+                    </strong>
+
+                    <div
+                      style={{
+                        display: "flex",
+                        gap: "8px",
+                        flexWrap: "wrap",
+                        marginTop: "7px",
+                      }}
+                    >
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          padding: "5px 9px",
+                          borderRadius: "20px",
+                          background:
+                            "rgba(23,105,255,.12)",
+                        }}
+                      >
+                        {ticket.category}
+                      </span>
+
+                      <span
+                        style={{
+                          fontSize: "12px",
+                          padding: "5px 9px",
+                          borderRadius: "20px",
+                          background:
+                            ticket.status === "Answered"
+                              ? "rgba(40,190,120,.14)"
+                              : "rgba(255,180,50,.14)",
+                        }}
+                      >
+                        {ticket.status}
+                      </span>
+
+                      {hasAdminReply && (
+                        <span
+                          style={{
+                            fontSize: "12px",
+                            padding: "5px 9px",
+                            borderRadius: "20px",
+                            background:
+                              "rgba(0,184,255,.14)",
+                          }}
+                        >
+                          ● New Reply
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="primary-btn"
+                    onClick={() => openChat(ticket)}
+                    style={{
+                      whiteSpace: "nowrap",
+                      padding: "10px 15px",
+                    }}
+                  >
+                    💬 Open Chat
+                  </button>
+                </div>
+
+                <p
+                  style={{
+                    margin:
+                      "14px 0 8px",
+                    opacity: .78,
+                  }}
+                >
+                  {ticket.message}
+                </p>
+
+                {lastReply && (
+                  <div
+                    style={{
+                      fontSize: "12px",
+                      opacity: .6,
+                    }}
+                  >
+                    Last message:{" "}
+                    {lastReply.sender === "admin"
+                      ? "Tradenex Support"
+                      : "You"}
+                  </div>
+                )}
+              </div>
+            );
+          })
+        )}
+      </div>
+
+      {selectedTicket && (
+        <div
+          onClick={(e) => {
+            if (e.target === e.currentTarget) {
+              closeChat();
+            }
+          }}
+          style={{
+            position: "fixed",
+            inset: 0,
+            zIndex: 9999,
+            background:
+              "rgba(3,8,18,.72)",
+            backdropFilter: "blur(8px)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            padding: "16px",
+          }}
+        >
+          <div
+            style={{
+              width: "100%",
+              maxWidth: "520px",
+              height: "min(720px, 90vh)",
+              display: "flex",
+              flexDirection: "column",
+              overflow: "hidden",
+              borderRadius: "24px",
+              background:
+                "linear-gradient(180deg,#101c32,#08111f)",
+              border:
+                "1px solid rgba(255,255,255,.12)",
+              boxShadow:
+                "0 30px 90px rgba(0,0,0,.45)",
+            }}
+          >
             <div
-              key={ticket.id}
-              className="support-card"
               style={{
-                marginBottom: "16px",
+                padding: "17px 18px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "space-between",
+                gap: "12px",
+                background:
+                  "linear-gradient(135deg,#1265ff,#009edb)",
+                color: "#fff",
               }}
             >
-              <div>
-                <strong>
-                  {ticket.subject}
-                </strong>
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "12px",
+                  minWidth: 0,
+                }}
+              >
+                <div
+                  style={{
+                    width: "43px",
+                    height: "43px",
+                    borderRadius: "14px",
+                    background:
+                      "rgba(255,255,255,.16)",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    fontSize: "20px",
+                  }}
+                >
+                  💬
+                </div>
 
-                <div>
-                  <small>
-                    {ticket.category} ·{" "}
-                    {ticket.status}
-                  </small>
+                <div style={{ minWidth: 0 }}>
+                  <strong
+                    style={{
+                      display: "block",
+                      fontSize: "16px",
+                    }}
+                  >
+                    Tradenex Support
+                  </strong>
+
+                  <span
+                    style={{
+                      display: "block",
+                      fontSize: "12px",
+                      opacity: .82,
+                      whiteSpace: "nowrap",
+                      overflow: "hidden",
+                      textOverflow: "ellipsis",
+                    }}
+                  >
+                    {selectedTicket.subject}
+                  </span>
                 </div>
               </div>
 
-              <p>
-                {ticket.message}
-              </p>
+              <div
+                style={{
+                  display: "flex",
+                  gap: "7px",
+                }}
+              >
+                <button
+                  type="button"
+                  onClick={refreshChat}
+                  style={{
+                    border: 0,
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "11px",
+                    background:
+                      "rgba(255,255,255,.14)",
+                    color: "#fff",
+                    cursor: "pointer",
+                  }}
+                >
+                  ↻
+                </button>
 
-              {Array.isArray(ticket.replies) &&
-                ticket.replies.length > 0 && (
-                  <div
-                    style={{
-                      marginTop: "12px",
-                    }}
-                  >
-                    {ticket.replies.map(
-                      (item) => (
-                        <div
-                          key={item.id}
-                          className="panel-card"
-                        >
-                          <strong>
-                            {item.sender ===
-                            "admin"
-                              ? "Admin Reply"
-                              : "Your Reply"}
-                          </strong>
-
-                          <p>
-                            {item.message}
-                          </p>
-
-                          <small>
-                            {item.createdAt
-                              ? new Date(
-                                  item.createdAt
-                                ).toLocaleString()
-                              : ""}
-                          </small>
-                        </div>
-                      )
-                    )}
-                  </div>
-                )}
+                <button
+                  type="button"
+                  onClick={closeChat}
+                  style={{
+                    border: 0,
+                    width: "36px",
+                    height: "36px",
+                    borderRadius: "11px",
+                    background:
+                      "rgba(255,255,255,.14)",
+                    color: "#fff",
+                    fontSize: "20px",
+                    cursor: "pointer",
+                  }}
+                >
+                  ×
+                </button>
+              </div>
             </div>
-          ))
-        )}
-      </div>
+
+            <div
+              style={{
+                padding: "10px 16px",
+                borderBottom:
+                  "1px solid rgba(255,255,255,.07)",
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <span
+                style={{
+                  fontSize: "12px",
+                  opacity: .65,
+                }}
+              >
+                Ticket #{selectedTicket.id}
+              </span>
+
+              <span
+                style={{
+                  fontSize: "12px",
+                  padding: "5px 9px",
+                  borderRadius: "20px",
+                  background:
+                    selectedTicket.status === "Answered"
+                      ? "rgba(40,190,120,.14)"
+                      : "rgba(255,180,50,.14)",
+                }}
+              >
+                {selectedTicket.status}
+              </span>
+            </div>
+
+            <div
+              style={{
+                flex: 1,
+                overflowY: "auto",
+                padding: "18px 14px",
+              }}
+            >
+              <div
+                style={{
+                  maxWidth: "86%",
+                  marginBottom: "14px",
+                  marginRight: "auto",
+                }}
+              >
+                <div
+                  style={{
+                    fontSize: "11px",
+                    opacity: .55,
+                    marginBottom: "5px",
+                  }}
+                >
+                  You · Ticket
+                </div>
+
+                <div
+                  style={{
+                    padding: "12px 14px",
+                    borderRadius:
+                      "15px 15px 15px 5px",
+                    background:
+                      "rgba(255,255,255,.07)",
+                    lineHeight: 1.5,
+                  }}
+                >
+                  {selectedTicket.message}
+                </div>
+
+                <small
+                  style={{
+                    display: "block",
+                    marginTop: "5px",
+                    opacity: .42,
+                  }}
+                >
+                  {selectedTicket.createdAt
+                    ? new Date(
+                        selectedTicket.createdAt
+                      ).toLocaleString()
+                    : ""}
+                </small>
+              </div>
+
+              {Array.isArray(selectedTicket.replies) &&
+                selectedTicket.replies.map((item) => {
+                  const isAdmin =
+                    item.sender === "admin";
+
+                  return (
+                    <div
+                      key={item.id}
+                      style={{
+                        maxWidth: "86%",
+                        marginBottom: "14px",
+                        marginLeft: isAdmin
+                          ? 0
+                          : "auto",
+                        marginRight: isAdmin
+                          ? "auto"
+                          : 0,
+                      }}
+                    >
+                      <div
+                        style={{
+                          fontSize: "11px",
+                          opacity: .55,
+                          marginBottom: "5px",
+                          textAlign: isAdmin
+                            ? "left"
+                            : "right",
+                        }}
+                      >
+                        {isAdmin
+                          ? "Tradenex Support"
+                          : "You"}
+                      </div>
+
+                      <div
+                        style={{
+                          padding: "12px 14px",
+                          borderRadius: isAdmin
+                            ? "15px 15px 15px 5px"
+                            : "15px 15px 5px 15px",
+                          background: isAdmin
+                            ? "rgba(23,105,255,.17)"
+                            : "linear-gradient(135deg,#1265ff,#008fd0)",
+                          color: "#fff",
+                          lineHeight: 1.5,
+                          boxShadow: isAdmin
+                            ? "none"
+                            : "0 8px 22px rgba(0,120,220,.18)",
+                        }}
+                      >
+                        {item.message}
+                      </div>
+
+                      <small
+                        style={{
+                          display: "block",
+                          marginTop: "5px",
+                          opacity: .42,
+                          textAlign: isAdmin
+                            ? "left"
+                            : "right",
+                        }}
+                      >
+                        {item.createdAt
+                          ? new Date(
+                              item.createdAt
+                            ).toLocaleString()
+                          : ""}
+                      </small>
+                    </div>
+                  );
+                })}
+            </div>
+
+            <form
+              onSubmit={sendChatMessage}
+              style={{
+                padding: "12px",
+                borderTop:
+                  "1px solid rgba(255,255,255,.08)",
+                background:
+                  "rgba(0,0,0,.16)",
+                display: "flex",
+                gap: "9px",
+              }}
+            >
+              <input
+                value={chatInput}
+                onChange={(e) =>
+                  setChatInput(e.target.value)
+                }
+                placeholder="Write a message..."
+                disabled={chatSending}
+                style={{
+                  flex: 1,
+                  margin: 0,
+                  minWidth: 0,
+                }}
+              />
+
+              <button
+                type="submit"
+                className="primary-btn"
+                disabled={
+                  chatSending ||
+                  !chatInput.trim()
+                }
+                style={{
+                  minWidth: "82px",
+                  padding: "10px 13px",
+                }}
+              >
+                {chatSending
+                  ? "..."
+                  : "Send"}
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
     </>
   );
 }
