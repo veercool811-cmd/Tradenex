@@ -4773,6 +4773,74 @@ app.post(
   }
 );
 
+
+/* =====================================================
+   USER SUPPORT CHAT REPLY
+===================================================== */
+
+app.post(
+  "/api/support/:id/reply",
+  auth,
+  (req, res) => {
+    try {
+      const reply = clean(req.body?.reply);
+
+      if (!reply) {
+        return res.status(400).json({
+          success: false,
+          message: "Reply message required.",
+        });
+      }
+
+      const support = read(SUPPORT_FILE);
+
+      const index = support.findIndex(
+        (ticket) =>
+          String(ticket.id) === String(req.params.id) &&
+          String(ticket.userId) === String(req.user.id)
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "Support ticket not found.",
+        });
+      }
+
+      const ticket = support[index];
+
+      if (!Array.isArray(ticket.replies)) {
+        ticket.replies = [];
+      }
+
+      ticket.replies.push({
+        id: makeId("REPLY"),
+        sender: "user",
+        message: reply,
+        createdAt: now(),
+      });
+
+      ticket.status = "Open";
+      ticket.updatedAt = now();
+
+      write(SUPPORT_FILE, support);
+
+      return res.json({
+        success: true,
+        message: "Message sent successfully.",
+        ticket,
+      });
+    } catch (error) {
+      console.error("USER SUPPORT REPLY ERROR:", error);
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to send support message.",
+      });
+    }
+  }
+);
+
 /* =====================================================
    ADMIN APPROVE DEPOSIT
 ===================================================== */
