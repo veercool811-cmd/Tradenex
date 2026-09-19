@@ -10519,3 +10519,295 @@ a.live-offer-button:active,
   }
 }
 
+
+/* =========================================================
+   TRADENEX MOBILE PREMIUM RESPONSIVE FIX
+   Desktop layout remains unchanged
+========================================================= */
+
+html,
+body,
+#root {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+@media (max-width: 768px) {
+
+  /* ---------- GLOBAL ---------- */
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    overflow-x: hidden !important;
+  }
+
+  .app,
+  .app-shell,
+  .dashboard,
+  .main-content,
+  .page-content {
+    max-width: 100vw !important;
+    overflow-x: hidden !important;
+  }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar {
+    min-height: 76px !important;
+    height: auto !important;
+    padding: 12px 14px !important;
+    gap: 10px !important;
+    position: relative !important;
+    z-index: 300000 !important;
+  }
+
+  .topbar h1,
+  .topbar h2,
+  .topbar-title {
+    font-size: 22px !important;
+    line-height: 1.15 !important;
+  }
+
+  .topbar p,
+  .topbar-subtitle {
+    font-size: 11px !important;
+  }
+
+  .topbar button {
+    min-width: 48px !important;
+    min-height: 48px !important;
+  }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar {
+    width: min(310px, 84vw) !important;
+    max-width: 84vw !important;
+  }
+
+  .sidebar img {
+    max-width: 190px !important;
+    max-height: 145px !important;
+    object-fit: contain !important;
+  }
+
+  .sidebar .menu-item,
+  .sidebar button {
+    min-height: 52px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* ---------- MAIN CONTENT ---------- */
+  .content,
+  .main-content,
+  .page-content,
+  .dashboard-content {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 14px !important;
+    margin: 0 !important;
+  }
+
+  /* ---------- CARDS ---------- */
+  .card,
+  .panel,
+  .stat-card,
+  .dashboard-card,
+  .wallet-card {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-width: 0 !important;
+    margin-left: 0 !important;
+    margin-right: 0 !important;
+    border-radius: 20px !important;
+  }
+
+  .card h1,
+  .card h2,
+  .panel h1,
+  .panel h2 {
+    font-size: clamp(20px, 6vw, 28px) !important;
+  }
+
+  /* ---------- GRIDS ---------- */
+  .grid,
+  .stats-grid,
+  .dashboard-grid,
+  .card-grid {
+    display: grid !important;
+    grid-template-columns: 1fr !important;
+    width: 100% !important;
+    gap: 12px !important;
+  }
+
+  /* ---------- TABLES ---------- */
+  .table-wrap,
+  .tu-table-wrap {
+    width: 100% !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  table {
+    min-width: 620px;
+  }
+
+  /* ---------- INPUTS ---------- */
+  input,
+  select,
+  textarea {
+    max-width: 100% !important;
+    font-size: 16px !important;
+  }
+
+  /* ---------- SUPPORT FLOATING CHAT ----------
+     circular Messenger-style button
+  ------------------------------------------------ */
+  .tradenex-floating-chat {
+    width: 58px !important;
+    height: 58px !important;
+    min-width: 58px !important;
+    min-height: 58px !important;
+    right: 18px !important;
+    bottom: 82px !important;
+    border-radius: 50% !important;
+    font-size: 27px !important;
+    padding: 0 !important;
+    z-index: 400000 !important;
+  }
+
+  /* unread badge */
+  .tradenex-floating-chat span {
+    min-width: 22px !important;
+    height: 22px !important;
+    padding: 0 5px !important;
+    font-size: 11px !important;
+    top: -3px !important;
+    right: -2px !important;
+  }
+
+  /* ---------- ANDROID APP BUTTON ----------
+     keep it separate from chat
+  ------------------------------------------------ */
+  .tradenex-android-app {
+    position: fixed !important;
+    left: 14px !important;
+    right: auto !important;
+    bottom: 14px !important;
+    width: auto !important;
+    max-width: 150px !important;
+    min-height: 48px !important;
+    z-index: 399999 !important;
+    border-radius: 16px !important;
+    padding: 0 15px !important;
+    font-size: 14px !important;
+    white-space: nowrap !important;
+  }
+
+  /* ---------- SUPPORT CHAT WINDOW ---------- */
+  .tradenex-support-chat {
+    position: fixed !important;
+    left: 10px !important;
+    right: 10px !important;
+    bottom: 10px !important;
+    top: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    height: min(78vh, 650px) !important;
+    max-height: calc(100vh - 20px) !important;
+    margin: 0 !important;
+    border-radius: 24px !important;
+    z-index: 500000 !important;
+    overflow: hidden !important;
+  }
+
+  .tradenex-support-chat input,
+  .tradenex-support-chat textarea {
+    min-width: 0 !important;
+    width: 100% !important;
+  }
+
+  .tradenex-support-chat button {
+    min-height: 46px !important;
+  }
+
+  /* ---------- SUPPORT MESSAGE AREA ---------- */
+  .tradenex-chat-messages {
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* ---------- MODALS ---------- */
+  .modal,
+  .popup,
+  .dialog {
+    max-width: calc(100vw - 20px) !important;
+  }
+
+  /* ---------- PORTFOLIO / CHART ---------- */
+  canvas,
+  svg {
+    max-width: 100% !important;
+  }
+
+  /* ---------- REMOVE MOBILE SIDE OVERFLOW ---------- */
+  img,
+  video,
+  iframe {
+    max-width: 100%;
+  }
+
+  /* ---------- BETTER TOUCH TARGETS ---------- */
+  button {
+    touch-action: manipulation;
+  }
+}
+
+@media (max-width: 430px) {
+
+  .topbar {
+    padding: 10px 11px !important;
+  }
+
+  .content,
+  .main-content,
+  .page-content,
+  .dashboard-content {
+    padding: 10px !important;
+  }
+
+  .card,
+  .panel,
+  .stat-card,
+  .dashboard-card,
+  .wallet-card {
+    border-radius: 17px !important;
+  }
+
+  .tradenex-floating-chat {
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px !important;
+    min-height: 56px !important;
+    right: 15px !important;
+    bottom: 78px !important;
+  }
+
+  .tradenex-android-app {
+    left: 10px !important;
+    bottom: 10px !important;
+    min-height: 46px !important;
+    padding: 0 12px !important;
+    font-size: 13px !important;
+  }
+
+  .tradenex-support-chat {
+    left: 7px !important;
+    right: 7px !important;
+    bottom: 7px !important;
+    height: min(82vh, 650px) !important;
+    border-radius: 21px !important;
+  }
+}
+
