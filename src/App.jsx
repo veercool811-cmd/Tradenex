@@ -6312,7 +6312,7 @@ function Support({
 
                   <button
                     type="button"
-                    className="primary-btn"
+                    className="primary-btn support-open-chat"
                     onClick={() => openChat(ticket)}
                     style={{
                       whiteSpace: "nowrap",
@@ -6378,6 +6378,7 @@ function Support({
             }
           }}
           aria-label="Open Support Chat"
+          className="tradenex-floating-chat"
           style={{
             position: "fixed",
             right: "125px",
