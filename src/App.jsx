@@ -4377,45 +4377,38 @@ function Profile({
 
         <div className="profile-avatar-wrap">
           <div className="profile-avatar">
-            {photoUrl ? (
-              <img
-                src={photoUrl}
-                alt="Profile"
-              />
-            ) : (
-              <span>{initials}</span>
-            )}
-          </div>
-
-          <label className="profile-camera">
-            {photoLoading ? "…" : "📷"}
-            <input
-              type="file"
-              accept="image/jpeg,image/png,image/webp"
-              onChange={uploadPhoto}
-              disabled={photoLoading}
-              hidden
+            <img
+              src="/tradenex-premium-logo.png"
+              alt="Tradenex"
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "contain",
+                padding: "12px",
+              }}
             />
-          </label>
+          </div>
         </div>
 
         <div className="profile-hero-info">
           <div className="profile-kicker">
-            TRADENEX ACCOUNT
+            COMPANY PROFILE
           </div>
 
-          <h1>{fullName}</h1>
+          <h1>TRADENEX</h1>
 
-          <p>{user.email || "Email not available"}</p>
+          <p>
+            Smart Digital Finance & Trading Platform
+          </p>
 
           <div className="profile-badges">
             <span className="profile-status">
               <i />
-              Active Account
+              Digital Platform
             </span>
 
             <span>
-              Member since {memberSince}
+              Secure • Simple • Accessible
             </span>
           </div>
         </div>
@@ -4423,133 +4416,46 @@ function Profile({
         <div className="profile-hero-action">
           <button
             type="button"
-            onClick={() => go && go("settings")}
+            onClick={() => go && go("support")}
           >
-            🔐 Security
+            🎧 Support
           </button>
         </div>
       </div>
-
-      {message && (
-        <div className="profile-alert profile-alert-success">
-          ✓ {message}
-        </div>
-      )}
-
-      {error && (
-        <div className="profile-alert profile-alert-error">
-          ⚠ {error}
-        </div>
-      )}
 
       <div className="profile-grid">
 
         <section className="profile-card profile-main-card">
           <div className="profile-card-head">
             <div>
-              <small>PERSONAL INFORMATION</small>
-              <h2>Profile Details</h2>
+              <small>ABOUT TRADENEX</small>
+              <h2>Who We Are</h2>
             </div>
+
             <span className="profile-card-icon">✦</span>
           </div>
 
-          <form onSubmit={submit}>
+          <p style={{
+            lineHeight: "1.8",
+            color: "rgba(255,255,255,.78)",
+            marginBottom: "20px",
+          }}>
+            Tradenex is a digital platform designed to provide
+            users with a structured environment for managing
+            their account, deposits, withdrawals, transactions
+            and referral activities through one convenient
+            dashboard.
+          </p>
 
-            <div className="profile-form-grid">
-              <div className="profile-field">
-                <label>First Name</label>
-                <input
-                  value={form.firstName}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      firstName: e.target.value,
-                    })
-                  }
-                  placeholder="First name"
-                />
-              </div>
-
-              <div className="profile-field">
-                <label>Last Name</label>
-                <input
-                  value={form.lastName}
-                  onChange={(e) =>
-                    setForm({
-                      ...form,
-                      lastName: e.target.value,
-                    })
-                  }
-                  placeholder="Last name"
-                />
-              </div>
-            </div>
-
-            <div className="profile-field">
-              <label>Mobile Number</label>
-              <input
-                value={form.mobile}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    mobile: e.target.value,
-                  })
-                }
-                placeholder="Mobile number"
-              />
-            </div>
-
-            <div className="profile-field">
-              <label>Email Address</label>
-              <div className="profile-readonly">
-                <span>✉</span>
-                <input
-                  value={user.email || ""}
-                  disabled
-                />
-                <b>Verified</b>
-              </div>
-            </div>
-
-            <div className="profile-field">
-              <label>Address</label>
-              <textarea
-                rows="4"
-                value={form.address}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    address: e.target.value,
-                  })
-                }
-                placeholder="Enter your address"
-              />
-            </div>
-
-            <div className="profile-field">
-              <label>Country</label>
-              <input
-                value={form.country}
-                onChange={(e) =>
-                  setForm({
-                    ...form,
-                    country: e.target.value,
-                  })
-                }
-                placeholder="Country"
-              />
-            </div>
-
-            <button
-              className="profile-save-btn"
-              type="submit"
-              disabled={loading}
-            >
-              {loading
-                ? "Saving Profile..."
-                : "Save Profile →"}
-            </button>
-          </form>
+          <p style={{
+            lineHeight: "1.8",
+            color: "rgba(255,255,255,.68)",
+            margin: 0,
+          }}>
+            Our platform brings essential account-management
+            tools together in one simple and accessible
+            experience across web and Android.
+          </p>
         </section>
 
         <aside className="profile-side">
@@ -4557,97 +4463,30 @@ function Profile({
           <section className="profile-card profile-account-card">
             <div className="profile-card-head">
               <div>
-                <small>ACCOUNT OVERVIEW</small>
-                <h2>Account Info</h2>
+                <small>OUR PLATFORM</small>
+                <h2>What We Offer</h2>
               </div>
             </div>
 
             <div className="profile-info-row">
-              <span>Account Status</span>
-              <strong className="profile-green">
-                ● Active
-              </strong>
+              <span>Account Management</span>
+              <strong>✓</strong>
             </div>
 
             <div className="profile-info-row">
-              <span>Member Since</span>
-              <strong>{memberSince}</strong>
+              <span>Deposit & Withdrawal</span>
+              <strong>✓</strong>
             </div>
 
             <div className="profile-info-row">
-              <span>Wallet Balance</span>
-              <strong>
-                ${Number(
-                  user.balance || 0
-                ).toLocaleString(
-                  undefined,
-                  {
-                    minimumFractionDigits: 2,
-                    maximumFractionDigits: 2,
-                  }
-                )}
-              </strong>
-            </div>
-          </section>
-
-          <section className="profile-card profile-referral-card">
-            <div className="profile-card-head">
-              <div>
-                <small>REFERRAL PROGRAM</small>
-                <h2>Your Referral</h2>
-              </div>
-              <span className="profile-card-icon">↗</span>
+              <span>Transactions & Statements</span>
+              <strong>✓</strong>
             </div>
 
-            <p>
-              Share your referral code and track
-              your referral activity from the
-              Referrals section.
-            </p>
-
-            <div className="profile-referral-code">
-              <span>
-                {user.referralCode || "Not available"}
-              </span>
-
-              <button
-                type="button"
-                onClick={copyReferral}
-                disabled={!user.referralCode}
-              >
-                Copy
-              </button>
+            <div className="profile-info-row">
+              <span>Referral Program</span>
+              <strong>✓</strong>
             </div>
-
-            <button
-              type="button"
-              className="profile-secondary-btn"
-              onClick={() => go && go("referrals")}
-            >
-              Open Referrals →
-            </button>
-          </section>
-
-          <section className="profile-card profile-security-card">
-            <div className="profile-security-icon">
-              🔐
-            </div>
-
-            <div>
-              <small>ACCOUNT SECURITY</small>
-              <h3>Protect your account</h3>
-              <p>
-                Manage login and transaction
-                password settings.
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => go && go("settings")}
-            >
-              Security Settings →
-            </button>
           </section>
 
         </aside>
@@ -4655,28 +4494,28 @@ function Profile({
 
       <section className="profile-quick-actions">
         <div className="profile-section-title">
-          <small>QUICK ACTIONS</small>
-          <h2>Manage Your Account</h2>
+          <small>TRADENEX FEATURES</small>
+          <h2>Everything in One Platform</h2>
         </div>
 
         <div className="profile-action-grid">
 
           <button
             type="button"
-            onClick={() => go && go("statement")}
+            onClick={() => go && go("dashboard")}
           >
-            <span>▣</span>
-            <b>My Statement</b>
-            <small>View & download</small>
+            <span>◈</span>
+            <b>Smart Dashboard</b>
+            <small>Manage your account</small>
           </button>
 
           <button
             type="button"
             onClick={() => go && go("wallet")}
           >
-            <span>◈</span>
-            <b>Wallet</b>
-            <small>View balance</small>
+            <span>◉</span>
+            <b>Digital Wallet</b>
+            <small>View balance & activity</small>
           </button>
 
           <button
@@ -4685,37 +4524,106 @@ function Profile({
           >
             <span>↕</span>
             <b>Transactions</b>
-            <small>Account activity</small>
+            <small>Track account activity</small>
           </button>
 
           <button
             type="button"
-            onClick={() => go && go("support")}
+            onClick={() => go && go("referrals")}
           >
-            <span>◉</span>
-            <b>Support</b>
-            <small>Get assistance</small>
+            <span>↗</span>
+            <b>Referral Program</b>
+            <small>Manage referrals</small>
           </button>
 
         </div>
+      </section>
+
+      <section className="profile-grid">
+
+        <section className="profile-card profile-main-card">
+          <div className="profile-card-head">
+            <div>
+              <small>SECURITY & ACCESS</small>
+              <h2>Account Protection</h2>
+            </div>
+
+            <span className="profile-card-icon">🔐</span>
+          </div>
+
+          <div className="profile-info-row">
+            <span>Secure Authentication</span>
+            <strong className="profile-green">Protected</strong>
+          </div>
+
+          <div className="profile-info-row">
+            <span>Login Password</span>
+            <strong className="profile-green">Protected</strong>
+          </div>
+
+          <div className="profile-info-row">
+            <span>Transaction Password</span>
+            <strong className="profile-green">Protected</strong>
+          </div>
+
+          <button
+            type="button"
+            className="profile-secondary-btn"
+            onClick={() => go && go("settings")}
+            style={{ marginTop: "18px" }}
+          >
+            Security Settings →
+          </button>
+        </section>
+
+        <section className="profile-card profile-account-card">
+          <div className="profile-card-head">
+            <div>
+              <small>COMPANY INFORMATION</small>
+              <h2>Tradenex</h2>
+            </div>
+          </div>
+
+          <div className="profile-info-row">
+            <span>Platform</span>
+            <strong>Tradenex</strong>
+          </div>
+
+          <div className="profile-info-row">
+            <span>Website</span>
+            <strong>tradenex.onrender.com</strong>
+          </div>
+
+          <div className="profile-info-row">
+            <span>Access</span>
+            <strong>Web + Android</strong>
+          </div>
+
+          <div className="profile-info-row">
+            <span>Support</span>
+            <strong>Available</strong>
+          </div>
+        </section>
+
       </section>
 
       <section className="profile-safe-banner">
         <div className="profile-safe-icon">✓</div>
 
         <div>
-          <strong>Your Information is Safe</strong>
+          <strong>Built Around Your Account Experience</strong>
           <p>
-            Your account information is handled
-            through your secure Tradenex account.
+            Tradenex provides a centralized interface for
+            account management, transactions, wallet activity,
+            referrals and support.
           </p>
         </div>
 
         <button
           type="button"
-          onClick={() => go && go("settings")}
+          onClick={() => go && go("support")}
         >
-          Security →
+          Contact Support →
         </button>
       </section>
 
