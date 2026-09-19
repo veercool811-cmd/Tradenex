@@ -4741,6 +4741,19 @@ function Settings({ user, theme, setTheme }) {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotType, setForgotType] = useState("login");
+  const [forgotCurrentPassword, setForgotCurrentPassword] = useState("");
+  const [forgotNewPassword, setForgotNewPassword] = useState("");
+  const [forgotConfirmPassword, setForgotConfirmPassword] = useState("");
+  const [forgotCaptchaToken, setForgotCaptchaToken] = useState("");
+  const [forgotCaptchaQuestion, setForgotCaptchaQuestion] = useState("");
+  const [forgotCaptchaAnswer, setForgotCaptchaAnswer] = useState("");
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotCaptchaLoading, setForgotCaptchaLoading] = useState(false);
+  const [showForgotCurrent, setShowForgotCurrent] = useState(false);
+  const [showForgotNew, setShowForgotNew] = useState(false);
+  const [showForgotConfirm, setShowForgotConfirm] = useState(false);
 
   const [notificationPrefs, setNotificationPrefs] = useState(() => {
     try {
@@ -4807,6 +4820,134 @@ function Settings({ user, theme, setTheme }) {
       /\d/.test(value) &&
       /[^A-Za-z0-9]/.test(value)
     );
+  }
+
+  async function loadForgotCaptcha() {
+    try {
+      setForgotCaptchaLoading(true);
+      setError("");
+
+      const data = await api("/password-recovery/captcha");
+
+      setForgotCaptchaToken(data.token || "");
+      setForgotCaptchaQuestion(data.question || "");
+      setForgotCaptchaAnswer("");
+    } catch (err) {
+      setError(
+        err?.message ||
+          "Unable to load captcha."
+      );
+    } finally {
+      setForgotCaptchaLoading(false);
+    }
+  }
+
+  async function openForgotPassword() {
+    setMessage("");
+    setError("");
+    setForgotType("login");
+    setForgotCurrentPassword("");
+    setForgotNewPassword("");
+    setForgotConfirmPassword("");
+    setForgotCaptchaAnswer("");
+    setForgotOpen(true);
+    await loadForgotCaptcha();
+  }
+
+  function closeForgotPassword() {
+    setForgotOpen(false);
+    setForgotLoading(false);
+    setError("");
+    setMessage("");
+  }
+
+  async function submitForgotPassword(e) {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+
+    if (!forgotCurrentPassword) {
+      setError(
+        forgotType === "login"
+          ? "Enter your current transaction password."
+          : "Enter your current login password."
+      );
+      return;
+    }
+
+    if (!forgotNewPassword || !forgotConfirmPassword) {
+      setError("Enter new password and confirm password.");
+      return;
+    }
+
+    if (forgotNewPassword !== forgotConfirmPassword) {
+      setError("New password and confirm password do not match.");
+      return;
+    }
+
+    if (!isStrongPassword(forgotNewPassword)) {
+      setError(
+        "Password must be at least 8 characters and include uppercase, lowercase, number and special character."
+      );
+      return;
+    }
+
+    if (!forgotCaptchaAnswer.trim()) {
+      setError("Enter the captcha answer.");
+      return;
+    }
+
+    try {
+      setForgotLoading(true);
+
+      const data = await api("/password-recovery", {
+        method: "POST",
+        body: JSON.stringify({
+          type: forgotType,
+          currentPassword: forgotCurrentPassword,
+          newPassword: forgotNewPassword,
+          confirmPassword: forgotConfirmPassword,
+          captchaToken: forgotCaptchaToken,
+          captchaAnswer: forgotCaptchaAnswer,
+        }),
+      });
+
+      setMessage(
+        data?.message ||
+          "Password reset successfully."
+      );
+
+      setForgotCurrentPassword("");
+      setForgotNewPassword("");
+      setForgotConfirmPassword("");
+      setForgotCaptchaAnswer("");
+
+      /*
+       * Login-password recovery invalidates the current session
+       * on the backend, so return to the login screen after success.
+       */
+      if (forgotType === "login") {
+        localStorage.removeItem("tradenex_token");
+        localStorage.removeItem("tradenex_user");
+
+        setTimeout(() => {
+          window.location.href = "/";
+        }, 900);
+
+        return;
+      }
+
+      await loadForgotCaptcha();
+    } catch (err) {
+      setError(
+        err?.message ||
+          "Unable to reset password."
+      );
+      await loadForgotCaptcha();
+    } finally {
+      setForgotLoading(false);
+    }
   }
 
   function saveNotificationPrefs(next) {
@@ -4904,6 +5045,410 @@ function Settings({ user, theme, setTheme }) {
     } finally {
       setLoading(false);
     }
+  }
+
+  if (forgotOpen) {
+    const strength = getPasswordStrength(
+      forgotNewPassword
+    );
+
+    return (
+      <div
+        style={{
+          maxWidth: "760px",
+          margin: "0 auto",
+        }}
+      >
+        <div
+          className="panel-card"
+          style={{
+            padding: "24px",
+            borderRadius: "22px",
+          }}
+        >
+          <button
+            type="button"
+            className="text-btn"
+            onClick={closeForgotPassword}
+            disabled={forgotLoading}
+            style={{
+              marginBottom: "18px",
+            }}
+          >
+            ← Back to Settings
+          </button>
+
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: "14px",
+              marginBottom: "22px",
+            }}
+          >
+            <div
+              style={{
+                width: "54px",
+                height: "54px",
+                borderRadius: "16px",
+                display: "grid",
+                placeItems: "center",
+                fontSize: "25px",
+                background:
+                  "linear-gradient(135deg, rgba(61,143,255,.20), rgba(121,82,255,.18))",
+                border:
+                  "1px solid rgba(61,143,255,.25)",
+              }}
+            >
+              🔐
+            </div>
+
+            <div>
+              <small
+                style={{
+                  opacity: 0.65,
+                  letterSpacing: "1.5px",
+                }}
+              >
+                ACCOUNT SECURITY
+              </small>
+
+              <h2
+                style={{
+                  margin: "4px 0 0",
+                }}
+              >
+                Forgot Password
+              </h2>
+            </div>
+          </div>
+
+          <p
+            style={{
+              opacity: 0.72,
+              lineHeight: 1.6,
+              marginBottom: "22px",
+            }}
+          >
+            Verify your existing password, create a new
+            strong password and complete the security
+            captcha.
+          </p>
+
+          {message && (
+            <div className="success-box">
+              {message}
+            </div>
+          )}
+
+          {error && (
+            <div className="error-box">
+              {error}
+            </div>
+          )}
+
+          <form onSubmit={submitForgotPassword}>
+            <label>Password Type</label>
+
+            <select
+              value={forgotType}
+              onChange={(e) => {
+                setForgotType(e.target.value);
+                setForgotCurrentPassword("");
+                setError("");
+              }}
+              disabled={forgotLoading}
+            >
+              <option value="login">
+                Login Password
+              </option>
+              <option value="transaction">
+                Transaction Password
+              </option>
+            </select>
+
+            <div
+              className="info-box"
+              style={{
+                marginTop: "14px",
+                marginBottom: "18px",
+              }}
+            >
+              {forgotType === "login"
+                ? "To reset your Login Password, enter your current Transaction Password."
+                : "To reset your Transaction Password, enter your current Login Password."}
+            </div>
+
+            <label>
+              {forgotType === "login"
+                ? "Current Transaction Password"
+                : "Current Login Password"}
+            </label>
+
+            <div
+              style={{
+                position: "relative",
+              }}
+            >
+              <input
+                type={
+                  showForgotCurrent
+                    ? "text"
+                    : "password"
+                }
+                placeholder={
+                  forgotType === "login"
+                    ? "Enter current transaction password"
+                    : "Enter current login password"
+                }
+                value={forgotCurrentPassword}
+                onChange={(e) =>
+                  setForgotCurrentPassword(
+                    e.target.value
+                  )
+                }
+                disabled={forgotLoading}
+                required
+                style={{
+                  paddingRight: "52px",
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowForgotCurrent(
+                    !showForgotCurrent
+                  )
+                }
+                disabled={forgotLoading}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: 0,
+                  cursor: "pointer",
+                  fontSize: "18px",
+                }}
+              >
+                {showForgotCurrent ? "🙈" : "👁️"}
+              </button>
+            </div>
+
+            <label>New Password</label>
+
+            <div
+              style={{
+                position: "relative",
+              }}
+            >
+              <input
+                type={
+                  showForgotNew
+                    ? "text"
+                    : "password"
+                }
+                placeholder="Enter new password"
+                value={forgotNewPassword}
+                onChange={(e) =>
+                  setForgotNewPassword(
+                    e.target.value
+                  )
+                }
+                disabled={forgotLoading}
+                required
+                style={{
+                  paddingRight: "52px",
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowForgotNew(
+                    !showForgotNew
+                  )
+                }
+                disabled={forgotLoading}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: 0,
+                  cursor: "pointer",
+                  fontSize: "18px",
+                }}
+              >
+                {showForgotNew ? "🙈" : "👁️"}
+              </button>
+            </div>
+
+            {forgotNewPassword && (
+              <div className="password-strength-card">
+                <div className="password-strength-head">
+                  <span>Password Strength</span>
+                  <strong>
+                    {strength.label}
+                  </strong>
+                </div>
+
+                <div className="password-strength-bars">
+                  {[1, 2, 3, 4, 5, 6].map(
+                    (bar) => (
+                      <span
+                        key={bar}
+                        className={
+                          bar <= strength.score
+                            ? "active"
+                            : ""
+                        }
+                      />
+                    )
+                  )}
+                </div>
+
+                <small>
+                  Minimum 8 characters with uppercase,
+                  lowercase, number and special character.
+                </small>
+              </div>
+            )}
+
+            <label>Confirm New Password</label>
+
+            <div
+              style={{
+                position: "relative",
+              }}
+            >
+              <input
+                type={
+                  showForgotConfirm
+                    ? "text"
+                    : "password"
+                }
+                placeholder="Confirm new password"
+                value={forgotConfirmPassword}
+                onChange={(e) =>
+                  setForgotConfirmPassword(
+                    e.target.value
+                  )
+                }
+                disabled={forgotLoading}
+                required
+                style={{
+                  paddingRight: "52px",
+                }}
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  setShowForgotConfirm(
+                    !showForgotConfirm
+                  )
+                }
+                disabled={forgotLoading}
+                style={{
+                  position: "absolute",
+                  right: "10px",
+                  top: "50%",
+                  transform: "translateY(-50%)",
+                  background: "transparent",
+                  border: 0,
+                  cursor: "pointer",
+                  fontSize: "18px",
+                }}
+              >
+                {showForgotConfirm ? "🙈" : "👁️"}
+              </button>
+            </div>
+
+            <label>Security Captcha</label>
+
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: "10px",
+                marginBottom: "10px",
+              }}
+            >
+              <div
+                style={{
+                  flex: 1,
+                  padding: "13px 15px",
+                  borderRadius: "12px",
+                  border:
+                    "1px solid rgba(61,143,255,.25)",
+                  background:
+                    "rgba(61,143,255,.06)",
+                  fontWeight: 700,
+                  letterSpacing: "1px",
+                  textAlign: "center",
+                }}
+              >
+                {forgotCaptchaLoading
+                  ? "Loading..."
+                  : forgotCaptchaQuestion ||
+                    "Captcha unavailable"}
+              </div>
+
+              <button
+                type="button"
+                className="secondary-btn"
+                onClick={loadForgotCaptcha}
+                disabled={
+                  forgotCaptchaLoading ||
+                  forgotLoading
+                }
+              >
+                ↻
+              </button>
+            </div>
+
+            <input
+              type="text"
+              inputMode="numeric"
+              placeholder="Enter captcha answer"
+              value={forgotCaptchaAnswer}
+              onChange={(e) =>
+                setForgotCaptchaAnswer(
+                  e.target.value
+                )
+              }
+              disabled={
+                forgotCaptchaLoading ||
+                forgotLoading
+              }
+              required
+            />
+
+            <button
+              type="submit"
+              className="primary-btn"
+              disabled={
+                forgotLoading ||
+                forgotCaptchaLoading ||
+                !forgotCaptchaToken
+              }
+              style={{
+                width: "100%",
+                marginTop: "10px",
+              }}
+            >
+              {forgotLoading
+                ? "Resetting Password..."
+                : "Reset Password"}
+            </button>
+          </form>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -5161,6 +5706,51 @@ function Settings({ user, theme, setTheme }) {
               : "Save Password Changes"}
           </button>
         </form>
+      </div>
+
+      <div className="panel-card settings-feature-card">
+        <div className="settings-section-title">
+          <div className="settings-feature-icon">🔐</div>
+          <div>
+            <h3>Forgot Password</h3>
+            <p>
+              Reset your Login or Transaction Password
+              with account verification.
+            </p>
+          </div>
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "space-between",
+            gap: "18px",
+            flexWrap: "wrap",
+          }}
+        >
+          <div>
+            <strong>Need to reset a password?</strong>
+            <small
+              style={{
+                display: "block",
+                opacity: 0.68,
+                marginTop: "5px",
+              }}
+            >
+              A separate secure recovery page will verify
+              your existing password before changing it.
+            </small>
+          </div>
+
+          <button
+            type="button"
+            className="primary-btn"
+            onClick={openForgotPassword}
+          >
+            Forgot Password →
+          </button>
+        </div>
       </div>
 
       <div className="panel-card settings-feature-card">
