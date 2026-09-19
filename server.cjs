@@ -1969,6 +1969,203 @@ function createAdminNotification(type, title, message, meta = {}) {
   }
 }
 
+/* =====================================================
+   USER NOTIFICATIONS
+===================================================== */
+
+const USER_NOTIFICATIONS_KEY = "user_notifications.json";
+
+function readUserNotifications(userId) {
+  const data = read(
+    path.join(DATA_DIR, USER_NOTIFICATIONS_KEY),
+    []
+  );
+
+  if (!Array.isArray(data)) {
+    return [];
+  }
+
+  return data.filter(
+    (notification) =>
+      String(notification.userId) === String(userId)
+  );
+}
+
+function writeUserNotifications(notifications) {
+  write(
+    path.join(DATA_DIR, USER_NOTIFICATIONS_KEY),
+    Array.isArray(notifications) ? notifications : []
+  );
+}
+
+function createUserNotification(
+  userId,
+  type,
+  title,
+  message,
+  meta = {}
+) {
+  try {
+    if (!userId) return;
+
+    const data = read(
+      path.join(DATA_DIR, USER_NOTIFICATIONS_KEY),
+      []
+    );
+
+    const notifications = Array.isArray(data)
+      ? data
+      : [];
+
+    notifications.unshift({
+      id: makeId("UNTF"),
+      userId: String(userId),
+      type: clean(type),
+      title: clean(title),
+      message: clean(message),
+      meta: meta || {},
+      read: false,
+      createdAt: now(),
+    });
+
+    writeUserNotifications(
+      notifications.slice(0, 1000)
+    );
+  } catch (error) {
+    console.error(
+      "USER NOTIFICATION ERROR:",
+      error
+    );
+  }
+}
+
+app.get(
+  "/api/notifications",
+  auth,
+  (req, res) => {
+    try {
+      const notifications =
+        readUserNotifications(req.user.id);
+
+      return res.json({
+        success: true,
+        notifications,
+        unreadCount: notifications.filter(
+          (notification) => !notification.read
+        ).length,
+      });
+    } catch (error) {
+      console.error(
+        "USER NOTIFICATIONS LOAD ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to load notifications.",
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/notifications/:id/read",
+  auth,
+  (req, res) => {
+    try {
+      const data = read(
+        path.join(DATA_DIR, USER_NOTIFICATIONS_KEY),
+        []
+      );
+
+      const notifications = Array.isArray(data)
+        ? data
+        : [];
+
+      const index = notifications.findIndex(
+        (notification) =>
+          String(notification.id) ===
+            String(req.params.id) &&
+          String(notification.userId) ===
+            String(req.user.id)
+      );
+
+      if (index === -1) {
+        return res.status(404).json({
+          success: false,
+          message: "Notification not found.",
+        });
+      }
+
+      notifications[index].read = true;
+      notifications[index].readAt = now();
+
+      writeUserNotifications(notifications);
+
+      return res.json({
+        success: true,
+        notification: notifications[index],
+      });
+    } catch (error) {
+      console.error(
+        "USER NOTIFICATION READ ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to mark notification as read.",
+      });
+    }
+  }
+);
+
+app.put(
+  "/api/notifications/read-all",
+  auth,
+  (req, res) => {
+    try {
+      const data = read(
+        path.join(DATA_DIR, USER_NOTIFICATIONS_KEY),
+        []
+      );
+
+      const notifications = Array.isArray(data)
+        ? data
+        : [];
+
+      const timestamp = now();
+
+      notifications.forEach((notification) => {
+        if (
+          String(notification.userId) ===
+          String(req.user.id)
+        ) {
+          notification.read = true;
+          notification.readAt = timestamp;
+        }
+      });
+
+      writeUserNotifications(notifications);
+
+      return res.json({
+        success: true,
+        message: "All notifications marked as read.",
+      });
+    } catch (error) {
+      console.error(
+        "USER NOTIFICATIONS READ ALL ERROR:",
+        error
+      );
+
+      return res.status(500).json({
+        success: false,
+        message: "Unable to mark notifications as read.",
+      });
+    }
+  }
+);
+
 app.get(
   "/api/admin/notifications",
   (req, res) => {
@@ -3988,6 +4185,17 @@ app.post(
       tickets
     );
 
+    createAdminNotification(
+      "support",
+      "New Support Ticket",
+      `${req.user.name || req.user.email || "User"} created a new support ticket.`,
+      {
+        ticketId: ticket.id,
+        userId: req.user.id,
+        subject: ticket.subject,
+      }
+    );
+
     res
       .status(201)
       .json({
@@ -4757,6 +4965,17 @@ app.post(
 
       write(SUPPORT_FILE, support);
 
+      createUserNotification(
+        ticket.userId,
+        "support",
+        "New Support Reply",
+        "Tradenex Support replied to your support ticket.",
+        {
+          ticketId: ticket.id,
+          subject: ticket.subject,
+        }
+      );
+
       return res.json({
         success: true,
         message: "Reply sent successfully.",
@@ -4824,6 +5043,17 @@ app.post(
       ticket.updatedAt = now();
 
       write(SUPPORT_FILE, support);
+
+      createAdminNotification(
+        "support",
+        "New Support Message",
+        `${req.user.name || req.user.email || "User"} sent a new message in support chat.`,
+        {
+          ticketId: ticket.id,
+          userId: req.user.id,
+          subject: ticket.subject,
+        }
+      );
 
       return res.json({
         success: true,
