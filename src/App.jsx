@@ -6043,7 +6043,7 @@ function Support({
       )}
 
       <div
-        className="panel-card"
+        className="panel-card support-create-card"
         style={{
           background:
             "linear-gradient(135deg, rgba(18,32,58,.98), rgba(10,18,34,.98))",

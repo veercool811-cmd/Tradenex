@@ -11317,3 +11317,744 @@ body,
     font-size: 20px !important;
   }
 }
+
+/* =====================================================
+   MOBILE DESKTOP-DENSITY — FINAL
+   Compact desktop-style layout on phones
+===================================================== */
+
+@media (max-width: 768px) {
+
+  /* ---------- PAGE SHELL ---------- */
+  .main-content {
+    width: 100% !important;
+    margin-left: 0 !important;
+    min-width: 0 !important;
+  }
+
+  .content,
+  .main-content,
+  .page-content,
+  .dashboard-content {
+    padding: 7px !important;
+  }
+
+  /* ---------- TOP BAR ---------- */
+  .topbar {
+    min-height: 58px !important;
+    height: 58px !important;
+    padding: 6px 8px !important;
+    gap: 6px !important;
+  }
+
+  .hamburger-btn {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    font-size: 20px !important;
+    border-radius: 10px !important;
+  }
+
+  .topbar h1,
+  .topbar h2,
+  .topbar h3,
+  .page-title {
+    font-size: 18px !important;
+    line-height: 1.1 !important;
+  }
+
+  .topbar p,
+  .topbar small {
+    font-size: 9px !important;
+  }
+
+  /* ---------- SIDEBAR ---------- */
+  .sidebar {
+    width: 205px !important;
+    min-width: 205px !important;
+    max-width: 205px !important;
+    padding: 9px 7px !important;
+  }
+
+  .sidebar-logo-img {
+    width: 105px !important;
+    max-width: 105px !important;
+    max-height: 78px !important;
+    margin: 2px auto 7px !important;
+  }
+
+  .logo {
+    padding: 2px 5px 8px !important;
+    gap: 5px !important;
+    font-size: 13px !important;
+  }
+
+  .logo small {
+    font-size: 5px !important;
+  }
+
+  .menu-title {
+    padding: 7px 7px 4px !important;
+    font-size: 7px !important;
+    letter-spacing: 1.3px !important;
+  }
+
+  .menu-item {
+    min-height: 38px !important;
+    height: 38px !important;
+    margin: 2px 3px !important;
+    padding: 7px 9px !important;
+    gap: 7px !important;
+    border-radius: 8px !important;
+    font-size: 11px !important;
+  }
+
+  .menu-item span {
+    width: 15px !important;
+    flex-basis: 15px !important;
+    font-size: 11px !important;
+  }
+
+  .menu-item b {
+    font-size: 11px !important;
+  }
+
+  /* ---------- ALL CARDS ---------- */
+  .card,
+  .panel,
+  .stat-card,
+  .dashboard-card,
+  .wallet-card,
+  .support-card,
+  .transaction-panel,
+  .wallet-stat,
+  .wallet-stat-card {
+    padding: 9px !important;
+    border-radius: 11px !important;
+    margin-bottom: 8px !important;
+  }
+
+  /* ---------- HEADINGS ---------- */
+  .card h1,
+  .card h2,
+  .card h3,
+  .panel h1,
+  .panel h2,
+  .panel h3,
+  .dashboard-card h1,
+  .dashboard-card h2,
+  .dashboard-card h3,
+  .wallet-card h1,
+  .wallet-card h2,
+  .wallet-card h3 {
+    font-size: 15px !important;
+    line-height: 1.2 !important;
+  }
+
+  .card p,
+  .panel p,
+  .dashboard-card p,
+  .wallet-card p {
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+  }
+
+  /* ---------- GRIDS: DESKTOP-LIKE DENSITY ---------- */
+  .dashboard-grid,
+  .stats-grid,
+  .wallet-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+    gap: 7px !important;
+  }
+
+  /* Keep major dashboard sections compact */
+  .dashboard-live-market {
+    padding: 10px !important;
+    border-radius: 12px !important;
+  }
+
+  /* ---------- MARKET CARDS ---------- */
+  .dashboard-live-market > div,
+  .market-card {
+    gap: 6px !important;
+  }
+
+  /* ---------- BUTTONS ---------- */
+  .primary-btn,
+  .secondary-btn {
+    min-height: 34px !important;
+    padding: 7px 10px !important;
+    font-size: 10px !important;
+    border-radius: 9px !important;
+  }
+
+  /* ---------- TABLES ---------- */
+  table {
+    font-size: 9px !important;
+  }
+
+  th,
+  td {
+    padding: 6px 5px !important;
+  }
+
+  /* ---------- INPUTS ---------- */
+  input,
+  select,
+  textarea {
+    min-height: 36px !important;
+    padding: 7px 9px !important;
+    font-size: 12px !important;
+  }
+
+  /* ---------- SUPPORT ---------- */
+  .support-card {
+    padding: 9px !important;
+  }
+
+  .support-card strong {
+    font-size: 13px !important;
+  }
+
+  .support-card p {
+    font-size: 10px !important;
+    margin: 7px 0 !important;
+  }
+
+  .support-card span {
+    font-size: 9px !important;
+    padding: 3px 6px !important;
+  }
+
+  .support-open-chat {
+    width: 100px !important;
+    min-width: 100px !important;
+    height: 32px !important;
+    min-height: 32px !important;
+    padding: 5px 8px !important;
+    font-size: 9px !important;
+  }
+
+  /* ---------- FLOATING CHAT ---------- */
+  .tradenex-floating-chat {
+    width: 48px !important;
+    height: 48px !important;
+    min-width: 48px !important;
+    min-height: 48px !important;
+    right: 10px !important;
+    bottom: 64px !important;
+    font-size: 20px !important;
+  }
+
+  /* ---------- IMAGES / CHARTS ---------- */
+  canvas,
+  svg {
+    max-width: 100% !important;
+  }
+
+  img {
+    max-width: 100%;
+  }
+}
+
+@media (max-width: 430px) {
+
+  .content,
+  .main-content,
+  .page-content,
+  .dashboard-content {
+    padding: 6px !important;
+  }
+
+  .topbar {
+    height: 56px !important;
+    min-height: 56px !important;
+    padding: 5px 7px !important;
+  }
+
+  .topbar h1,
+  .topbar h2,
+  .topbar h3,
+  .page-title {
+    font-size: 17px !important;
+  }
+
+  .hamburger-btn {
+    width: 40px !important;
+    height: 40px !important;
+    min-width: 40px !important;
+  }
+
+  .sidebar {
+    width: 195px !important;
+    min-width: 195px !important;
+    max-width: 195px !important;
+    padding: 8px 6px !important;
+  }
+
+  .sidebar-logo-img {
+    width: 95px !important;
+    max-width: 95px !important;
+    max-height: 70px !important;
+  }
+
+  .menu-item {
+    height: 36px !important;
+    min-height: 36px !important;
+    font-size: 10px !important;
+    padding: 6px 8px !important;
+  }
+
+  .menu-item b {
+    font-size: 10px !important;
+  }
+
+  .dashboard-grid,
+  .stats-grid,
+  .wallet-grid {
+    gap: 6px !important;
+  }
+
+  .card,
+  .panel,
+  .stat-card,
+  .dashboard-card,
+  .wallet-card {
+    padding: 8px !important;
+    border-radius: 10px !important;
+  }
+
+  .primary-btn,
+  .secondary-btn {
+    min-height: 32px !important;
+    padding: 6px 9px !important;
+    font-size: 9px !important;
+  }
+}
+
+
+/* =====================================================
+   SUPPORT CHAT — MOBILE COMPACT
+===================================================== */
+
+@media (max-width: 768px) {
+
+  /* Chat overlay */
+  .tradenex-support-chat,
+  .support-chat-modal,
+  .support-chat-popup {
+    width: min(430px, calc(100vw - 28px)) !important;
+    max-width: calc(100vw - 28px) !important;
+    height: min(650px, calc(100vh - 150px)) !important;
+    max-height: calc(100vh - 150px) !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: 14px !important;
+    transform: translateX(-50%) !important;
+    border-radius: 16px !important;
+  }
+
+  /* Chat header */
+  .tradenex-support-chat > div:first-child,
+  .support-chat-modal > div:first-child,
+  .support-chat-popup > div:first-child {
+    min-height: 62px !important;
+    padding: 8px 10px !important;
+  }
+
+  /* Chat title */
+  .tradenex-support-chat h2,
+  .tradenex-support-chat h3,
+  .support-chat-modal h2,
+  .support-chat-modal h3,
+  .support-chat-popup h2,
+  .support-chat-popup h3 {
+    font-size: 16px !important;
+  }
+
+  /* Chat messages */
+  .tradenex-chat-messages,
+  .support-chat-messages {
+    padding: 9px !important;
+    font-size: 11px !important;
+  }
+
+  /* Message bubbles */
+  .tradenex-chat-messages > div,
+  .support-chat-messages > div {
+    max-width: 82% !important;
+  }
+
+  /* Message text */
+  .tradenex-chat-messages p,
+  .support-chat-messages p {
+    font-size: 11px !important;
+    line-height: 1.3 !important;
+  }
+
+  /* Chat input area */
+  .tradenex-support-chat input,
+  .support-chat-modal input,
+  .support-chat-popup input {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 11px !important;
+    padding: 7px 9px !important;
+  }
+
+  .tradenex-support-chat button,
+  .support-chat-modal button,
+  .support-chat-popup button {
+    min-height: 38px !important;
+    height: 38px !important;
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+  }
+}
+
+@media (max-width: 430px) {
+
+  .tradenex-support-chat,
+  .support-chat-modal,
+  .support-chat-popup {
+    width: calc(100vw - 36px) !important;
+    max-width: calc(100vw - 36px) !important;
+    height: calc(100vh - 185px) !important;
+    max-height: calc(100vh - 185px) !important;
+    bottom: 10px !important;
+    border-radius: 14px !important;
+  }
+
+  .tradenex-chat-messages,
+  .support-chat-messages {
+    padding: 7px !important;
+  }
+}
+
+
+/* =====================================================
+   SUPPORT TICKET CARDS — PREMIUM COMPACT MOBILE
+===================================================== */
+
+@media (max-width: 768px) {
+
+  .support-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 0 0 10px 0 !important;
+    padding: 12px !important;
+    border-radius: 14px !important;
+    min-height: 0 !important;
+    background:
+      linear-gradient(
+        145deg,
+        rgba(9,35,58,.96),
+        rgba(4,20,34,.96)
+      ) !important;
+    border: 1px solid rgba(74,145,220,.16) !important;
+    box-shadow:
+      0 7px 20px rgba(0,0,0,.20),
+      inset 0 1px 0 rgba(255,255,255,.035) !important;
+  }
+
+  /* Ticket top row */
+  .support-card > div:first-child {
+    gap: 8px !important;
+    align-items: center !important;
+  }
+
+  /* Subject */
+  .support-card strong {
+    font-size: 13px !important;
+    line-height: 1.2 !important;
+    font-weight: 800 !important;
+  }
+
+  /* Open Chat */
+  .support-card .primary-btn {
+    width: auto !important;
+    min-width: 104px !important;
+    max-width: 112px !important;
+    min-height: 36px !important;
+    height: 36px !important;
+    padding: 7px 10px !important;
+    margin: 0 !important;
+    border-radius: 10px !important;
+    font-size: 10px !important;
+    line-height: 1 !important;
+    white-space: nowrap !important;
+    flex: 0 0 auto !important;
+  }
+
+  /* Badges */
+  .support-card span {
+    font-size: 9px !important;
+    padding: 4px 7px !important;
+    border-radius: 999px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Ticket message */
+  .support-card > p {
+    font-size: 10px !important;
+    line-height: 1.35 !important;
+    margin: 8px 0 5px !important;
+    opacity: .72 !important;
+  }
+
+  /* Last message */
+  .support-card > div:last-child {
+    font-size: 9px !important;
+    line-height: 1.2 !important;
+    opacity: .55 !important;
+  }
+}
+
+@media (max-width: 430px) {
+
+  .support-card {
+    padding: 10px !important;
+    margin-bottom: 8px !important;
+    border-radius: 13px !important;
+  }
+
+  .support-card strong {
+    font-size: 12px !important;
+  }
+
+  .support-card .primary-btn {
+    min-width: 96px !important;
+    max-width: 102px !important;
+    height: 34px !important;
+    min-height: 34px !important;
+    padding: 6px 8px !important;
+    font-size: 9px !important;
+  }
+
+  .support-card span {
+    font-size: 8.5px !important;
+    padding: 3px 6px !important;
+  }
+
+  .support-card > p {
+    font-size: 9.5px !important;
+    margin-top: 7px !important;
+  }
+}
+
+
+/* =====================================================
+   MOBILE SIDEBAR LOGO — PREMIUM GLOW
+===================================================== */
+
+@media (max-width: 768px) {
+
+  .sidebar .logo {
+    position: relative !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 12px 8px 18px !important;
+    min-height: 175px !important;
+    overflow: hidden !important;
+  }
+
+  /* Soft blurred light behind logo */
+  .sidebar .logo::before {
+    content: "";
+    position: absolute;
+    width: 210px;
+    height: 115px;
+    left: 50%;
+    top: 28px;
+    transform: translateX(-50%);
+    background:
+      radial-gradient(
+        ellipse,
+        rgba(35,125,255,.38) 0%,
+        rgba(35,125,255,.20) 32%,
+        rgba(35,125,255,.07) 58%,
+        transparent 76%
+      );
+    filter: blur(18px);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .sidebar .sidebar-logo-img {
+    position: relative !important;
+    z-index: 1 !important;
+    width: 155px !important;
+    max-width: 155px !important;
+    height: auto !important;
+    max-height: 125px !important;
+    object-fit: contain !important;
+    margin: 4px auto 5px !important;
+    filter:
+      drop-shadow(0 0 10px rgba(30,120,255,.35))
+      drop-shadow(0 0 25px rgba(30,120,255,.18)) !important;
+  }
+
+  .sidebar .logo b,
+  .sidebar .logo small {
+    position: relative !important;
+    z-index: 2 !important;
+  }
+
+  .sidebar .logo b {
+    font-size: 15px !important;
+  }
+
+  .sidebar .logo small {
+    font-size: 6px !important;
+  }
+}
+
+@media (max-width: 430px) {
+
+  .sidebar .logo {
+    min-height: 155px !important;
+    padding: 8px 6px 15px !important;
+  }
+
+  .sidebar .logo::before {
+    width: 185px !important;
+    height: 100px !important;
+    top: 25px !important;
+    filter: blur(16px) !important;
+  }
+
+  .sidebar .sidebar-logo-img {
+    width: 145px !important;
+    max-width: 145px !important;
+    max-height: 115px !important;
+  }
+
+  .sidebar .logo b {
+    font-size: 14px !important;
+  }
+}
+
+
+
+/* =====================================================
+   CREATE SUPPORT TICKET — COMPACT PREMIUM MOBILE
+===================================================== */
+
+@media (max-width: 768px) {
+
+  .support-create-card {
+    width: 100% !important;
+    box-sizing: border-box !important;
+    margin: 8px 0 12px !important;
+    padding: 14px !important;
+    border-radius: 16px !important;
+    box-shadow:
+      0 10px 28px rgba(0,0,0,.20),
+      inset 0 1px 0 rgba(255,255,255,.035) !important;
+  }
+
+  .support-create-card > div:first-child {
+    gap: 10px !important;
+    margin-bottom: 13px !important;
+  }
+
+  .support-create-card > div:first-child > div:first-child {
+    width: 42px !important;
+    height: 42px !important;
+    min-width: 42px !important;
+    border-radius: 12px !important;
+    font-size: 19px !important;
+    box-shadow: 0 7px 20px rgba(23,105,255,.25) !important;
+  }
+
+  .support-create-card h3 {
+    font-size: 16px !important;
+    line-height: 1.2 !important;
+  }
+
+  .support-create-card p {
+    font-size: 10px !important;
+    line-height: 1.3 !important;
+    margin-top: 3px !important;
+  }
+
+  .support-create-card form {
+    display: grid !important;
+    gap: 7px !important;
+  }
+
+  .support-create-card label {
+    font-size: 11px !important;
+    margin-top: 3px !important;
+    margin-bottom: 1px !important;
+  }
+
+  .support-create-card select,
+  .support-create-card input {
+    width: 100% !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    box-sizing: border-box !important;
+    padding: 8px 11px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+  }
+
+  .support-create-card textarea {
+    width: 100% !important;
+    height: 105px !important;
+    min-height: 105px !important;
+    box-sizing: border-box !important;
+    padding: 9px 11px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+    resize: vertical !important;
+  }
+
+  .support-create-card .primary-btn {
+    width: 100% !important;
+    min-height: 40px !important;
+    height: 40px !important;
+    padding: 8px 12px !important;
+    margin-top: 4px !important;
+    border-radius: 10px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 430px) {
+
+  .support-create-card {
+    padding: 12px !important;
+    border-radius: 14px !important;
+  }
+
+  .support-create-card h3 {
+    font-size: 15px !important;
+  }
+
+  .support-create-card p {
+    font-size: 9px !important;
+  }
+
+  .support-create-card select,
+  .support-create-card input {
+    height: 38px !important;
+    min-height: 38px !important;
+    font-size: 11px !important;
+  }
+
+  .support-create-card textarea {
+    height: 92px !important;
+    min-height: 92px !important;
+  }
+
+  .support-create-card .primary-btn {
+    height: 38px !important;
+    min-height: 38px !important;
+    font-size: 11px !important;
+  }
+}
