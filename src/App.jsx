@@ -88,6 +88,27 @@ function LoginPage({ onLogin }) {
       confirmPassword: "",
     });
 
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const referral = String(
+        params.get("ref") ||
+        params.get("referral") ||
+        ""
+      ).trim().toUpperCase();
+
+      if (referral) {
+        setRegister((prev) => ({
+          ...prev,
+          referralCode: referral,
+        }));
+        setMode("register");
+      }
+    } catch {
+      // Ignore invalid referral URL parameters.
+    }
+  }, []);
+
   const [mobileOtp, setMobileOtp] = useState({
     otp: "",
     reqId: "",
@@ -3771,6 +3792,33 @@ function Referrals({
           {user.referralCode || "—"}
         </div>
 
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginTop: "14px",
+          }}
+        >
+          <button
+            type="button"
+            className="primary-btn"
+            onClick={shareReferral}
+            disabled={!user?.referralCode}
+          >
+            📤 Share Referral
+          </button>
+
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={copyReferral}
+            disabled={!user?.referralCode}
+          >
+            📋 Copy Code
+          </button>
+        </div>
+
         <p>
           इस code को अपने friends के साथ
           share करें।
@@ -4232,6 +4280,51 @@ function Profile({
       setError("");
     } catch {
       setError("Unable to copy referral code.");
+    }
+  }
+
+  async function shareReferral() {
+    const code = String(user?.referralCode || "").trim();
+
+    if (!code) {
+      setError("Referral code is not available.");
+      return;
+    }
+
+    const referralUrl =
+      "https://tradenex.onrender.com/?ref=" +
+      encodeURIComponent(code);
+
+    const shareText =
+      "Join me on Tradenex. Use my referral link to register:\n\n" +
+      referralUrl;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Join Tradenex",
+          text: shareText,
+          url: referralUrl,
+        });
+
+        setMessage("Referral link ready to share.");
+        setError("");
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareText);
+      setMessage("Referral link copied. You can paste it into WhatsApp or Telegram.");
+      setError("");
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+
+      try {
+        await navigator.clipboard.writeText(shareText);
+        setMessage("Referral link copied. You can paste it into WhatsApp or Telegram.");
+        setError("");
+      } catch {
+        setError("Unable to share referral link.");
+      }
     }
   }
 
