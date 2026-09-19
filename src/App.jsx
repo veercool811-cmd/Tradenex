@@ -3654,6 +3654,47 @@ function Referrals({
   user,
   data,
 }) {
+  async function copyReferral() {
+    const code = String(user?.referralCode || "").trim();
+
+    if (!code) return;
+
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      // Clipboard may be unavailable in some WebViews.
+    }
+  }
+
+  async function shareReferral() {
+    const code = String(user?.referralCode || "").trim();
+
+    if (!code) return;
+
+    const referralUrl =
+      "https://tradenex.onrender.com/?ref=" +
+      encodeURIComponent(code);
+
+    const shareText =
+      "Join me on Tradenex. Use my referral link to register:\n\n" +
+      referralUrl;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Join Tradenex",
+          text: shareText,
+          url: referralUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareText);
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+    }
+  }
+
   const referrals =
     Array.isArray(data.referrals)
       ? data.referrals
