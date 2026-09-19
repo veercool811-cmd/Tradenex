@@ -5776,7 +5776,10 @@ function Settings({ user, theme, setTheme }) {
    SUPPORT
 ===================================================== */
 
-function Support() {
+function Support({
+  openTicketId = null,
+  onTicketOpened = null,
+}) {
   const [form, setForm] = useState({
     category: "General",
     subject: "",
@@ -5814,6 +5817,30 @@ function Support() {
   useEffect(() => {
     loadTickets();
   }, []);
+
+  useEffect(() => {
+    if (!openTicketId) return;
+
+    const ticket = tickets.find(
+      (item) =>
+        String(item.id) ===
+        String(openTicketId)
+    );
+
+    if (ticket) {
+      openChat(ticket);
+
+      if (typeof onTicketOpened === "function") {
+        onTicketOpened();
+      }
+      return;
+    }
+
+    loadTickets();
+  }, [
+    openTicketId,
+    tickets,
+  ]);
 
   async function submit(e) {
     e.preventDefault();
@@ -6932,6 +6959,59 @@ function LandingPage({ onLogin }) {
 ===================================================== */
 
 
+function playTradenexNotificationSound() {
+  try {
+    const AudioCtx =
+      window.AudioContext ||
+      window.webkitAudioContext;
+
+    if (!AudioCtx) return;
+
+    const ctx = new AudioCtx();
+
+    const playTone = (frequency, start, duration) => {
+      const oscillator = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      oscillator.type = "sine";
+      oscillator.frequency.value = frequency;
+
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.18, start + 0.02);
+      gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        start + duration
+      );
+
+      oscillator.connect(gain);
+      gain.connect(ctx.destination);
+
+      oscillator.start(start);
+      oscillator.stop(start + duration);
+    };
+
+    if (ctx.state === "suspended") {
+      ctx.resume().then(() => {
+        const now = ctx.currentTime;
+        playTone(880, now, 0.16);
+        playTone(1174, now + 0.13, 0.22);
+      });
+    } else {
+      const now = ctx.currentTime;
+      playTone(880, now, 0.16);
+      playTone(1174, now + 0.13, 0.22);
+    }
+
+    setTimeout(() => {
+      try {
+        ctx.close();
+      } catch {}
+    }, 1000);
+  } catch (error) {
+    console.log("Notification sound skipped:", error);
+  }
+}
+
 function compareVersions(a, b) {
   const pa = String(a).split(".").map(Number);
   const pb = String(b).split(".").map(Number);
@@ -6969,6 +7049,18 @@ export default function App() {
 
   const [page, setPage] =
     useState("dashboard");
+
+  const [notifications, setNotifications] =
+    useState([]);
+
+  const [notificationUnread, setNotificationUnread] =
+    useState(0);
+
+  const [notificationOpen, setNotificationOpen] =
+    useState(false);
+
+  const [supportOpenTicketId, setSupportOpenTicketId] =
+    useState(null);
 
   const [loading, setLoading] =
     useState(true);
@@ -7145,6 +7237,215 @@ export default function App() {
       );
     };
   }, []);
+
+  async function loadNotifications() {
+    try {
+      const result = await api("/notifications");
+
+      const list = Array.isArray(result.notifications)
+        ? result.notifications
+        : [];
+
+      setNotifications(list);
+
+      setNotificationUnread(
+        Number.isFinite(Number(result.unreadCount))
+          ? Number(result.unreadCount)
+          : list.filter(
+              (item) => !item.read
+            ).length
+      );
+
+      return list;
+    } catch (error) {
+      console.log(
+        "User notification check skipped:",
+        error
+      );
+      return [];
+    }
+  }
+
+  async function markNotificationRead(id) {
+    if (!id) return;
+
+    try {
+      await api(
+        `/notifications/${id}/read`,
+        {
+          method: "PUT",
+        }
+      );
+
+      setNotifications((prev) =>
+        prev.map((item) =>
+          String(item.id) === String(id)
+            ? {
+                ...item,
+                read: true,
+              }
+            : item
+        )
+      );
+
+      setNotificationUnread((prev) =>
+        Math.max(0, prev - 1)
+      );
+    } catch (error) {
+      console.log(
+        "Notification read error:",
+        error
+      );
+    }
+  }
+
+  async function markAllNotificationsRead() {
+    try {
+      await api(
+        "/notifications/read-all",
+        {
+          method: "PUT",
+        }
+      );
+
+      setNotifications((prev) =>
+        prev.map((item) => ({
+          ...item,
+          read: true,
+        }))
+      );
+
+      setNotificationUnread(0);
+    } catch (error) {
+      console.log(
+        "Notification read-all error:",
+        error
+      );
+    }
+  }
+
+  async function openNotification(notification) {
+    if (!notification) return;
+
+    if (!notification.read) {
+      await markNotificationRead(
+        notification.id
+      );
+    }
+
+    setNotificationOpen(false);
+
+    if (
+      notification.type === "support" ||
+      notification.meta?.ticketId
+    ) {
+      setSupportOpenTicketId(
+        notification.meta?.ticketId || null
+      );
+
+      setPage("support");
+      setSidebarOpen(false);
+    }
+  }
+
+  useEffect(() => {
+    if (!user) return;
+
+    let cancelled = false;
+    let initialized = false;
+    let knownIds = new Set();
+
+    async function pollNotifications() {
+      if (cancelled) return;
+
+      const list = await loadNotifications();
+
+      if (cancelled) return;
+
+      const currentIds = new Set(
+        list.map((item) =>
+          String(item.id)
+        )
+      );
+
+      if (initialized) {
+        const hasNewNotification =
+          list.some(
+            (item) =>
+              !knownIds.has(
+                String(item.id)
+              )
+          );
+
+        if (hasNewNotification) {
+          playTradenexNotificationSound();
+
+          try {
+            if (
+              "vibrate" in navigator
+            ) {
+              navigator.vibrate([
+                180,
+                80,
+                180,
+              ]);
+            }
+          } catch {}
+        }
+      }
+
+      knownIds = currentIds;
+      initialized = true;
+    }
+
+    pollNotifications();
+
+    const interval = setInterval(
+      pollNotifications,
+      10000
+    );
+
+    const unlockAudio = () => {
+      try {
+        const AudioCtx =
+          window.AudioContext ||
+          window.webkitAudioContext;
+
+        if (!AudioCtx) return;
+
+        const ctx = new AudioCtx();
+
+        if (
+          ctx.state ===
+          "suspended"
+        ) {
+          ctx.resume().catch(() => {});
+        }
+
+        setTimeout(() => {
+          try {
+            ctx.close();
+          } catch {}
+        }, 500);
+      } catch {}
+    };
+
+    window.addEventListener(
+      "pointerdown",
+      unlockAudio,
+      { once: true }
+    );
+
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+
+      window.removeEventListener(
+        "pointerdown",
+        unlockAudio
+      );
+    };
+  }, [user]);
 
   async function logout() {
     try {
@@ -7437,10 +7738,245 @@ export default function App() {
             </div>
           </div>
 
-          <div className="top-user">
-            <span className="notification">
+          <div
+            className="top-user"
+            style={{
+              position: "relative",
+            }}
+          >
+            <button
+              type="button"
+              onClick={() =>
+                setNotificationOpen(
+                  (prev) => !prev
+                )
+              }
+              aria-label="Notifications"
+              style={{
+                position: "relative",
+                width: "44px",
+                height: "44px",
+                borderRadius: "14px",
+                border:
+                  "1px solid rgba(255,255,255,.12)",
+                background:
+                  "rgba(255,255,255,.06)",
+                color: "#fff",
+                fontSize: "21px",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
               🔔
-            </span>
+
+              {notificationUnread > 0 && (
+                <span
+                  style={{
+                    position: "absolute",
+                    top: "-5px",
+                    right: "-5px",
+                    minWidth: "20px",
+                    height: "20px",
+                    padding: "0 5px",
+                    borderRadius: "999px",
+                    background:
+                      "#ff3b30",
+                    color: "#fff",
+                    fontSize: "11px",
+                    fontWeight: 800,
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    border:
+                      "2px solid #07101f",
+                  }}
+                >
+                  {notificationUnread > 99
+                    ? "99+"
+                    : notificationUnread}
+                </span>
+              )}
+            </button>
+
+            {notificationOpen && (
+              <div
+                style={{
+                  position: "absolute",
+                  top: "54px",
+                  right: "0",
+                  width:
+                    "min(380px, calc(100vw - 28px))",
+                  maxHeight: "430px",
+                  overflowY: "auto",
+                  zIndex: 9999,
+                  borderRadius: "18px",
+                  border:
+                    "1px solid rgba(255,255,255,.12)",
+                  background:
+                    "linear-gradient(145deg, rgba(10,20,38,.98), rgba(5,12,25,.98))",
+                  boxShadow:
+                    "0 22px 60px rgba(0,0,0,.45)",
+                  backdropFilter:
+                    "blur(18px)",
+                  padding: "14px",
+                }}
+              >
+                <div
+                  style={{
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent:
+                      "space-between",
+                    marginBottom: "10px",
+                  }}
+                >
+                  <strong
+                    style={{
+                      color: "#fff",
+                      fontSize: "15px",
+                    }}
+                  >
+                    Notifications
+                  </strong>
+
+                  {notificationUnread > 0 && (
+                    <button
+                      type="button"
+                      onClick={
+                        markAllNotificationsRead
+                      }
+                      style={{
+                        border: "0",
+                        background:
+                          "transparent",
+                        color: "#58a6ff",
+                        cursor: "pointer",
+                        fontSize: "12px",
+                        fontWeight: 700,
+                      }}
+                    >
+                      Mark all read
+                    </button>
+                  )}
+                </div>
+
+                {notifications.length === 0 ? (
+                  <div
+                    style={{
+                      padding: "28px 12px",
+                      textAlign: "center",
+                      color:
+                        "rgba(255,255,255,.55)",
+                      fontSize: "13px",
+                    }}
+                  >
+                    No notifications
+                  </div>
+                ) : (
+                  notifications
+                    .slice(0, 30)
+                    .map((notification) => (
+                      <button
+                        key={notification.id}
+                        type="button"
+                        onClick={() =>
+                          openNotification(
+                            notification
+                          )
+                        }
+                        style={{
+                          width: "100%",
+                          textAlign: "left",
+                          border: "0",
+                          borderRadius: "14px",
+                          padding: "12px",
+                          marginBottom: "8px",
+                          cursor: "pointer",
+                          background:
+                            notification.read
+                              ? "rgba(255,255,255,.035)"
+                              : "rgba(35,125,255,.14)",
+                          borderLeft:
+                            notification.read
+                              ? "3px solid transparent"
+                              : "3px solid #2d8cff",
+                          color: "#fff",
+                        }}
+                      >
+                        <div
+                          style={{
+                            display: "flex",
+                            gap: "9px",
+                            alignItems:
+                              "flex-start",
+                          }}
+                        >
+                          <span
+                            style={{
+                              fontSize: "18px",
+                            }}
+                          >
+                            {notification.type ===
+                            "support"
+                              ? "🎫"
+                              : "🔔"}
+                          </span>
+
+                          <span
+                            style={{
+                              minWidth: 0,
+                              flex: 1,
+                            }}
+                          >
+                            <strong
+                              style={{
+                                display: "block",
+                                fontSize: "13px",
+                                marginBottom:
+                                  "4px",
+                              }}
+                            >
+                              {notification.title ||
+                                "Notification"}
+                            </strong>
+
+                            <span
+                              style={{
+                                display: "block",
+                                color:
+                                  "rgba(255,255,255,.68)",
+                                fontSize: "12px",
+                                lineHeight: 1.4,
+                              }}
+                            >
+                              {notification.message ||
+                                ""}
+                            </span>
+
+                            <small
+                              style={{
+                                display: "block",
+                                marginTop: "6px",
+                                color:
+                                  "rgba(255,255,255,.38)",
+                                fontSize: "10px",
+                              }}
+                            >
+                              {notification.createdAt
+                                ? new Date(
+                                    notification.createdAt
+                                  ).toLocaleString()
+                                : ""}
+                            </small>
+                          </span>
+                        </div>
+                      </button>
+                    ))
+                )}
+              </div>
+            )}
 
             <div>
               <strong>
@@ -7551,7 +8087,14 @@ export default function App() {
           )}
 
           {page === "support" && (
-            <Support />
+            <Support
+              openTicketId={
+                supportOpenTicketId
+              }
+              onTicketOpened={() =>
+                setSupportOpenTicketId(null)
+              }
+            />
           )}
 
           {page === "faq" && (
