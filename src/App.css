@@ -10811,3 +10811,188 @@ body,
   }
 }
 
+
+
+/* =====================================================
+   MOBILE COMPACT UI V2
+===================================================== */
+
+@media (max-width: 768px) {
+
+  /* Sidebar compact */
+  .sidebar {
+    width: 280px !important;
+    max-width: 280px !important;
+    min-width: 280px !important;
+    padding: 14px 12px !important;
+  }
+
+  /* Sidebar logo */
+  .sidebar img {
+    width: 135px !important;
+    max-width: 135px !important;
+    height: auto !important;
+    max-height: 105px !important;
+    object-fit: contain !important;
+    margin: 4px auto 12px !important;
+  }
+
+  /* Main menu heading */
+  .sidebar h1,
+  .sidebar h2,
+  .sidebar h3 {
+    font-size: 14px !important;
+    margin: 8px 0 !important;
+  }
+
+  /* Sidebar menu buttons / links */
+  .sidebar button,
+  .sidebar a {
+    min-height: 54px !important;
+    height: 54px !important;
+    padding: 0 16px !important;
+    margin: 6px 0 !important;
+    border-radius: 15px !important;
+    font-size: 15px !important;
+    line-height: 1.1 !important;
+  }
+
+  /* Sidebar icons */
+  .sidebar button svg,
+  .sidebar a svg {
+    width: 18px !important;
+    height: 18px !important;
+  }
+
+  /* Sidebar text */
+  .sidebar button span,
+  .sidebar a span {
+    font-size: 15px !important;
+  }
+
+  /* Topbar compact */
+  .topbar {
+    min-height: 78px !important;
+    padding: 10px 14px !important;
+  }
+
+  .topbar h1,
+  .topbar h2,
+  .topbar h3 {
+    font-size: 24px !important;
+    margin: 0 !important;
+  }
+
+  .topbar p {
+    font-size: 12px !important;
+  }
+
+  /* Dashboard/content */
+  .content,
+  .main-content,
+  .page-content,
+  .dashboard-content {
+    padding: 12px !important;
+  }
+
+  /* Cards smaller */
+  .stat-card,
+  .dashboard-card,
+  .wallet-card {
+    border-radius: 14px !important;
+    padding: 14px !important;
+    min-height: unset !important;
+  }
+
+  .stat-card h1,
+  .stat-card h2,
+  .stat-card h3,
+  .dashboard-card h1,
+  .dashboard-card h2,
+  .dashboard-card h3 {
+    font-size: 18px !important;
+  }
+
+  .stat-card p,
+  .dashboard-card p,
+  .wallet-card p {
+    font-size: 12px !important;
+  }
+
+  /* Reduce excessive gaps */
+  .dashboard-grid,
+  .stats-grid,
+  .wallet-grid {
+    gap: 10px !important;
+  }
+
+  /* Buttons compact */
+  .primary-btn,
+  .secondary-btn {
+    min-height: 44px !important;
+    height: auto !important;
+    padding: 10px 14px !important;
+    font-size: 14px !important;
+    border-radius: 12px !important;
+  }
+
+  /* Floating chat */
+  .tradenex-floating-chat {
+    width: 56px !important;
+    height: 56px !important;
+    min-width: 56px !important;
+    min-height: 56px !important;
+    right: 15px !important;
+    bottom: 78px !important;
+    font-size: 25px !important;
+  }
+}
+
+@media (max-width: 430px) {
+
+  .sidebar {
+    width: 270px !important;
+    max-width: 270px !important;
+    min-width: 270px !important;
+    padding: 12px 10px !important;
+  }
+
+  .sidebar img {
+    width: 120px !important;
+    max-width: 120px !important;
+    max-height: 92px !important;
+  }
+
+  .sidebar button,
+  .sidebar a {
+    min-height: 50px !important;
+    height: 50px !important;
+    padding: 0 13px !important;
+    margin: 5px 0 !important;
+    border-radius: 13px !important;
+    font-size: 14px !important;
+  }
+
+  .sidebar button span,
+  .sidebar a span {
+    font-size: 14px !important;
+  }
+
+  .topbar {
+    min-height: 70px !important;
+    padding: 8px 10px !important;
+  }
+
+  .topbar h1,
+  .topbar h2,
+  .topbar h3 {
+    font-size: 21px !important;
+  }
+
+  .content,
+  .main-content,
+  .page-content,
+  .dashboard-content {
+    padding: 10px !important;
+  }
+}
