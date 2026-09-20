@@ -1,0 +1,6550 @@
+import { jsPDF } from "jspdf";
+import { App as CapacitorApp } from "@capacitor/app";
+import { Browser } from "@capacitor/browser";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
+import "./App.css";
+import { loadMSG91 } from "./msg91";
+
+const API = "https://tradenex-api.onrender.com/api";
+
+async function api(path, options = {}) {
+  const token =
+    localStorage.getItem("tradenex_token");
+
+  const headers = {
+    ...(options.headers || {}),
+  };
+
+  if (!(options.body instanceof FormData)) {
+    headers["Content-Type"] =
+      "application/json";
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`;
+  }
+
+  const response = await fetch(
+    API + path,
+    {
+      ...options,
+      headers,
+    }
+  );
+
+  const data =
+    await response.json().catch(() => ({
+      success: false,
+      message:
+        "Invalid server response.",
+    }));
+
+  if (!response.ok) {
+    throw new Error(
+      data.message ||
+        "Something went wrong."
+    );
+  }
+
+  return data;
+}
+
+/* =====================================================
+   LOGIN / REGISTER
+===================================================== */
+
+function LoginPage({ onLogin }) {
+  const [mode, setMode] =
+    useState("login");
+
+  const [login, setLogin] = useState({
+    email: "",
+    password: "",
+  });
+
+  const [register, setRegister] =
+    useState({
+      firstName: "",
+      lastName: "",
+      mobile: "",
+      email: "",
+      address: "",
+      country: "",
+      password: "",
+      confirmPassword: "",
+      referralCode: "",
+    });
+
+  const [forgot, setForgot] =
+    useState({
+      type: "login",
+      email: "",
+      newPassword: "",
+      confirmPassword: "",
+    });
+
+  useEffect(() => {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const referral = String(
+        params.get("ref") ||
+        params.get("referral") ||
+        ""
+      ).trim().toUpperCase();
+
+      if (referral) {
+        setRegister((prev) => ({
+          ...prev,
+          referralCode: referral,
+        }));
+        setMode("register");
+      }
+    } catch {
+      // Ignore invalid referral URL parameters.
+    }
+  }, []);
+
+  const [mobileOtp, setMobileOtp] = useState({
+    otp: "",
+    reqId: "",
+    accessToken: "",
+    sent: false,
+    verified: false,
+    sending: false,
+    verifying: false,
+  });
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  function clearMessages() {
+    setMessage("");
+    setError("");
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+
+    clearMessages();
+    setLoading(true);
+
+    try {
+      const data = await api(
+        "/login",
+        {
+          method: "POST",
+          body: JSON.stringify(login),
+        }
+      );
+
+      localStorage.setItem(
+        "tradenex_token",
+        data.token
+      );
+
+      localStorage.setItem(
+        "tradenex_user",
+        JSON.stringify(data.user)
+      );
+
+      onLogin(data.user);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleSendMobileOtp() {
+    clearMessages();
+
+    const phone = String(register.mobile || "").replace(/\D/g, "");
+
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setError("Valid 10-digit Indian mobile number डालें.");
+      return;
+    }
+
+    setMobileOtp((prev) => ({
+      ...prev,
+      sending: true,
+      sent: false,
+      verified: false,
+      otp: "",
+      reqId: "",
+      accessToken: "",
+    }));
+
+    try {
+      await loadMSG91();
+
+      if (typeof window.sendOtp !== "function") {
+        throw new Error("MSG91 OTP service अभी तैयार नहीं है.");
+      }
+
+      window.sendOtp(
+        "91" + phone,
+        (data) => {
+          const reqId = data?.reqId || data?.requestId || "";
+
+          setMobileOtp((prev) => ({
+            ...prev,
+            sending: false,
+            sent: true,
+            reqId,
+          }));
+
+          setMessage("OTP आपके mobile number पर भेज दिया गया है.");
+        },
+        (error) => {
+          setMobileOtp((prev) => ({
+            ...prev,
+            sending: false,
+          }));
+
+          setError(
+            error?.message ||
+              "OTP भेजने में समस्या हुई."
+          );
+        }
+      );
+    } catch (err) {
+      setMobileOtp((prev) => ({
+        ...prev,
+        sending: false,
+      }));
+
+      setError(err.message);
+    }
+  }
+
+  async function handleVerifyMobileOtp() {
+    clearMessages();
+
+    const phone = String(register.mobile || "").replace(/\D/g, "");
+    const otp = String(mobileOtp.otp || "").trim();
+
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setError("Valid 10-digit Indian mobile number डालें.");
+      return;
+    }
+
+    if (!/^\d{4,8}$/.test(otp)) {
+      setError("Valid OTP डालें.");
+      return;
+    }
+
+    setMobileOtp((prev) => ({
+      ...prev,
+      verifying: true,
+    }));
+
+    try {
+      await loadMSG91();
+
+      if (typeof window.verifyOtp !== "function") {
+        throw new Error("MSG91 OTP verification service अभी तैयार नहीं है.");
+      }
+
+      window.verifyOtp(
+        otp,
+        async (data) => {
+          function findMSG91Token(value) {
+            if (!value) return "";
+
+            if (typeof value === "string") {
+              const text = value.trim();
+
+              if (
+                /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(text)
+              ) {
+                return text;
+              }
+
+              return "";
+            }
+
+            if (typeof value !== "object") return "";
+
+            const preferredKeys = [
+              "accessToken",
+              "access_token",
+              "token",
+              "jwt",
+              "jwtToken",
+              "jwt_token",
+            ];
+
+            for (const key of preferredKeys) {
+              const found = findMSG91Token(value[key]);
+              if (found) return found;
+            }
+
+            for (const key of Object.keys(value)) {
+              const found = findMSG91Token(value[key]);
+              if (found) return found;
+            }
+
+            return "";
+          }
+
+          const accessToken = findMSG91Token(data);
+
+          if (!accessToken) {
+            setMobileOtp((prev) => ({
+              ...prev,
+              verifying: false,
+            }));
+            setError("MSG91 ने verification token नहीं दिया.");
+            return;
+          }
+
+          try {
+            const verified = await api(
+              "/auth/verify-mobile",
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  phone,
+                  accessToken,
+                }),
+              }
+            );
+
+            setMobileOtp((prev) => ({
+              ...prev,
+              verifying: false,
+              verified: true,
+              accessToken,
+            }));
+
+            setMessage(
+              verified.message ||
+                "Mobile number verified successfully."
+            );
+          } catch (err) {
+            setMobileOtp((prev) => ({
+              ...prev,
+              verifying: false,
+            }));
+            setError(err.message);
+          }
+        },
+        (error) => {
+          setMobileOtp((prev) => ({
+            ...prev,
+            verifying: false,
+          }));
+
+          setError(
+            error?.message ||
+              "OTP गलत या expired है."
+          );
+        },
+        mobileOtp.reqId || undefined
+      );
+    } catch (err) {
+      setMobileOtp((prev) => ({
+        ...prev,
+        verifying: false,
+      }));
+
+      setError(err.message);
+    }
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+
+    clearMessages();
+
+    if (
+      register.password !==
+      register.confirmPassword
+    ) {
+      setError(
+        "Password और confirm password अलग हैं."
+      );
+      return;
+    }
+
+    if (register.password.length < 6) {
+      setError(
+        "Password minimum 6 characters होना चाहिए."
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await api("/register", {
+        method: "POST",
+        body: JSON.stringify({
+          firstName:
+            register.firstName,
+          lastName:
+            register.lastName,
+          mobile:
+            register.mobile,
+          email:
+            register.email,
+          address:
+            register.address,
+          country:
+            register.country,
+          password:
+            register.password,
+          referralCode:
+            register.referralCode,
+        }),
+      });
+
+      setMessage(
+        "Registration successful. अब Login करें."
+      );
+
+      setLogin({
+        email: register.email,
+        password: "",
+      });
+
+      setRegister({
+        firstName: "",
+        lastName: "",
+        mobile: "",
+        email: "",
+        address: "",
+        country: "",
+        password: "",
+        confirmPassword: "",
+        referralCode: "",
+      });
+
+      setMode("login");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handleForgot(e) {
+    e.preventDefault();
+
+    clearMessages();
+
+    if (
+      forgot.newPassword !==
+      forgot.confirmPassword
+    ) {
+      setError(
+        "New password और confirm password अलग हैं."
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const data = await api(
+        "/forgot-password",
+        {
+          method: "POST",
+          body: JSON.stringify({
+            type: forgot.type,
+            email: forgot.email,
+            newPassword:
+              forgot.newPassword,
+          }),
+        }
+      );
+
+      setMessage(data.message);
+
+      setForgot({
+        type: "login",
+        email: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+
+      setMode("login");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+
+
+  return (
+    <div className="auth-page">
+      <div className="auth-card">
+        <div className="brand">
+          <img src="/tradenex-premium-logo.png" alt="Tradenex" className="auth-logo-img" />
+          <b>Tradenex</b>
+        </div>
+
+        {mode === "login" && (
+          <>
+            <h1>Welcome Back</h1>
+
+            <p className="auth-subtitle">
+              Login to your Tradenex account
+            </p>
+
+            {message && (
+              <div className="success-box">
+                {message}
+              </div>
+            )}
+
+            {error && (
+              <div className="error-box">
+                {error}
+              </div>
+            )}
+
+            <form
+              onSubmit={handleLogin}
+            >
+              <label>Email</label>
+
+              <input
+                type="email"
+                placeholder="Enter your email"
+                value={login.email}
+                onChange={(e) =>
+                  setLogin({
+                    ...login,
+                    email:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <label>Password</label>
+
+              <input
+                type="password"
+                placeholder="Enter your password"
+                value={login.password}
+                onChange={(e) =>
+                  setLogin({
+                    ...login,
+                    password:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <button
+                className="primary-btn"
+                disabled={loading}
+              >
+                {loading
+                  ? "Please wait..."
+                  : "Login"}
+              </button>
+            </form>
+
+            <button
+              className="text-btn"
+              onClick={() => {
+                clearMessages();
+                setMode("forgot");
+              }}
+            >
+              Forgot Password?
+            </button>
+
+            <div className="auth-bottom">
+              Don't have an account?
+
+              <button
+                className="link-btn"
+                onClick={() => {
+                  clearMessages();
+                  setMode("register");
+                }}
+              >
+                Create Account
+              </button>
+            </div>
+          </>
+        )}
+
+        {mode === "register" && (
+          <>
+            <h1>Create Account</h1>
+
+            <p className="auth-subtitle">
+              Register your new Tradenex account
+            </p>
+
+            {message && (
+              <div className="success-box">
+                {message}
+              </div>
+            )}
+
+            {error && (
+              <div className="error-box">
+                {error}
+              </div>
+            )}
+
+            <form
+              onSubmit={handleRegister}
+            >
+              <div className="two-col">
+                <div>
+                  <label>
+                    First Name
+                  </label>
+
+                  <input
+                    placeholder="First name"
+                    value={
+                      register.firstName
+                    }
+                    onChange={(e) =>
+                      setRegister({
+                        ...register,
+                        firstName:
+                          e.target.value,
+                      })
+                    }
+                    required
+                  />
+                </div>
+
+                <div>
+                  <label>
+                    Last Name
+                  </label>
+
+                  <input
+                    placeholder="Last name"
+                    value={
+                      register.lastName
+                    }
+                    onChange={(e) =>
+                      setRegister({
+                        ...register,
+                        lastName:
+                          e.target.value,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+
+              <label>
+                Mobile Number
+              </label>
+
+              <input
+                type="tel"
+                placeholder="Enter mobile number"
+                value={register.mobile}
+                onChange={(e) => {
+                  const mobile = e.target.value;
+
+                  setRegister({
+                    ...register,
+                    mobile,
+                  });
+
+                  setMobileOtp((prev) => ({
+                    ...prev,
+                    otp: "",
+                    reqId: "",
+                    accessToken: "",
+                    sent: false,
+                    verified: false,
+                  }));
+                }}
+                required
+              />
+
+              {!mobileOtp.verified ? (
+                <>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={handleSendMobileOtp}
+                    disabled={
+                      mobileOtp.sending ||
+                      !register.mobile
+                    }
+                  >
+                    {mobileOtp.sending
+                      ? "Sending OTP..."
+                      : mobileOtp.sent
+                      ? "Resend OTP"
+                      : "Send OTP"}
+                  </button>
+
+                  {mobileOtp.sent && (
+                    <div style={{ marginTop: "10px" }}>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength="8"
+                        placeholder="Enter OTP"
+                        value={mobileOtp.otp}
+                        onChange={(e) =>
+                          setMobileOtp((prev) => ({
+                            ...prev,
+                            otp: e.target.value.replace(/\D/g, ""),
+                          }))
+                        }
+                      />
+
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={handleVerifyMobileOtp}
+                        disabled={
+                          mobileOtp.verifying ||
+                          !mobileOtp.otp
+                        }
+                        style={{ marginTop: "8px" }}
+                      >
+                        {mobileOtp.verifying
+                          ? "Verifying..."
+                          : "Verify OTP"}
+                      </button>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    marginTop: "8px",
+                    fontWeight: "600",
+                  }}
+                >
+                  ✓ Mobile number verified
+                </div>
+              )}
+
+              <label>
+                Email ID
+              </label>
+
+              <input
+                type="email"
+                placeholder="Enter email"
+                value={register.email}
+                onChange={(e) =>
+                  setRegister({
+                    ...register,
+                    email:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <label>
+                Address
+              </label>
+
+              <textarea
+                placeholder="Enter your address"
+                value={register.address}
+                onChange={(e) =>
+                  setRegister({
+                    ...register,
+                    address:
+                      e.target.value,
+                  })
+                }
+                rows="3"
+                required
+              />
+
+              <label>
+                Country
+              </label>
+
+              <input
+                placeholder="Country"
+                value={register.country}
+                onChange={(e) =>
+                  setRegister({
+                    ...register,
+                    country:
+                      e.target.value,
+                  })
+                }
+              />
+
+              <label>
+                Referral Code
+              </label>
+
+              <input
+                placeholder="Enter referral code (optional)"
+                value={
+                  register.referralCode
+                }
+                onChange={(e) =>
+                  setRegister({
+                    ...register,
+                    referralCode:
+                      e.target.value.toUpperCase(),
+                  })
+                }
+              />
+
+              <small className="field-help">
+                Referral code नहीं है तो
+                इसे खाली छोड़ सकते हैं।
+              </small>
+
+              <label>
+                Password
+              </label>
+
+              <input
+                type="password"
+                placeholder="Create password"
+                value={
+                  register.password
+                }
+                onChange={(e) =>
+                  setRegister({
+                    ...register,
+                    password:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <label>
+                Confirm Password
+              </label>
+
+              <input
+                type="password"
+                placeholder="Confirm password"
+                value={
+                  register.confirmPassword
+                }
+                onChange={(e) =>
+                  setRegister({
+                    ...register,
+                    confirmPassword:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <button
+                className="primary-btn"
+                disabled={
+                  loading ||
+                  !mobileOtp.verified
+                }
+              >
+                {loading
+                  ? "Creating..."
+                  : "Create Account"}
+              </button>
+            </form>
+
+            <div className="auth-bottom">
+              Already have an account?
+
+              <button
+                className="link-btn"
+                onClick={() => {
+                  clearMessages();
+                  setMode("login");
+                }}
+              >
+                Login
+              </button>
+            </div>
+          </>
+        )}
+
+        {mode === "forgot" && (
+          <>
+            <h1>Reset Password</h1>
+
+            <p className="auth-subtitle">
+              Reset your Tradenex password
+            </p>
+
+            {message && (
+              <div className="success-box">
+                {message}
+              </div>
+            )}
+
+            {error && (
+              <div className="error-box">
+                {error}
+              </div>
+            )}
+
+            <form
+              onSubmit={handleForgot}
+            >
+              <label>
+                Password Type
+              </label>
+
+              <select
+                value={forgot.type}
+                onChange={(e) =>
+                  setForgot({
+                    ...forgot,
+                    type: e.target.value,
+                  })
+                }
+              >
+                <option value="login">
+                  Login Password
+                </option>
+
+                <option value="transaction">
+                  Transaction Password
+                </option>
+              </select>
+
+              <label>Email</label>
+
+              <input
+                type="email"
+                placeholder="Registered email"
+                value={forgot.email}
+                onChange={(e) =>
+                  setForgot({
+                    ...forgot,
+                    email:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <label>
+                New Password
+              </label>
+
+              <input
+                type="password"
+                placeholder="New password"
+                value={
+                  forgot.newPassword
+                }
+                onChange={(e) =>
+                  setForgot({
+                    ...forgot,
+                    newPassword:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <label>
+                Confirm New Password
+              </label>
+
+              <input
+                type="password"
+                placeholder="Confirm new password"
+                value={
+                  forgot.confirmPassword
+                }
+                onChange={(e) =>
+                  setForgot({
+                    ...forgot,
+                    confirmPassword:
+                      e.target.value,
+                  })
+                }
+                required
+              />
+
+              <button
+                className="primary-btn"
+                disabled={loading}
+              >
+                {loading
+                  ? "Please wait..."
+                  : "Reset Password"}
+              </button>
+            </form>
+
+            <button
+              className="text-btn"
+              onClick={() => {
+                clearMessages();
+                setMode("login");
+              }}
+            >
+              ← Back to Login
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/* =====================================================
+   DASHBOARD
+===================================================== */
+
+function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
+  const num = (v) => Number(v || 0);
+  const balance = num(data.walletBalance);
+  const deposit = num(data.totalDeposit);
+  const profit = Math.max(0, balance - deposit);
+  const withdrawal = num(data.totalWithdrawal || data.totalWithdrawals);
+  const referralReward = num(data.referralReward);
+  const pending = num(data.pendingDeposit);
+
+  const downloadStatementPDF = () => {
+    const doc = new jsPDF();
+    const transactions = Array.isArray(data.transactions) ? data.transactions : [];
+
+    doc.setFontSize(20);
+    doc.text("TRADEX - ACCOUNT STATEMENT", 20, 20);
+    doc.setFontSize(11);
+    doc.text(`User: ${user?.name || user?.username || user?.email || "User"}`, 20, 32);
+    doc.text(`Date: ${new Date().toLocaleString()}`, 20, 40);
+    doc.setFontSize(14);
+    doc.text("Account Summary", 20, 55);
+    doc.setFontSize(11);
+    doc.text(`Total Deposit: $${deposit.toFixed(2)}`, 20, 66);
+    doc.text(`Total Profit: $${profit.toFixed(2)}`, 20, 74);
+    doc.text(`Total Withdrawal: $${withdrawal.toFixed(2)}`, 20, 82);
+    doc.text(`Referral Reward: $${referralReward.toFixed(2)}`, 20, 90);
+    doc.text(`Current Balance: $${balance.toFixed(2)}`, 20, 98);
+
+    doc.setFontSize(14);
+    doc.text("Transaction History", 20, 115);
+
+    let y = 126;
+    doc.setFontSize(9);
+    doc.text("#", 20, y);
+    doc.text("Type", 32, y);
+    doc.text("Amount", 75, y);
+    doc.text("Status", 115, y);
+    doc.text("Date", 150, y);
+    y += 7;
+
+    transactions.slice(0, 25).forEach((tx, i) => {
+      if (y > 280) {
+        doc.addPage();
+        y = 20;
+      }
+      doc.text(String(i + 1), 20, y);
+      doc.text(String(tx.type || "Deposit").slice(0, 18), 32, y);
+      doc.text(`$${num(tx.amount).toFixed(2)}`, 75, y);
+      doc.text(String(tx.status || "Approved").slice(0, 14), 115, y);
+      doc.text(String(tx.date || tx.createdAt || "-").slice(0, 18), 150, y);
+      y += 7;
+    });
+
+    doc.save(`Tradenex-Statement-${Date.now()}.pdf`);
+  };
+
+  return (
+    <div className="premium-dashboard">
+
+      <div className="premium-hero">
+        <div className="hero-copy">
+          <span className="hero-kicker">TRADEX USER PANEL</span>
+          <h1>Build Your <b>Financial Freedom</b></h1>
+          <p>Trade&nbsp;&nbsp;•&nbsp;&nbsp;Grow&nbsp;&nbsp;•&nbsp;&nbsp;Succeed</p>
+        </div>
+        <div className="hero-badge">A Smarter Way to Invest</div>
+      </div>
+
+      {offer?.enabled && (
+        <section className="live-offer-banner live-offer-compact">
+
+          <div className="live-offer-sparkles">✦ ✦</div>
+
+          <div className="live-offer-gift">
+            <div className="live-offer-gift-box">🎁</div>
+          </div>
+
+          <div className="live-offer-main">
+            <div className="live-offer-label">♛ LIMITED TIME OFFER</div>
+            <h2>{offer.title || "Special Welcome Bonus!"}</h2>
+            <p>{offer.message || "A special offer is available for you."}</p>
+          </div>
+
+          <div className="live-offer-highlight">
+            <span>GET</span>
+            <strong>
+              {(() => {
+                const text = String(offer.message || "");
+                const nums = text.match(/\b\d+(?:,\d{3})*(?:\.\d+)?\b/g) || [];
+                return nums.length ? nums[nums.length - 1] : "200";
+              })()}
+            </strong>
+            <b>USDT</b>
+          </div>
+
+          {offer.buttonUrl ? (
+            <a
+              className="live-offer-button"
+              href={offer.buttonUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              🚀 {offer.buttonText || "Grab Offer"} <span>→</span>
+            </a>
+          ) : (
+            <button
+              className="live-offer-button"
+              onClick={() => setOffer(null)}
+            >
+              🚀 {offer.buttonText || "Grab Offer"} <span>→</span>
+            </button>
+          )}
+        </section>
+      )}
+
+      {/* =====================================================
+          LIVE MARKET
+      ===================================================== */}
+      <LiveMarket go={go} />
+
+      <section className="transaction-panel">
+        <div className="transaction-head">
+          <div>
+            <h2>Transaction History</h2>
+            <p>{data.transactions?.length || 0} records</p>
+          </div>
+          <button onClick={() => go("transactions")}>View All&nbsp; →</button>
+        </div>
+
+        <div className="premium-table-wrap">
+          <table className="premium-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(data.transactions || []).slice(0,5).map((tx,i) => (
+                <tr key={tx.id || i}>
+                  <td>{i+1}</td>
+                  <td><span className="tx-type">↓</span> {tx.type || "Deposit"}</td>
+                  <td>${num(tx.amount).toFixed(2)}</td>
+                  <td><span className="status-pill">{tx.status || "Approved"}</span></td>
+                  <td>{tx.date || tx.createdAt || "—"}</td>
+                </tr>
+              ))}
+              {!(data.transactions || []).length && (
+                <tr>
+                  <td colSpan="5" className="empty-row">No transactions yet.</td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <div className="premium-features">
+        <div>🛡️<b>Secure<br/>Platform</b></div>
+        <div>⚡<b>Fast<br/>Transactions</b></div>
+        <div>◉<b>24/7<br/>Support</b></div>
+        <div>💎<b>Trusted<br/>Worldwide</b></div>
+      </div>
+
+      <div className="premium-footer">
+        © 2026 Tradenex. All rights reserved.
+        <span>Privacy&nbsp;&nbsp; | &nbsp;&nbsp;Terms&nbsp;&nbsp; | &nbsp;&nbsp;Help</span>
+      </div>
+
+      {pending > 0 && (
+        <div className="premium-pending">
+          ⏳ Pending Deposit: ${pending.toFixed(2)}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* =====================================================
+   DASHBOARD LIVE MARKET
+===================================================== */
+
+function LiveMarket({ go }) {
+  const baseMarkets = [
+    { symbol: "BTC/USDT", name: "Bitcoin", price: 104582.42, change: 2.84 },
+    { symbol: "ETH/USDT", name: "Ethereum", price: 3824.16, change: 1.72 },
+    { symbol: "BNB/USDT", name: "BNB", price: 928.34, change: 0.94 },
+    { symbol: "SOL/USDT", name: "Solana", price: 238.71, change: 3.26 },
+    { symbol: "XRP/USDT", name: "XRP", price: 2.914, change: -0.68 },
+    { symbol: "ADA/USDT", name: "Cardano", price: 0.8241, change: 1.18 }
+  ];
+
+  const [markets, setMarkets] = React.useState(baseMarkets);
+  const [selected, setSelected] = React.useState(0);
+  const [pulse, setPulse] = React.useState(0);
+
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setMarkets(prev =>
+        prev.map(item => {
+          const movement = (Math.random() - 0.48) * 0.0018;
+          const price = Math.max(0.0001, item.price * (1 + movement));
+          const change = item.change + movement * 35;
+
+          return {
+            ...item,
+            price,
+            change
+          };
+        })
+      );
+
+      setPulse(Date.now());
+    }, 1800);
+
+    return () => clearInterval(timer);
+  }, []);
+
+  const active = markets[selected];
+
+  const chartPoints = Array.from({ length: 30 }, (_, i) => {
+    const wave =
+      Math.sin(i * 0.65 + pulse / 2200) * 10 +
+      Math.sin(i * 0.19) * 7 +
+      i * 0.32;
+    return 42 + wave;
+  });
+
+  const points = chartPoints
+    .map((y, i) => `${(i / 29) * 100},${y}`)
+    .join(" ");
+
+  return (
+    <section className="dashboard-live-market">
+
+      <div className="market-head">
+        <div>
+          <span className="market-kicker">
+            <i></i> LIVE MARKET
+          </span>
+          <h2>Market Overview</h2>
+          <p>Real-time market-style dashboard feed</p>
+        </div>
+
+        <button
+          className="market-trade-btn"
+          onClick={() => go && go("live-trading")}
+        >
+          Open Live Trading <span>↗</span>
+        </button>
+      </div>
+
+      <div className="market-ticker">
+        {markets.map((m, i) => (
+          <button
+            key={m.symbol}
+            className={`market-ticker-item ${selected === i ? "active" : ""}`}
+            onClick={() => setSelected(i)}
+          >
+            <span className="ticker-symbol">{m.symbol}</span>
+            <strong>
+              {m.price >= 1000
+                ? `$${m.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                : `$${m.price.toFixed(4)}`}
+            </strong>
+            <small className={m.change >= 0 ? "up" : "down"}>
+              {m.change >= 0 ? "▲" : "▼"} {Math.abs(m.change).toFixed(2)}%
+            </small>
+          </button>
+        ))}
+      </div>
+
+      <div className="market-main">
+
+        <div className="market-chart-card">
+          <div className="market-chart-top">
+            <div>
+              <span>{active.name}</span>
+              <h3>
+                {active.price >= 1000
+                  ? `$${active.price.toLocaleString(undefined, { maximumFractionDigits: 2 })}`
+                  : `$${active.price.toFixed(4)}`}
+              </h3>
+            </div>
+
+            <span className={`market-live-change ${active.change >= 0 ? "up" : "down"}`}>
+              {active.change >= 0 ? "+" : ""}
+              {active.change.toFixed(2)}%
+            </span>
+          </div>
+
+          <div className="market-chart">
+            <div className="chart-grid"></div>
+            <svg viewBox="0 0 100 60" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="marketGlow" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stopOpacity=".38" />
+                  <stop offset="100%" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+
+              <polygon
+                className="market-area"
+                points={`0,60 ${points} 100,60`}
+              />
+
+              <polyline
+                className="market-line"
+                points={points}
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+
+            <div className="market-live-dot"></div>
+          </div>
+
+          <div className="chart-time">
+            <span>1H</span>
+            <span>4H</span>
+            <span className="selected">1D</span>
+            <span>1W</span>
+            <span>1M</span>
+          </div>
+        </div>
+
+        <div className="market-side-card">
+          <div className="side-card-title">
+            <span>MARKET STATUS</span>
+            <b><i></i> LIVE</b>
+          </div>
+
+          <div className="market-stat">
+            <span>24H Change</span>
+            <strong className={active.change >= 0 ? "up" : "down"}>
+              {active.change >= 0 ? "+" : ""}
+              {active.change.toFixed(2)}%
+            </strong>
+          </div>
+
+          <div className="market-stat">
+            <span>Market</span>
+            <strong>Crypto</strong>
+          </div>
+
+          <div className="market-stat">
+            <span>Pair</span>
+            <strong>{active.symbol}</strong>
+          </div>
+
+          <div className="market-status-bar">
+            <div></div>
+          </div>
+
+          <button
+            className="market-full-btn"
+            onClick={() => go && go("live-trading")}
+          >
+            View Full Market
+          </button>
+        </div>
+
+      </div>
+    </section>
+  );
+}
+
+/* =====================================================
+   TRANSACTION TABLE
+===================================================== */
+/* =====================================================
+   TRANSACTION TABLE
+===================================================== */
+
+function TransactionTable({
+  transactions,
+}) {
+  return (
+    <div className="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Type</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Date</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {transactions.map(
+            (tx) => (
+              <tr key={tx.id}>
+                <td>
+                  {tx.type}
+                </td>
+
+                <td>
+                  $
+                  {Number(
+                    tx.amount || 0
+                  ).toFixed(2)}
+                </td>
+
+                <td>
+                  <span
+                    className={
+                      "status " +
+                      String(
+                        tx.status || ""
+                      ).toLowerCase()
+                    }
+                  >
+                    {tx.status}
+                  </span>
+                </td>
+
+                <td>
+                  {tx.createdAt
+                    ? new Date(
+                        tx.createdAt
+                      ).toLocaleString()
+                    : "—"}
+                </td>
+              </tr>
+            )
+          )}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
+/* =====================================================
+   WALLET
+===================================================== */
+
+function Wallet({ user, data = {}, go }) {
+  const num = (v) => Number(v || 0);
+
+  const balance = num(
+    user?.balance ??
+    user?.walletBalance ??
+    data?.walletBalance
+  );
+
+  const deposit = num(
+    user?.totalDeposit ??
+    data?.totalDeposit
+  );
+
+  const profit = num(
+    user?.profit ??
+    data?.profit ??
+    Math.max(0, balance - deposit)
+  );
+
+  const referral = num(
+    user?.referralReward ??
+    data?.referralReward
+  );
+
+  const withdrawal = num(
+    user?.totalWithdrawal ??
+    user?.totalWithdrawals ??
+    data?.totalWithdrawal
+  );
+
+  const transactions = Array.isArray(data?.transactions)
+    ? data.transactions
+    : [];
+
+  const referrals = Array.isArray(data?.referrals)
+    ? data.referrals.length
+    : num(data?.referrals);
+
+  const totalValue = balance + profit + referral;
+
+  const balancePercent =
+    totalValue > 0 ? (balance / totalValue) * 100 : 0;
+
+  const profitPercent =
+    totalValue > 0 ? (profit / totalValue) * 100 : 0;
+
+  const referralPercent =
+    totalValue > 0 ? (referral / totalValue) * 100 : 0;
+
+  const accountStatus =
+    user?.status ||
+    user?.accountStatus ||
+    "Active";
+
+  const donutStyle = {
+    background: `conic-gradient(
+      #2787ff 0 ${balancePercent}%,
+      #9b5cff ${balancePercent}% ${balancePercent + profitPercent}%,
+      #d9a62e ${balancePercent + profitPercent}% ${balancePercent + profitPercent + referralPercent}%,
+      #0c2730 ${balancePercent + profitPercent + referralPercent}% 100%
+    )`,
+  };
+
+  return (
+    <div className="wallet-premium">
+
+      <div className="wallet-page-head">
+        <div>
+          <span>WALLET</span>
+          <h1>Wallet</h1>
+          <p>Your current wallet information and profit summary.</p>
+        </div>
+
+        <div className="wallet-live">
+          <i></i>
+          Live Account
+        </div>
+      </div>
+
+      {/* ================= STATS ================= */}
+
+      <div className="wallet-stat-grid">
+
+        <div className="wallet-stat wallet-blue">
+          <div className="wallet-stat-icon">💰</div>
+          <div>
+            <small>Available Balance</small>
+            <strong>${balance.toFixed(2)}</strong>
+            <em>Current wallet balance</em>
+          </div>
+        </div>
+
+        <div className="wallet-stat wallet-green">
+          <div className="wallet-stat-icon">💼</div>
+          <div>
+            <small>Total Deposit</small>
+            <strong>${deposit.toFixed(2)}</strong>
+            <em>Total investment</em>
+          </div>
+        </div>
+
+        <div className="wallet-stat wallet-purple">
+          <div className="wallet-stat-icon">📊</div>
+          <div>
+            <small>Total Profit</small>
+            <strong>${profit.toFixed(2)}</strong>
+            <em>
+              {deposit > 0
+                ? `${((profit / deposit) * 100).toFixed(1)}% return`
+                : "No investment return yet"}
+            </em>
+          </div>
+        </div>
+
+        <div className="wallet-stat wallet-gold">
+          <div className="wallet-stat-icon">🎁</div>
+          <div>
+            <small>Referral Reward</small>
+            <strong>${referral.toFixed(2)}</strong>
+            <em>{referrals} referral{referrals === 1 ? "" : "s"}</em>
+          </div>
+        </div>
+
+      </div>
+
+      {/* ================= PORTFOLIO ================= */}
+
+      <section className="wallet-portfolio">
+
+        <div className="wallet-section-head">
+          <div>
+            <h2>◉ Portfolio Overview</h2>
+            <p>Total wallet value distribution</p>
+          </div>
+
+          <span>Current Portfolio</span>
+        </div>
+
+        <div className="wallet-portfolio-body">
+
+          <div className="wallet-donut-wrap">
+            <div
+              className="wallet-donut"
+              style={donutStyle}
+            >
+              <div className="wallet-donut-inner">
+                <small>Total Value</small>
+                <strong>${totalValue.toFixed(2)}</strong>
+                <em>
+                  {deposit > 0
+                    ? `+${((profit / deposit) * 100).toFixed(1)}%`
+                    : "0.0%"}
+                </em>
+              </div>
+            </div>
+          </div>
+
+          <div className="wallet-distribution">
+
+            <div>
+              <i className="dot-blue"></i>
+              <span>Available Balance</span>
+              <strong>${balance.toFixed(2)}</strong>
+              <small>{balancePercent.toFixed(1)}%</small>
+            </div>
+
+            <div>
+              <i className="dot-purple"></i>
+              <span>Total Profit</span>
+              <strong>${profit.toFixed(2)}</strong>
+              <small>{profitPercent.toFixed(1)}%</small>
+            </div>
+
+            <div>
+              <i className="dot-gold"></i>
+              <span>Referral Reward</span>
+              <strong>${referral.toFixed(2)}</strong>
+              <small>{referralPercent.toFixed(1)}%</small>
+            </div>
+
+            <div>
+              <i className="dot-green"></i>
+              <span>Total Withdrawal</span>
+              <strong>${withdrawal.toFixed(2)}</strong>
+              <small>Withdrawn</small>
+            </div>
+
+          </div>
+
+        </div>
+
+        <div className="wallet-mini-stats">
+
+          <div>
+            <span>↗</span>
+            <small>Profit / Deposit</small>
+            <strong>
+              {deposit > 0
+                ? `${((profit / deposit) * 100).toFixed(2)}%`
+                : "0.00%"}
+            </strong>
+          </div>
+
+          <div>
+            <span>⇄</span>
+            <small>Total Transactions</small>
+            <strong>{transactions.length}</strong>
+          </div>
+
+          <div>
+            <span>♧</span>
+            <small>Referrals</small>
+            <strong>{referrals}</strong>
+          </div>
+
+          <div>
+            <span>✓</span>
+            <small>Account Status</small>
+            <strong className="wallet-status">{accountStatus}</strong>
+          </div>
+
+        </div>
+
+      </section>
+
+      {/* ================= QUICK ACTIONS ================= */}
+
+      <section className="wallet-actions">
+
+        <div className="wallet-section-head">
+          <div>
+            <h2>▣ Quick Actions</h2>
+            <p>Manage your account easily and securely.</p>
+          </div>
+        </div>
+
+        <div className="wallet-action-grid">
+
+          <button
+            type="button"
+            onClick={() => go && go("deposit")}
+            className="action-blue"
+          >
+            <span>↓</span>
+            <b>Deposit</b>
+            <small>Add Funds →</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("withdraw")}
+            className="action-purple"
+          >
+            <span>↗</span>
+            <b>Withdraw</b>
+            <small>Withdraw Funds →</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("transactions")}
+            className="action-gold"
+          >
+            <span>⇄</span>
+            <b>Transactions</b>
+            <small>View Activity →</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("statement")}
+            className="action-green"
+          >
+            <span>▤</span>
+            <b>My Statement</b>
+            <small>View Statement →</small>
+          </button>
+
+        </div>
+
+      </section>
+
+      {/* ================= RECENT TRANSACTIONS ================= */}
+
+      <section className="wallet-recent">
+
+        <div className="wallet-section-head">
+          <div>
+            <h2>▣ Recent Transactions</h2>
+            <p>Your latest wallet activity.</p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => go && go("transactions")}
+          >
+            View All →
+          </button>
+        </div>
+
+        <div className="wallet-table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Type</th>
+                <th>Amount</th>
+                <th>Status</th>
+                <th>Date</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {transactions.slice(0, 5).map((tx, index) => (
+                <tr key={tx.id || index}>
+                  <td>{index + 1}</td>
+
+                  <td>
+                    <span className="wallet-tx-icon">↓</span>
+                    {tx.type || "Transaction"}
+                  </td>
+
+                  <td>
+                    ${num(tx.amount).toFixed(2)}
+                  </td>
+
+                  <td>
+                    <span className="wallet-tx-status">
+                      {tx.status || "Approved"}
+                    </span>
+                  </td>
+
+                  <td>
+                    {tx.date ||
+                      tx.createdAt ||
+                      "—"}
+                  </td>
+                </tr>
+              ))}
+
+              {!transactions.length && (
+                <tr>
+                  <td
+                    colSpan="5"
+                    className="wallet-empty"
+                  >
+                    No transactions yet.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+
+      </section>
+
+      <section className="wallet-banner">
+        <div className="wallet-banner-logo">T</div>
+
+        <div>
+          <h2>Trade Smarter, Grow Faster</h2>
+          <p>Secure • Reliable • Global</p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => go && go("live-trading")}
+        >
+          Start Trading →
+        </button>
+      </section>
+
+    </div>
+  );
+}
+
+/* =====================================================
+   DEPOSIT
+===================================================== */
+
+function Deposit({ onDone }) {
+  const [form, setForm] =
+    useState({
+      method: "USDT",
+      network: "TRC20",
+      amount: "",
+      walletAddress: "",
+      txid: "",
+    });
+
+  const [proof, setProof] =
+    useState(null);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [message, setMessage] =
+    useState("");
+
+  const depositWallets = {
+    TRC20: {
+      address:
+        "TUuGwbzorVauCkhsmCUw6gCmvCAMcQaUZZ",
+      label: "USDT - TRC20",
+    },
+
+    BEP20: {
+      address:
+        "0x22B72f2dAeDeB450333D9FA0Fc8E5C274E0a85f9",
+      label: "USDT - BEP20",
+    },
+  };
+
+  const selectedWallet =
+    depositWallets[form.network];
+
+  const qrCodeUrl =
+    "https://api.qrserver.com/v1/create-qr-code/" +
+    `?size=300x300&margin=10&data=${encodeURIComponent(
+      selectedWallet.address
+    )}`;
+
+  async function copyAddress() {
+    try {
+      await navigator.clipboard.writeText(
+        selectedWallet.address
+      );
+
+      setError("");
+
+      setMessage(
+        `${selectedWallet.label} wallet address copied.`
+      );
+
+      setTimeout(() => {
+        setMessage("");
+      }, 2500);
+    } catch (err) {
+      setError(
+        "Address copy नहीं हो पाया. Address को manually copy करें."
+      );
+    }
+  }
+
+  async function submit(e) {
+    e.preventDefault();
+
+    setError("");
+    setMessage("");
+
+    if (!proof) {
+      setError(
+        "Payment proof upload करें."
+      );
+      return;
+    }
+
+    const fd = new FormData();
+
+    fd.append(
+      "method",
+      form.method
+    );
+
+    fd.append(
+      "network",
+      form.network
+    );
+
+    fd.append(
+      "amount",
+      form.amount
+    );
+
+    fd.append(
+      "walletAddress",
+      form.walletAddress
+    );
+
+    fd.append(
+      "txid",
+      form.txid
+    );
+
+    fd.append(
+      "proof",
+      proof
+    );
+
+    setLoading(true);
+
+    try {
+      const data = await api(
+        "/deposits",
+        {
+          method: "POST",
+          body: fd,
+        }
+      );
+
+      setMessage(data.message);
+
+      setForm({
+        method: "USDT",
+        network: "TRC20",
+        amount: "",
+        walletAddress: "",
+        txid: "",
+      });
+
+      setProof(null);
+
+      const fileInput =
+        document.getElementById(
+          "payment-proof-input"
+        );
+
+      if (fileInput) {
+        fileInput.value = "";
+      }
+
+      if (onDone) {
+        onDone();
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="page-title">
+        <small>DEPOSIT</small>
+
+        <h2>
+          Deposit Funds
+        </h2>
+
+        <p>
+          Send USDT to the wallet address
+          below and submit your payment
+          details.
+        </p>
+      </div>
+
+      {error && (
+        <div className="error-box">
+          {error}
+        </div>
+      )}
+
+      {message && (
+        <div className="success-box">
+          {message}
+        </div>
+      )}
+
+      <div className="panel-card deposit-wallet-card">
+        <div className="panel-head">
+          <div>
+            <h3>
+              Deposit Wallet
+            </h3>
+
+            <span>
+              Send USDT only to the selected
+              network address.
+            </span>
+          </div>
+        </div>
+
+        {form.method === "USDT" && (
+          <div className="deposit-wallet-box">
+            <div className="deposit-wallet-info">
+              <div className="deposit-network-badge">
+                {selectedWallet.label}
+              </div>
+
+              <h4>
+                Payment Address
+              </h4>
+
+              <div className="deposit-address-row">
+                <div className="deposit-address">
+                  {selectedWallet.address}
+                </div>
+
+                <button
+                  type="button"
+                  className="copy-address-btn"
+                  onClick={copyAddress}
+                >
+                  📋 Copy
+                </button>
+              </div>
+
+              <div className="deposit-warning">
+                ⚠️ Send USDT on{" "}
+                <strong>
+                  {form.network}
+                </strong>{" "}
+                network only.
+              </div>
+            </div>
+
+            <div className="deposit-qr-box">
+              <img
+                src={qrCodeUrl}
+                alt={`${selectedWallet.label} QR Code`}
+              />
+
+              <strong>
+                Scan to Pay
+              </strong>
+
+              <small>
+                {form.network} Network
+              </small>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="panel-card">
+        <form onSubmit={submit}>
+          <label>
+            Deposit Method
+          </label>
+
+          <select
+            value={form.method}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                method: e.target.value,
+              })
+            }
+          >
+            <option value="USDT">
+              USDT
+            </option>
+
+            <option value="CASH">
+              CASH
+            </option>
+          </select>
+
+          {form.method === "USDT" && (
+            <>
+              <label>
+                Network
+              </label>
+
+              <select
+                value={form.network}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    network: e.target.value,
+                  })
+                }
+              >
+                <option value="TRC20">
+                  TRC20
+                </option>
+
+                <option value="BEP20">
+                  BEP20
+                </option>
+              </select>
+            </>
+          )}
+
+          <label>
+            Amount
+          </label>
+
+          <input
+            type="number"
+            min="1"
+            placeholder="Enter amount"
+            value={form.amount}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                amount: e.target.value,
+              })
+            }
+            required
+          />
+
+          <label>
+            Your Wallet Address
+          </label>
+
+          <input
+            placeholder="Enter your sending wallet address"
+            value={form.walletAddress}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                walletAddress: e.target.value,
+              })
+            }
+          />
+
+          <label>
+            Transaction Hash / TXID
+          </label>
+
+          <input
+            placeholder="Enter TXID"
+            value={form.txid}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                txid: e.target.value,
+              })
+            }
+          />
+
+          <label>
+            Payment Proof
+          </label>
+
+          <input
+            id="payment-proof-input"
+            type="file"
+            accept="image/*,.pdf"
+            onChange={(e) =>
+              setProof(
+                e.target.files?.[0] || null
+              )
+            }
+            required
+          />
+
+          <button
+            className="primary-btn"
+            disabled={loading}
+          >
+            {loading
+              ? "Submitting..."
+              : "Submit Deposit"}
+          </button>
+        </form>
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
+   WITHDRAW
+===================================================== */
+
+function Withdraw({
+  user,
+  onDone,
+}) {
+  const [form, setForm] =
+    useState({
+      source: "balance",
+      amount: "",
+      network: "TRC20",
+      walletAddress: "",
+      transactionPassword: "",
+    });
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [error, setError] =
+    useState("");
+
+  const [message, setMessage] =
+    useState("");
+
+  const maxAvailable =
+    useMemo(() => {
+      if (
+        form.source ===
+        "profit"
+      ) {
+        return Number(
+          user.profit || 0
+        );
+      }
+
+      if (
+        form.source ===
+        "referralReward"
+      ) {
+        return Number(
+          user.referralReward ||
+            0
+        );
+      }
+
+      return Number(
+        user.balance || 0
+      );
+    }, [form.source, user]);
+
+  async function submit(e) {
+    e.preventDefault();
+
+    setError("");
+    setMessage("");
+
+    if (
+      Number(form.amount) >
+      maxAvailable
+    ) {
+      setError(
+        "Withdrawal amount available balance से ज्यादा है."
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const data = await api(
+        "/withdrawals",
+        {
+          method: "POST",
+          body: JSON.stringify(
+            form
+          ),
+        }
+      );
+
+      setMessage(data.message);
+
+      setForm({
+        ...form,
+        amount: "",
+        walletAddress: "",
+        transactionPassword:
+          "",
+      });
+
+      if (onDone) {
+        onDone();
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="page-title">
+        <small>WITHDRAW</small>
+
+        <h2>
+          Withdraw Funds
+        </h2>
+
+        <p>
+          Request a withdrawal from
+          your available balance.
+        </p>
+      </div>
+
+      {error && (
+        <div className="error-box">
+          {error}
+        </div>
+      )}
+
+      {message && (
+        <div className="success-box">
+          {message}
+        </div>
+      )}
+
+      <div className="panel-card">
+        <div className="withdraw-balances">
+          <div>
+            Wallet Balance
+
+            <strong>
+              $
+              {Number(
+                user.balance || 0
+              ).toFixed(2)}
+            </strong>
+          </div>
+
+          <div>
+            Profit
+
+            <strong>
+              $
+              {Number(
+                user.profit || 0
+              ).toFixed(2)}
+            </strong>
+          </div>
+
+          <div>
+            Referral Reward
+
+            <strong>
+              $
+              {Number(
+                user.referralReward ||
+                  0
+              ).toFixed(2)}
+            </strong>
+          </div>
+        </div>
+
+        <form onSubmit={submit}>
+          <label>
+            Withdrawal Source
+          </label>
+
+          <select
+            value={form.source}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                source:
+                  e.target.value,
+              })
+            }
+          >
+            <option value="balance">
+              💰 Wallet Balance
+            </option>
+
+            <option value="profit">
+              📈 Profit
+            </option>
+
+            <option
+              value="referralReward"
+              disabled={
+                (user.referrals
+                  ?.length ||
+                  0) < 3
+              }
+            >
+              🎁 Referral Reward
+              {(user.referrals
+                ?.length ||
+                0) < 3
+                ? " — 3 referrals required"
+                : ""}
+            </option>
+          </select>
+
+          <div className="available-box">
+            Maximum available:
+
+            <strong>
+              {" "}
+              $
+              {maxAvailable.toFixed(
+                2
+              )}
+            </strong>
+          </div>
+
+          <label>
+            Withdrawal Amount
+          </label>
+
+          <input
+            type="number"
+            min="1"
+            max={maxAvailable}
+            placeholder="Enter amount"
+            value={form.amount}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                amount:
+                  e.target.value,
+              })
+            }
+            required
+          />
+
+          <label>
+            Network
+          </label>
+
+          <select
+            value={form.network}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                network:
+                  e.target.value,
+              })
+            }
+          >
+            <option value="TRC20">
+              TRC20
+            </option>
+
+            <option value="BEP20">
+              BEP20
+            </option>
+          </select>
+
+          <label>
+            Wallet Address
+          </label>
+
+          <input
+            placeholder="Enter wallet address"
+            value={
+              form.walletAddress
+            }
+            onChange={(e) =>
+              setForm({
+                ...form,
+                walletAddress:
+                  e.target.value,
+              })
+            }
+            required
+          />
+
+          <label>
+            Transaction Password
+          </label>
+
+          <input
+            type="password"
+            placeholder={
+              user.transactionPasswordHash
+                ? "Enter transaction password"
+                : "Create transaction password from Settings first"
+            }
+            value={
+              form.transactionPassword
+            }
+            onChange={(e) =>
+              setForm({
+                ...form,
+                transactionPassword:
+                  e.target.value,
+              })
+            }
+            required
+          />
+
+          <button
+            className="primary-btn"
+            disabled={loading}
+          >
+            {loading
+              ? "Submitting..."
+              : "Request Withdrawal"}
+          </button>
+        </form>
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
+   MY STATEMENT
+===================================================== */
+
+function MyStatement({ user, data }) {
+  const transactions = Array.isArray(data?.transactions)
+    ? data.transactions
+    : [];
+
+  const withdrawals = Array.isArray(data?.withdrawals)
+    ? data.withdrawals
+    : [];
+
+  const totalDeposit = Number(user?.totalDeposit || 0);
+
+  const totalProfit = Number(user?.profit || 0);
+
+  const referralReward = Number(
+    user?.referralReward || 0
+  );
+
+  const currentBalance = Number(
+    user?.balance || 0
+  );
+
+  const totalWithdrawal = withdrawals
+    .filter((w) => w.status === "Approved")
+    .reduce(
+      (sum, w) => sum + Number(w.amount || 0),
+      0
+    );
+
+  function moneyValue(value) {
+    return `$${Number(value || 0).toFixed(2)}`;
+  }
+
+  function dateValue(value) {
+    if (!value) return "-";
+
+    const date = new Date(value);
+
+    return Number.isNaN(date.getTime())
+      ? "-"
+      : date.toLocaleString();
+  }
+
+  function downloadStatement() {
+    const name =
+      user?.name ||
+      `${user?.firstName || ""} ${
+        user?.lastName || ""
+      }`.trim() ||
+      "User";
+
+    const rows = transactions.length
+      ? transactions
+          .slice()
+          .sort(
+            (a, b) =>
+              new Date(a.createdAt) -
+              new Date(b.createdAt)
+          )
+          .map(
+            (t) => `
+              <tr>
+                <td>${dateValue(t.createdAt)}</td>
+                <td>${t.type || "-"}</td>
+                <td>${t.method || t.network || "-"}</td>
+                <td>${t.status || "-"}</td>
+                <td>${moneyValue(t.amount)}</td>
+              </tr>
+            `
+          )
+          .join("")
+      : `
+          <tr>
+            <td colspan="5" style="text-align:center">
+              No transaction records found.
+            </td>
+          </tr>
+        `;
+
+    const win = window.open(
+      "",
+      "_blank",
+      "width=1000,height=800"
+    );
+
+    if (!win) {
+      alert(
+        "Please allow pop-ups to download the statement."
+      );
+      return;
+    }
+
+    win.document.write(`
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <title>Tradenex Account Statement</title>
+
+        <style>
+          * {
+            box-sizing: border-box;
+          }
+
+          body {
+            margin: 0;
+            padding: 32px;
+            font-family: Arial, sans-serif;
+            color: #111827;
+            background: white;
+          }
+
+          .header {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+            border-bottom: 2px solid #111827;
+            padding-bottom: 18px;
+            margin-bottom: 24px;
+          }
+
+          .brand {
+            font-size: 28px;
+            font-weight: 800;
+          }
+
+          .subtitle {
+            color: #6b7280;
+            margin-top: 5px;
+          }
+
+          .user-info {
+            text-align: right;
+            font-size: 12px;
+            line-height: 1.6;
+          }
+
+          .summary {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 10px;
+            margin-bottom: 28px;
+          }
+
+          .card {
+            border: 1px solid #d1d5db;
+            border-radius: 8px;
+            padding: 14px;
+          }
+
+          .label {
+            color: #6b7280;
+            font-size: 10px;
+            margin-bottom: 7px;
+          }
+
+          .value {
+            font-size: 17px;
+            font-weight: 700;
+          }
+
+          h2 {
+            font-size: 18px;
+            margin: 20px 0 10px;
+          }
+
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 12px;
+          }
+
+          th,
+          td {
+            border: 1px solid #d1d5db;
+            padding: 9px;
+            text-align: left;
+          }
+
+          th {
+            background: #f3f4f6;
+          }
+
+          .footer {
+            margin-top: 30px;
+            padding-top: 12px;
+            border-top: 1px solid #d1d5db;
+            color: #6b7280;
+            font-size: 10px;
+          }
+
+          @media print {
+            body {
+              padding: 18px;
+            }
+
+            @page {
+              size: A4;
+              margin: 12mm;
+            }
+          }
+        </style>
+      </head>
+
+      <body>
+        <div class="header">
+          <div>
+            <div class="brand">TRADENEX</div>
+            <div class="subtitle">
+              My Official Account Statement
+            </div>
+          </div>
+
+          <div class="user-info">
+            <b>${name}</b><br>
+            User ID: ${user?.id || "-"}<br>
+            Email: ${user?.email || "-"}<br>
+            Mobile: ${
+              user?.mobile ||
+              user?.phone ||
+              "-"
+            }
+          </div>
+        </div>
+
+        <div class="summary">
+          <div class="card">
+            <div class="label">TOTAL DEPOSIT</div>
+            <div class="value">
+              ${moneyValue(totalDeposit)}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="label">TOTAL PROFIT</div>
+            <div class="value">
+              ${moneyValue(totalProfit)}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="label">TOTAL WITHDRAWAL</div>
+            <div class="value">
+              ${moneyValue(totalWithdrawal)}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="label">REFERRAL REWARD</div>
+            <div class="value">
+              ${moneyValue(referralReward)}
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="label">CURRENT BALANCE</div>
+            <div class="value">
+              ${moneyValue(currentBalance)}
+            </div>
+          </div>
+        </div>
+
+        <h2>Transaction History</h2>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Method / Network</th>
+              <th>Status</th>
+              <th>Amount</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            ${rows}
+          </tbody>
+        </table>
+
+        <div class="footer">
+          Generated by Tradenex User Portal •
+          ${new Date().toLocaleString()}
+        </div>
+
+        <script>
+          window.onload = function() {
+            setTimeout(function() {
+              window.print();
+            }, 400);
+          };
+        </script>
+      </body>
+      </html>
+    `);
+
+    win.document.close();
+  }
+
+  return (
+    <>
+      <div className="page-title">
+        <small>ACCOUNT STATEMENT</small>
+
+        <h2>My Statement</h2>
+
+        <p>
+          View your account summary and complete
+          transaction history.
+        </p>
+      </div>
+
+      <div
+        className="stats-grid"
+        style={{
+          display: "grid",
+          gridTemplateColumns:
+            "repeat(auto-fit,minmax(160px,1fr))",
+          gap: "14px",
+          marginBottom: "20px",
+        }}
+      >
+        <div className="panel-card">
+          <small>Total Deposit</small>
+          <h3>{moneyValue(totalDeposit)}</h3>
+        </div>
+
+        <div className="panel-card">
+          <small>Total Profit</small>
+          <h3>{moneyValue(totalProfit)}</h3>
+        </div>
+
+        <div className="panel-card">
+          <small>Total Withdrawal</small>
+          <h3>{moneyValue(totalWithdrawal)}</h3>
+        </div>
+
+        <div className="panel-card">
+          <small>Referral Reward</small>
+          <h3>{moneyValue(referralReward)}</h3>
+        </div>
+
+        <div className="panel-card">
+          <small>Current Balance</small>
+          <h3>{moneyValue(currentBalance)}</h3>
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            gap: "12px",
+            flexWrap: "wrap",
+            marginBottom: "16px",
+          }}
+        >
+          <div>
+            <h3 style={{ margin: 0 }}>
+              Transaction History
+            </h3>
+
+            <small>
+              {transactions.length} records
+            </small>
+          </div>
+
+          <button
+            type="button"
+            onClick={downloadStatement}
+          >
+            🖨️ Download / Save PDF
+          </button>
+        </div>
+
+        {transactions.length ? (
+          <TransactionTable
+            transactions={transactions}
+          />
+        ) : (
+          <div className="empty">
+            No transactions yet.
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
+   TRANSACTIONS
+===================================================== */
+
+function Transactions({
+  data,
+}) {
+  return (
+    <>
+      <div className="page-title">
+        <small>
+          TRANSACTIONS
+        </small>
+
+        <h2>
+          Transactions
+        </h2>
+
+        <p>
+          Complete transaction history.
+        </p>
+      </div>
+
+      <div className="panel-card">
+        {data.transactions
+          ?.length ? (
+          <TransactionTable
+            transactions={
+              data.transactions
+            }
+          />
+        ) : (
+          <div className="empty">
+            No transactions yet.
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
+   LIVE TRADING
+===================================================== */
+
+function LiveTrading({ user, data }) {
+  const totalDeposit = Number(user?.totalDeposit || 0);
+  const balance = Number(user?.balance || 0);
+  const profit = Number(user?.profit || 0);
+  const dailyProfit = totalDeposit * 0.004;
+
+  const markets = [
+    ["BTCUSDT", "BTC", "Bitcoin"],
+    ["ETHUSDT", "ETH", "Ethereum"],
+    ["BNBUSDT", "BNB", "BNB"],
+    ["SOLUSDT", "SOL", "Solana"],
+    ["XRPUSDT", "XRP", "XRP"],
+    ["ADAUSDT", "ADA", "Cardano"],
+    ["DOGEUSDT", "DOGE", "Dogecoin"],
+    ["TRXUSDT", "TRX", "TRON"],
+    ["AVAXUSDT", "AVAX", "Avalanche"],
+    ["LINKUSDT", "LINK", "Chainlink"],
+  ];
+
+  const [selected, setSelected] = useState("BTCUSDT");
+  const [prices, setPrices] = useState({});
+  const [history, setHistory] = useState({});
+  const [orderBooks, setOrderBooks] = useState({});
+  const [side, setSide] = useState("BUY");
+
+  const selectedMarket =
+    markets.find((m) => m[0] === selected) || markets[0];
+
+
+  useEffect(() => {
+    const streams = markets
+      .flatMap((m) => [
+        `${m[0].toLowerCase()}@trade`,
+        `${m[0].toLowerCase()}@depth5@100ms`,
+      ])
+      .join("/");
+
+    const ws = new WebSocket(
+      `wss://stream.binance.com:9443/stream?streams=${streams}`
+    );
+
+    ws.onmessage = (event) => {
+      try {
+        const payload = JSON.parse(event.data);
+        const tick = payload?.data;
+
+        if (!tick) return;
+
+        const streamName = payload?.stream || "";
+        const streamSymbol = streamName.split("@")[0].toUpperCase();
+        const symbol = tick.s || streamSymbol;
+
+        if (tick.e === "trade") {
+          const price = Number(tick.p);
+
+          if (!symbol || !Number.isFinite(price)) return;
+
+          setPrices((prev) => ({
+            ...prev,
+            [symbol]: price,
+          }));
+
+          if (symbol === selected) {
+            setHistory((prev) => {
+              const old = prev[symbol] || [];
+              return {
+                ...prev,
+                [symbol]: [...old, price].slice(-80),
+              };
+            });
+          }
+        }
+
+        if ((tick.e === "depthUpdate" || (Array.isArray(tick.a) && Array.isArray(tick.b))) && symbol) {
+          const asks = Array.isArray(tick.a)
+            ? tick.a
+                .map(([price, amount]) => [
+                  Number(price),
+                  Number(amount),
+                ])
+                .filter(
+                  ([price, amount]) =>
+                    Number.isFinite(price) &&
+                    Number.isFinite(amount) &&
+                    amount > 0
+                )
+                .slice(0, 5)
+            : [];
+
+          const bids = Array.isArray(tick.b)
+            ? tick.b
+                .map(([price, amount]) => [
+                  Number(price),
+                  Number(amount),
+                ])
+                .filter(
+                  ([price, amount]) =>
+                    Number.isFinite(price) &&
+                    Number.isFinite(amount) &&
+                    amount > 0
+                )
+                .slice(0, 5)
+            : [];
+
+          setOrderBooks((prev) => ({
+            ...prev,
+            [symbol]: { asks, bids },
+          }));
+        }
+      } catch {}
+    };
+
+    ws.onerror = () => {};
+
+    return () => {
+      try {
+        ws.close();
+      } catch {}
+    };
+  }, [selected]);
+
+  useEffect(() => {
+    const symbol = selected.toLowerCase();
+    const depthWs = new WebSocket(
+      `wss://stream.binance.com:9443/ws/${symbol}@depth5@100ms`
+    );
+
+    depthWs.onmessage = (event) => {
+      try {
+        const book = JSON.parse(event.data);
+        const asks = Array.isArray(book.asks)
+          ? book.asks
+              .map(([price, amount]) => [Number(price), Number(amount)])
+              .filter(([price, amount]) => Number.isFinite(price) && Number.isFinite(amount) && amount > 0)
+              .slice(0, 5)
+          : [];
+        const bids = Array.isArray(book.bids)
+          ? book.bids
+              .map(([price, amount]) => [Number(price), Number(amount)])
+              .filter(([price, amount]) => Number.isFinite(price) && Number.isFinite(amount) && amount > 0)
+              .slice(0, 5)
+          : [];
+
+        setOrderBooks((prev) => ({
+          ...prev,
+          [selected]: { asks, bids },
+        }));
+      } catch {}
+    };
+
+    return () => {
+      try {
+        depthWs.close();
+      } catch {}
+    };
+  }, [selected]);
+
+  const currentOrderBook =
+    orderBooks[selected] || { asks: [], bids: [] };
+
+  const asks = [...currentOrderBook.asks]
+    .sort((a, b) => a[0] - b[0])
+    .slice(-5)
+    .reverse();
+
+  const bids = [...currentOrderBook.bids]
+    .sort((a, b) => b[0] - a[0])
+    .slice(0, 5);
+
+  const currentPrice = prices[selected] || null;
+  const selectedHistory = history[selected] || [];
+
+  const chart = useMemo(() => {
+    if (selectedHistory.length < 2) return [];
+
+    const min = Math.min(...selectedHistory);
+    const max = Math.max(...selectedHistory);
+    const padding = (max - min || Math.max(max * 0.0002, 1)) * 0.18;
+    const low = min - padding;
+    const high = max + padding;
+    const range = high - low || 1;
+
+    return selectedHistory.map((price, index) => ({
+      x: (index / Math.max(selectedHistory.length - 1, 1)) * 1000,
+      y: 315 - ((price - low) / range) * 270,
+    }));
+  }, [selectedHistory]);
+
+  const chartPath = chart.length
+    ? chart
+        .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`)
+        .join(" ")
+    : "";
+
+  const formatPrice = (price) => {
+    if (!Number.isFinite(price)) return "—";
+    if (price >= 1000) return `$${price.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+    if (price >= 1) return `$${price.toFixed(4)}`;
+    return `$${price.toFixed(6)}`;
+  };
+
+  return (
+    <>
+      <div className="page-title performance-title">
+        <small>MARKETS</small>
+        <h2>Live Trading</h2>
+        <p>Real-time cryptocurrency market prices powered by Binance public market data.</p>
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <span>💰</span>
+          <small>Total Deposit</small>
+          <strong>${totalDeposit.toFixed(2)}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>📈</span>
+          <small>Daily Profit (0.4%)</small>
+          <strong>${dailyProfit.toFixed(2)}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>💎</span>
+          <small>Total Profit</small>
+          <strong>${profit.toFixed(2)}</strong>
+        </div>
+
+        <div className="stat-card">
+          <span>💵</span>
+          <small>Wallet Balance</small>
+          <strong>${balance.toFixed(2)}</strong>
+        </div>
+      </div>
+
+      <div className="binance-terminal">
+        <div className="market-strip">
+          <div className="market-strip-title">
+            <span>⭐</span>
+            <strong>Markets</strong>
+          </div>
+
+          <div className="market-strip-scroll">
+            {markets.map(([symbol, coin, name]) => (
+              <button
+                key={symbol}
+                className={`market-chip ${selected === symbol ? "active" : ""}`}
+                onClick={() => setSelected(symbol)}
+              >
+                <strong>{coin}/USDT</strong>
+                <span>{formatPrice(prices[symbol])}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="trading-market-head">
+          <div className="trading-pair">
+            <span className="coin-logo">{selectedMarket[1][0]}</span>
+            <div>
+              <strong>{selectedMarket[1]} / USDT</strong>
+              <small>{selectedMarket[2]} • Spot Market</small>
+            </div>
+          </div>
+
+          <div className="trading-price">
+            <strong>{formatPrice(currentPrice)}</strong>
+            <span>● LIVE</span>
+          </div>
+
+          <div className="market-stat">
+            <small>24h Change</small>
+            <strong className="positive">+ Live Market</strong>
+          </div>
+
+          <div className="market-stat">
+            <small>24h High</small>
+            <strong>Live</strong>
+          </div>
+
+          <div className="market-stat">
+            <small>24h Low</small>
+            <strong>Live</strong>
+          </div>
+        </div>
+
+        <div className="trading-main">
+          <div className="trading-chart-panel">
+            <div className="chart-toolbar">
+              <span>Chart</span>
+              <button className="active">1m</button>
+              <button>5m</button>
+              <button>15m</button>
+              <button>1H</button>
+              <button>4H</button>
+              <button>1D</button>
+            </div>
+
+            <div className="binance-chart">
+              <div className="chart-grid">
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+                <span />
+              </div>
+
+              <svg viewBox="0 0 1000 360" preserveAspectRatio="none">
+                {chartPath && (
+                  <>
+                    <path
+                      d={`${chartPath} L 1000 360 L 0 360 Z`}
+                      className="chart-fill"
+                    />
+                    <path
+                      d={chartPath}
+                      className="chart-line"
+                      fill="none"
+                    />
+                  </>
+                )}
+              </svg>
+
+              {!currentPrice && (
+                <div className="chart-loading">
+                  Connecting to live market…
+                </div>
+              )}
+            </div>
+
+            <div className="chart-bottom">
+              <span>LIVE DATA</span>
+              <span>{selectedMarket[1]}/USDT</span>
+              <strong>0.4% DAILY WALLET PROFIT</strong>
+            </div>
+          </div>
+
+          <div className="orderbook-panel">
+            <div className="orderbook-head">
+              <strong>Order Book</strong>
+              <span>Live</span>
+            </div>
+
+            <div className="orderbook-cols">
+              <span>Price(USDT)</span>
+              <span>Amount</span>
+              <span>Total</span>
+            </div>
+
+            <div className="order-rows">
+              {asks.map(([price, amount], index) => (
+                <div className="order-row sell" key={`ask-${price}-${index}`}>
+                  <span>{formatPrice(price).replace("$", "")}</span>
+                  <span>{amount.toFixed(5)}</span>
+                  <span>{(price * amount).toFixed(2)}</span>
+                </div>
+              ))}
+
+              {asks.length === 0 && (
+                <div className="order-empty">
+                  Connecting live order book…
+                </div>
+              )}
+
+              <div className="order-mid">
+                <strong>{formatPrice(currentPrice)}</strong>
+                <span>↕ Live Price</span>
+              </div>
+
+              {bids.map(([price, amount], index) => (
+                <div className="order-row buy" key={`bid-${price}-${index}`}>
+                  <span>{formatPrice(price).replace("$", "")}</span>
+                  <span>{amount.toFixed(5)}</span>
+                  <span>{(price * amount).toFixed(2)}</span>
+                </div>
+              ))}
+
+              {bids.length === 0 && (
+                <div className="order-empty">
+                  Connecting live order book…
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+
+        <div className="trade-panel">
+          <div className="trade-tabs">
+            <button
+              className={side === "BUY" ? "active buy-tab" : ""}
+              onClick={() => setSide("BUY")}
+            >
+              Buy
+            </button>
+            <button
+              className={side === "SELL" ? "active sell-tab" : ""}
+              onClick={() => setSide("SELL")}
+            >
+              Sell
+            </button>
+          </div>
+
+          <div className="trade-form">
+            <div className="trade-field">
+              <span>Available</span>
+              <strong>${balance.toFixed(2)} USDT</strong>
+            </div>
+
+            <label>
+              Price
+              <div className="trade-input">
+                <input
+                  value={currentPrice ? currentPrice.toFixed(4) : ""}
+                  readOnly
+                  placeholder="Live price"
+                />
+                <span>USDT</span>
+              </div>
+            </label>
+
+            <label>
+              Amount
+              <div className="trade-input">
+                <input placeholder="0.000000" />
+                <span>{selectedMarket[1]}</span>
+              </div>
+            </label>
+
+            <label>
+              Total
+              <div className="trade-input">
+                <input placeholder="0.00" />
+                <span>USDT</span>
+              </div>
+            </label>
+
+            <button className={`trade-action ${side === "BUY" ? "buy-action" : "sell-action"}`}>
+              {side} {selectedMarket[1]}
+            </button>
+
+            <small className="trade-notice">
+              Trading execution is not connected to an exchange account.
+            </small>
+          </div>
+        </div>
+      </div>
+
+      <div className="dashboard-grid">
+        <div className="panel-card">
+          <div className="panel-head">
+            <h3>Today's Profit</h3>
+            <span>0.4%</span>
+          </div>
+          <div className="performance-value">
+            <strong>${dailyProfit.toFixed(2)}</strong>
+            <span>Daily credited profit</span>
+          </div>
+        </div>
+
+        <div className="panel-card">
+          <div className="panel-head">
+            <h3>Profit Summary</h3>
+            <span>ACTIVE</span>
+          </div>
+          <div className="performance-value">
+            <strong>${profit.toFixed(2)}</strong>
+            <span>Total accumulated profit</span>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel-card profit-activity-panel">
+        <div className="panel-head">
+          <h3>Profit Activity</h3>
+          <span>Wallet linked</span>
+        </div>
+
+        <div className="row">
+          <span>
+            📈 <b>Daily profit rate</b>
+            <small>Calculated from total deposit</small>
+          </span>
+          <strong>0.40%</strong>
+        </div>
+
+        <div className="row">
+          <span>
+            💰 <b>Current wallet balance</b>
+            <small>Including credited profit</small>
+          </span>
+          <strong>${balance.toFixed(2)}</strong>
+        </div>
+
+        <div className="row">
+          <span>
+            💎 <b>Total credited profit</b>
+            <small>Accumulated in your account</small>
+          </span>
+          <strong>${profit.toFixed(2)}</strong>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
+   PERFORMANCE
+===================================================== */
+
+function Performance({ user }) {
+  const totalDeposit = Number(user?.totalDeposit || 0);
+  const profit = Number(user?.profit || 0);
+  const dailyProfit = totalDeposit * 0.004;
+
+  const chartMax = Math.max(dailyProfit, profit, 1);
+  const current = Math.min(92, 28 + (profit / chartMax) * 60);
+
+  const points = [
+    18,
+    24,
+    21,
+    32,
+    29,
+    43,
+    39,
+    52,
+    48,
+    61,
+    57,
+    current
+  ];
+
+  return (
+    <>
+      <div className="page-title performance-title">
+        <small>PERFORMANCE</small>
+        <h2>Live Trading Performance</h2>
+        <p>
+          Your actual credited profit based on the 0.4% daily return.
+        </p>
+      </div>
+
+      <div className="performance-summary">
+        <div className="performance-value">
+          <span>Daily Profit (0.4%)</span>
+          <strong>${dailyProfit.toFixed(2)}</strong>
+        </div>
+
+        <div className="live-indicator">
+          <i /> LIVE
+        </div>
+      </div>
+
+      <div className="panel-card live-chart-card">
+        <div className="chart-header">
+          <div>
+            <strong>Tradenex Live Trading</strong>
+            <small>Actual credited profit performance</small>
+          </div>
+
+          <span>LIVE</span>
+        </div>
+
+        <div className="live-chart">
+          <div className="chart-grid">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+
+          <svg
+            className="chart-svg"
+            viewBox="0 0 1000 360"
+            preserveAspectRatio="none"
+          >
+            <defs>
+              <linearGradient
+                id="profitArea"
+                x1="0"
+                y1="0"
+                x2="0"
+                y2="1"
+              >
+                <stop
+                  offset="0%"
+                  stopColor="#328bff"
+                  stopOpacity="0.38"
+                />
+                <stop
+                  offset="100%"
+                  stopColor="#328bff"
+                  stopOpacity="0"
+                />
+              </linearGradient>
+
+              <filter id="profitGlow">
+                <feGaussianBlur
+                  stdDeviation="3"
+                  result="blur"
+                />
+                <feMerge>
+                  <feMergeNode in="blur" />
+                  <feMergeNode in="SourceGraphic" />
+                </feMerge>
+              </filter>
+            </defs>
+
+            <polygon
+              points={`0,360 ${points.map((value, index) => {
+                const x =
+                  (index / (points.length - 1)) * 1000;
+                const y =
+                  320 - value * 2.7;
+                return `${x},${y}`;
+              }).join(" ")} 1000,360`}
+              fill="url(#profitArea)"
+            />
+
+            <polyline
+              points={points.map((value, index) => {
+                const x =
+                  (index / (points.length - 1)) * 1000;
+                const y =
+                  320 - value * 2.7;
+                return `${x},${y}`;
+              }).join(" ")}
+              fill="none"
+              stroke="#3d8fff"
+              strokeWidth="5"
+              filter="url(#profitGlow)"
+            />
+          </svg>
+
+          <div className="chart-candles">
+            {points.map((value, index) => (
+              <div
+                className="candle"
+                key={index}
+                style={{
+                  height:
+                    `${Math.max(20, value * 0.65)}px`
+                }}
+              >
+                <i />
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="chart-footer">
+          <span>DAILY</span>
+          <span>0.4%</span>
+          <span className="active">LIVE</span>
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <div className="chart-header">
+          <div>
+            <strong>Total Credited Profit</strong>
+            <small>
+              Profit actually added to your wallet
+            </small>
+          </div>
+        </div>
+
+        <div className="performance-value">
+          <strong>${profit.toFixed(2)}</strong>
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
+   REFERRALS
+===================================================== */
+
+function Referrals({
+  user,
+  data,
+}) {
+  async function copyReferral() {
+    const code = String(user?.referralCode || "").trim();
+
+    if (!code) return;
+
+    try {
+      await navigator.clipboard.writeText(code);
+    } catch {
+      // Clipboard may be unavailable in some WebViews.
+    }
+  }
+
+  async function shareReferral() {
+    const code = String(user?.referralCode || "").trim();
+
+    if (!code) return;
+
+    const referralUrl =
+      "https://tradenex.onrender.com/?ref=" +
+      encodeURIComponent(code);
+
+    const shareText =
+      "Join me on Tradenex. Use my referral link to register:\n\n" +
+      referralUrl;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Join Tradenex",
+          text: shareText,
+          url: referralUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareText);
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+    }
+  }
+
+  const referrals =
+    Array.isArray(data.referrals)
+      ? data.referrals
+      : [];
+
+  const count = referrals.length;
+
+  const qualifyingCount =
+    referrals.filter(
+      (r) => r.qualifying === true
+    ).length;
+
+  const referralVolume = Number(
+    user.referralVolume || 0
+  );
+
+  const milestones = [
+    {
+      id: "iphone",
+      volume: 10000,
+      icon: "📱",
+      image: "/images/referral/iphone-15-pro.png",
+      title: "iPhone",
+    },
+    {
+      id: "bullet",
+      volume: 20000,
+      icon: "🏍️",
+      image: "/images/referral/royal-enfield-bullet.png",
+      title: "Royal Enfield Bullet",
+    },
+    {
+      id: "car",
+      volume: 50000,
+      icon: "🚗",
+      image: "/images/referral/maruti-baleno.png",
+      title: "Maruti Swift / Baleno / Hyundai i20",
+    },
+  ];
+
+  const earnedMilestones =
+    Array.isArray(user.referralMilestones)
+      ? user.referralMilestones
+      : [];
+
+  const nextMilestone =
+    milestones.find(
+      (m) =>
+        !earnedMilestones.some(
+          (e) => e.id === m.id
+        )
+    ) || null;
+
+  const progressTarget =
+    nextMilestone
+      ? nextMilestone.volume
+      : 50000;
+
+  const progressPercent = Math.min(
+    100,
+    (referralVolume / progressTarget) * 100
+  );
+
+  return (
+    <>
+      <div className="page-title">
+        <small>
+          REFERRALS
+        </small>
+
+        <h2>
+          Referral Program
+        </h2>
+
+        <p>
+          Build your referral network and
+          earn multi-level commissions on
+          approved qualifying deposits.
+        </p>
+      </div>
+
+      <div className="stats-grid">
+        <div className="stat-card">
+          <span>👥</span>
+
+          <small>
+            Total Referrals
+          </small>
+
+          <strong>
+            {count}
+          </strong>
+        </div>
+
+        <div className="stat-card">
+          <span>💰</span>
+
+          <small>
+            Referral Commission
+          </small>
+
+          <strong>
+            $
+            {Number(
+              user.referralReward || 0
+            ).toFixed(2)}
+          </strong>
+        </div>
+
+        <div className="stat-card">
+          <span>📊</span>
+
+          <small>
+            Referral Volume
+          </small>
+
+          <strong>
+            $
+            {referralVolume.toLocaleString(
+              undefined,
+              {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              }
+            )}
+          </strong>
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <h3>
+          Your Referral Code
+        </h3>
+
+        <div className="referral-code big">
+          {user.referralCode || "—"}
+        </div>
+
+        <div
+          style={{
+            display: "flex",
+            gap: "10px",
+            flexWrap: "wrap",
+            marginTop: "14px",
+          }}
+        >
+          <button
+            type="button"
+            className="primary-btn"
+            onClick={shareReferral}
+            disabled={!user?.referralCode}
+          >
+            📤 Share Referral
+          </button>
+
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={copyReferral}
+            disabled={!user?.referralCode}
+          >
+            📋 Copy Code
+          </button>
+        </div>
+
+        <p>
+          इस code को अपने friends के साथ
+          share करें।
+        </p>
+
+        <div className="referral-info">
+          <strong>
+            Commission Levels:
+          </strong>
+        </div>
+
+        <div className="referral-info">
+          Level 1 — <strong>10%</strong>
+        </div>
+
+        <div className="referral-info">
+          Level 2 — <strong>2%</strong>
+        </div>
+
+        <div className="referral-info">
+          Level 3 — <strong>1%</strong>
+        </div>
+
+        <div className="referral-info">
+          Level 4 — <strong>1%</strong>
+        </div>
+
+        <div className="referral-info">
+          Level 5 — <strong>1%</strong>
+        </div>
+
+        <div className="referral-info">
+          <strong>
+            Total possible commission:
+          </strong>{" "}
+          15%
+        </div>
+
+        <div className="referral-info">
+          <strong>
+            Qualifying deposit:
+          </strong>{" "}
+          Minimum $1,000 USDT
+        </div>
+
+        <div className="referral-info">
+          <strong>
+            Withdrawal unlock:
+          </strong>{" "}
+          {qualifyingCount} / 3 qualifying referrals
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <div className="panel-head">
+          <h3>
+            Referral Milestones
+          </h3>
+        </div>
+
+        <div className="referral-info">
+          Combined qualifying referral volume:
+          {" "}
+          <strong>
+            $
+            {referralVolume.toLocaleString(
+              undefined,
+              {
+                minimumFractionDigits: 0,
+                maximumFractionDigits: 2,
+              }
+            )}
+          </strong>
+        </div>
+
+        {nextMilestone && (
+          <>
+            <div className="referral-info">
+              Next milestone:
+              {" "}
+              <strong>
+                ${nextMilestone.volume.toLocaleString()}
+              </strong>
+            </div>
+
+            <div
+              style={{
+                width: "100%",
+                height: "10px",
+                background: "rgba(255,255,255,.08)",
+                borderRadius: "20px",
+                overflow: "hidden",
+                margin: "12px 0 18px",
+              }}
+            >
+              <div
+                style={{
+                  width: `${progressPercent}%`,
+                  height: "100%",
+                  background:
+                    "linear-gradient(90deg,#38bdf8,#8b5cf6,#f59e0b)",
+                  borderRadius: "20px",
+                  transition: "width .5s ease",
+                }}
+              />
+            </div>
+          </>
+        )}
+
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns:
+              "repeat(auto-fit,minmax(170px,1fr))",
+            gap: "12px",
+          }}
+        >
+          {milestones.map((milestone) => {
+            const earned =
+              earnedMilestones.some(
+                (m) => m.id === milestone.id
+              );
+
+            const reached =
+              referralVolume >= milestone.volume;
+
+            return (
+              <div
+                key={milestone.id}
+                style={{
+                  padding: "18px",
+                  border: earned
+                    ? "1px solid rgba(34,197,94,.7)"
+                    : "1px solid rgba(117,183,255,.22)",
+                  borderRadius: "14px",
+                  background:
+                    "linear-gradient(145deg,rgba(255,255,255,.07),rgba(255,255,255,.02))",
+                  textAlign: "center",
+                  boxShadow: reached
+                    ? "0 0 22px rgba(56,189,248,.18)"
+                    : "none",
+                }}
+              >
+                <div
+                  style={{
+                    height: "150px",
+                    marginBottom: "10px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    borderRadius: "12px",
+                    overflow: "hidden",
+                    background: "rgba(0,0,0,.18)",
+                  }}
+                >
+                  <img
+                    src={milestone.image}
+                    alt={milestone.title}
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      display: "block",
+                      filter: reached
+                        ? "drop-shadow(0 0 18px rgba(56,189,248,.45))"
+                        : "drop-shadow(0 0 10px rgba(56,189,248,.18))",
+                    }}
+                  />
+                </div>
+
+                <strong
+                  style={{
+                    display: "block",
+                    color: "#fff",
+                    marginBottom: "6px",
+                  }}
+                >
+                  {milestone.title}
+                </strong>
+
+                <div
+                  style={{
+                    color: "#75b7ff",
+                    fontWeight: 800,
+                  }}
+                >
+                  ${milestone.volume.toLocaleString()}
+                </div>
+
+                <small
+                  style={{
+                    display: "block",
+                    marginTop: "8px",
+                    color: earned
+                      ? "#4ade80"
+                      : "#8da1b5",
+                  }}
+                >
+                  {earned
+                    ? "✓ Earned"
+                    : reached
+                    ? "Eligible"
+                    : "In Progress"}
+                </small>
+              </div>
+            );
+          })}
+        </div>
+
+        <p
+          style={{
+            marginTop: "16px",
+            color: "#8293a6",
+            fontSize: "12px",
+            lineHeight: 1.6,
+          }}
+        >
+          Milestones are based on combined approved
+          qualifying deposit volume from your referrals.
+          Example: $1,000 + $9,000 = $10,000 volume.
+        </p>
+      </div>
+
+      <div className="panel-card">
+        <div className="panel-head">
+          <h3>
+            Your Referrals
+          </h3>
+        </div>
+
+        {count === 0 ? (
+          <div className="empty">
+            अभी कोई referral नहीं है।
+          </div>
+        ) : (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>Name</th>
+                  <th>Email</th>
+                  <th>Qualifying Volume</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+
+              <tbody>
+                {referrals.map(
+                  (ref) => (
+                    <tr
+                      key={ref.userId}
+                    >
+                      <td>
+                        {ref.name}
+                      </td>
+
+                      <td>
+                        {ref.email}
+                      </td>
+
+                      <td>
+                        $
+                        {Number(
+                          ref.qualifyingVolume || 0
+                        ).toFixed(2)}
+                      </td>
+
+                      <td>
+                        {ref.qualifying
+                          ? "Approved"
+                          : "Pending"}
+                      </td>
+
+                      <td>
+                        {ref.createdAt
+                          ? new Date(
+                              ref.createdAt
+                            ).toLocaleDateString()
+                          : "—"}
+                      </td>
+                    </tr>
+                  )
+                )}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
+   PROFILE
+===================================================== */
+
+function Profile({
+  user,
+  refresh,
+  go,
+}) {
+  const [form, setForm] = useState({
+    firstName: user.firstName || "",
+    lastName: user.lastName || "",
+    mobile: user.mobile || user.phone || "",
+    address: user.address || "",
+    country: user.country || "",
+  });
+
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState(false);
+
+  const photoUrl = user.profilePhoto
+    ? user.profilePhoto.startsWith("http")
+      ? user.profilePhoto
+      : `${API.replace(/\/api$/, "")}${user.profilePhoto}`
+    : "";
+
+  const fullName =
+    `${user.firstName || ""} ${user.lastName || ""}`.trim() ||
+    user.name ||
+    "Tradenex User";
+
+  const initials =
+    fullName
+      .split(" ")
+      .filter(Boolean)
+      .slice(0, 2)
+      .map((x) => x[0].toUpperCase())
+      .join("") || "TU";
+
+  const memberSince = user.createdAt
+    ? new Date(user.createdAt).toLocaleDateString(
+        undefined,
+        {
+          month: "short",
+          year: "numeric",
+        }
+      )
+    : "Active member";
+
+  async function submit(e) {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+    setLoading(true);
+
+    try {
+      const result = await api("/profile", {
+        method: "POST",
+        body: JSON.stringify({
+          firstName: form.firstName,
+          lastName: form.lastName,
+          mobile: form.mobile,
+          address: form.address,
+          country: form.country,
+        }),
+      });
+
+      if (result.user) {
+        localStorage.setItem(
+          "tradenex_user",
+          JSON.stringify(result.user)
+        );
+      }
+
+      setMessage(
+        result.message ||
+        "Profile updated successfully."
+      );
+
+      if (refresh) {
+        await refresh();
+      }
+    } catch (err) {
+      setError(
+        err.message ||
+        "Unable to update profile."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function uploadPhoto(e) {
+    const file = e.target.files?.[0];
+
+    if (!file) return;
+
+    setMessage("");
+    setError("");
+
+    if (![
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+      "image/jpg",
+    ].includes(file.type)) {
+      setError("Only JPG, PNG or WEBP images are allowed.");
+      e.target.value = "";
+      return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+      setError("Profile photo must be smaller than 10 MB.");
+      e.target.value = "";
+      return;
+    }
+
+    setPhotoLoading(true);
+
+    try {
+      const fd = new FormData();
+      fd.append("photo", file);
+
+      const result = await api("/profile/photo", {
+        method: "POST",
+        body: fd,
+      });
+
+      if (result.user) {
+        localStorage.setItem(
+          "tradenex_user",
+          JSON.stringify(result.user)
+        );
+      }
+
+      setMessage(
+        result.message ||
+        "Profile photo updated successfully."
+      );
+
+      if (refresh) {
+        await refresh();
+      }
+    } catch (err) {
+      setError(
+        err.message ||
+        "Unable to upload profile photo."
+      );
+    } finally {
+      setPhotoLoading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function copyReferral() {
+    if (!user.referralCode) return;
+
+    try {
+      await navigator.clipboard.writeText(
+        user.referralCode
+      );
+      setMessage("Referral code copied.");
+      setError("");
+    } catch {
+      setError("Unable to copy referral code.");
+    }
+  }
+
+  async function shareReferral() {
+    const code = String(user?.referralCode || "").trim();
+
+    if (!code) {
+      setError("Referral code is not available.");
+      return;
+    }
+
+    const referralUrl =
+      "https://tradenex.onrender.com/?ref=" +
+      encodeURIComponent(code);
+
+    const shareText =
+      "Join me on Tradenex. Use my referral link to register:\n\n" +
+      referralUrl;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: "Join Tradenex",
+          text: shareText,
+          url: referralUrl,
+        });
+
+        setMessage("Referral link ready to share.");
+        setError("");
+        return;
+      }
+
+      await navigator.clipboard.writeText(shareText);
+      setMessage("Referral link copied. You can paste it into WhatsApp or Telegram.");
+      setError("");
+    } catch (err) {
+      if (err?.name === "AbortError") return;
+
+      try {
+        await navigator.clipboard.writeText(shareText);
+        setMessage("Referral link copied. You can paste it into WhatsApp or Telegram.");
+        setError("");
+      } catch {
+        setError("Unable to share referral link.");
+      }
+    }
+  }
+
+  return (
+    <div className="profile-premium">
+
+      <div className="profile-hero">
+        <div className="profile-hero-glow" />
+
+        <div className="profile-avatar-wrap">
+          <div className="profile-avatar">
+            {photoUrl ? (
+              <img
+                src={photoUrl}
+                alt="Profile"
+              />
+            ) : (
+              <span>{initials}</span>
+            )}
+          </div>
+
+          <label className="profile-camera">
+            {photoLoading ? "…" : "📷"}
+            <input
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={uploadPhoto}
+              disabled={photoLoading}
+              hidden
+            />
+          </label>
+        </div>
+
+        <div className="profile-hero-info">
+          <div className="profile-kicker">
+            TRADENEX ACCOUNT
+          </div>
+
+          <h1>{fullName}</h1>
+
+          <p>{user.email || "Email not available"}</p>
+
+          <div className="profile-badges">
+            <span className="profile-status">
+              <i />
+              Active Account
+            </span>
+
+            <span>
+              Member since {memberSince}
+            </span>
+          </div>
+        </div>
+
+        <div className="profile-hero-action">
+          <button
+            type="button"
+            onClick={() => go && go("settings")}
+          >
+            🔐 Security
+          </button>
+        </div>
+      </div>
+
+      {message && (
+        <div className="profile-alert profile-alert-success">
+          ✓ {message}
+        </div>
+      )}
+
+      {error && (
+        <div className="profile-alert profile-alert-error">
+          ⚠ {error}
+        </div>
+      )}
+
+      <div className="profile-grid">
+
+        <section className="profile-card profile-main-card">
+          <div className="profile-card-head">
+            <div>
+              <small>PERSONAL INFORMATION</small>
+              <h2>Profile Details</h2>
+            </div>
+            <span className="profile-card-icon">✦</span>
+          </div>
+
+          <form onSubmit={submit}>
+
+            <div className="profile-form-grid">
+              <div className="profile-field">
+                <label>First Name</label>
+                <input
+                  value={form.firstName}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      firstName: e.target.value,
+                    })
+                  }
+                  placeholder="First name"
+                />
+              </div>
+
+              <div className="profile-field">
+                <label>Last Name</label>
+                <input
+                  value={form.lastName}
+                  onChange={(e) =>
+                    setForm({
+                      ...form,
+                      lastName: e.target.value,
+                    })
+                  }
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+
+            <div className="profile-field">
+              <label>Mobile Number</label>
+              <input
+                value={form.mobile}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    mobile: e.target.value,
+                  })
+                }
+                placeholder="Mobile number"
+              />
+            </div>
+
+            <div className="profile-field">
+              <label>Email Address</label>
+              <div className="profile-readonly">
+                <span>✉</span>
+                <input
+                  value={user.email || ""}
+                  disabled
+                />
+                <b>Verified</b>
+              </div>
+            </div>
+
+            <div className="profile-field">
+              <label>Address</label>
+              <textarea
+                rows="4"
+                value={form.address}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    address: e.target.value,
+                  })
+                }
+                placeholder="Enter your address"
+              />
+            </div>
+
+            <div className="profile-field">
+              <label>Country</label>
+              <input
+                value={form.country}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    country: e.target.value,
+                  })
+                }
+                placeholder="Country"
+              />
+            </div>
+
+            <button
+              className="profile-save-btn"
+              type="submit"
+              disabled={loading}
+            >
+              {loading
+                ? "Saving Profile..."
+                : "Save Profile →"}
+            </button>
+          </form>
+        </section>
+
+        <aside className="profile-side">
+
+          <section className="profile-card profile-account-card">
+            <div className="profile-card-head">
+              <div>
+                <small>ACCOUNT OVERVIEW</small>
+                <h2>Account Info</h2>
+              </div>
+            </div>
+
+            <div className="profile-info-row">
+              <span>Account Status</span>
+              <strong className="profile-green">
+                ● Active
+              </strong>
+            </div>
+
+            <div className="profile-info-row">
+              <span>Member Since</span>
+              <strong>{memberSince}</strong>
+            </div>
+
+            <div className="profile-info-row">
+              <span>Wallet Balance</span>
+              <strong>
+                ${Number(
+                  user.balance || 0
+                ).toLocaleString(
+                  undefined,
+                  {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  }
+                )}
+              </strong>
+            </div>
+          </section>
+
+          <section className="profile-card profile-referral-card">
+            <div className="profile-card-head">
+              <div>
+                <small>REFERRAL PROGRAM</small>
+                <h2>Your Referral</h2>
+              </div>
+              <span className="profile-card-icon">↗</span>
+            </div>
+
+            <p>
+              Share your referral code and track
+              your referral activity from the
+              Referrals section.
+            </p>
+
+            <div className="profile-referral-code">
+              <span>
+                {user.referralCode || "Not available"}
+              </span>
+
+              <button
+                type="button"
+                onClick={copyReferral}
+                disabled={!user.referralCode}
+              >
+                Copy
+              </button>
+            </div>
+
+            <button
+              type="button"
+              className="profile-secondary-btn"
+              onClick={() => go && go("referrals")}
+            >
+              Open Referrals →
+            </button>
+          </section>
+
+          <section className="profile-card profile-security-card">
+            <div className="profile-security-icon">
+              🔐
+            </div>
+
+            <div>
+              <small>ACCOUNT SECURITY</small>
+              <h3>Protect your account</h3>
+              <p>
+                Manage login and transaction
+                password settings.
+              </p>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => go && go("settings")}
+            >
+              Security Settings →
+            </button>
+          </section>
+
+        </aside>
+      </div>
+
+      <section className="profile-quick-actions">
+        <div className="profile-section-title">
+          <small>QUICK ACTIONS</small>
+          <h2>Manage Your Account</h2>
+        </div>
+
+        <div className="profile-action-grid">
+
+          <button
+            type="button"
+            onClick={() => go && go("statement")}
+          >
+            <span>▣</span>
+            <b>My Statement</b>
+            <small>View & download</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("wallet")}
+          >
+            <span>◈</span>
+            <b>Wallet</b>
+            <small>View balance</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("transactions")}
+          >
+            <span>↕</span>
+            <b>Transactions</b>
+            <small>Account activity</small>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => go && go("support")}
+          >
+            <span>◉</span>
+            <b>Support</b>
+            <small>Get assistance</small>
+          </button>
+
+        </div>
+      </section>
+
+      <section className="profile-safe-banner">
+        <div className="profile-safe-icon">✓</div>
+
+        <div>
+          <strong>Your Information is Safe</strong>
+          <p>
+            Your account information is handled
+            through your secure Tradenex account.
+          </p>
+        </div>
+
+        <button
+          type="button"
+          onClick={() => go && go("settings")}
+        >
+          Security →
+        </button>
+      </section>
+
+    </div>
+  );
+}
+
+/* =====================================================
+   SETTINGS
+===================================================== */
+
+function Settings({ user, theme, setTheme }) {
+  const [form, setForm] = useState({
+    oldLoginPassword: "",
+    newLoginPassword: "",
+    confirmLoginPassword: "",
+    oldTransactionPassword: "",
+    newTransactionPassword: "",
+    confirmTransactionPassword: "",
+  });
+
+  const [loading, setLoading] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+
+  const [notificationPrefs, setNotificationPrefs] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("tradenex_notification_prefs") ||
+          '{"login":true,"deposit":true,"withdrawal":true,"transaction":true}'
+      );
+    } catch {
+      return {
+        login: true,
+        deposit: true,
+        withdrawal: true,
+        transaction: true,
+      };
+    }
+  });
+
+  const [accountPrefs, setAccountPrefs] = useState(() => {
+    try {
+      return JSON.parse(
+        localStorage.getItem("tradenex_account_prefs") ||
+          '{"currency":"USD","dateFormat":"DD/MM/YYYY","autoRefresh":true}'
+      );
+    } catch {
+      return {
+        currency: "USD",
+        dateFormat: "DD/MM/YYYY",
+        autoRefresh: true,
+      };
+    }
+  });
+
+  function getPasswordStrength(password) {
+    const value = String(password || "");
+
+    if (!value) {
+      return {
+        label: "Not entered",
+        score: 0,
+      };
+    }
+
+    let score = 0;
+
+    if (value.length >= 6) score++;
+    if (value.length >= 10) score++;
+    if (/[A-Z]/.test(value)) score++;
+    if (/[a-z]/.test(value)) score++;
+    if (/\d/.test(value)) score++;
+    if (/[^A-Za-z0-9]/.test(value)) score++;
+
+    if (score <= 2) return { label: "Weak", score };
+    if (score <= 4) return { label: "Medium", score };
+    return { label: "Strong", score };
+  }
+
+  function isStrongPassword(password) {
+    const value = String(password || "");
+
+    return (
+      value.length >= 8 &&
+      /[A-Z]/.test(value) &&
+      /[a-z]/.test(value) &&
+      /\d/.test(value) &&
+      /[^A-Za-z0-9]/.test(value)
+    );
+  }
+
+  function saveNotificationPrefs(next) {
+    setNotificationPrefs(next);
+    localStorage.setItem(
+      "tradenex_notification_prefs",
+      JSON.stringify(next)
+    );
+  }
+
+  function saveAccountPrefs(next) {
+    setAccountPrefs(next);
+    localStorage.setItem(
+      "tradenex_account_prefs",
+      JSON.stringify(next)
+    );
+  }
+
+  async function submitPasswordSettings(e) {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+
+    const newLogin = String(form.newLoginPassword || "");
+    const confirmLogin = String(form.confirmLoginPassword || "");
+    const newTransaction = String(form.newTransactionPassword || "");
+    const confirmTransaction = String(
+      form.confirmTransactionPassword || ""
+    );
+
+    if (newLogin && newLogin !== confirmLogin) {
+      setError("New login passwords do not match.");
+      return;
+    }
+
+    if (newTransaction && newTransaction !== confirmTransaction) {
+      setError("New transaction passwords do not match.");
+      return;
+    }
+
+    if (!newLogin && !newTransaction) {
+      setError("Please enter at least one new password.");
+      return;
+    }
+
+    if (newLogin && !isStrongPassword(newLogin)) {
+      setError(
+        "Login password must be at least 8 characters and include uppercase, lowercase, number and special character."
+      );
+      return;
+    }
+
+    if (newTransaction && !isStrongPassword(newTransaction)) {
+      setError(
+        "Transaction password must be at least 8 characters and include uppercase, lowercase, number and special character."
+      );
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const data = await api("/settings", {
+        method: "POST",
+        body: JSON.stringify({
+          oldPassword: form.oldLoginPassword,
+          newPassword: newLogin,
+          confirmNewPassword: confirmLogin,
+          oldTransactionPassword:
+            form.oldTransactionPassword,
+          newTransactionPassword: newTransaction,
+          confirmTransactionPassword: confirmTransaction,
+        }),
+      });
+
+      setMessage(
+        data?.message ||
+          "Password settings updated successfully."
+      );
+
+      setForm({
+        oldLoginPassword: "",
+        newLoginPassword: "",
+        confirmLoginPassword: "",
+        oldTransactionPassword: "",
+        newTransactionPassword: "",
+        confirmTransactionPassword: "",
+      });
+    } catch (err) {
+      setError(
+        err?.message ||
+          "Unable to update password settings."
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="panel-card">
+        <div className="theme-studio">
+          <div className="theme-studio-head">
+            <div>
+              <h3>Theme Studio</h3>
+              <p>
+                Choose the look and feel of your Tradenex interface.
+              </p>
+            </div>
+
+            <span className="theme-current">
+              {theme === "modern-blue" && "Modern Blue"}
+              {theme === "dark-purple" && "Dark Purple"}
+              {theme === "black-gold" && "Black & Gold"}
+              {theme === "cyan-futuristic" && "Cyan Futuristic"}
+            </span>
+          </div>
+
+          <div className="theme-grid">
+            <button
+              type="button"
+              className={`theme-card modern-blue ${
+                theme === "modern-blue" ? "selected" : ""
+              }`}
+              onClick={() => setTheme("modern-blue")}
+            >
+              <span className="theme-preview" />
+              <strong>Modern Blue</strong>
+              <small>Clean professional interface</small>
+            </button>
+
+            <button
+              type="button"
+              className={`theme-card dark-purple ${
+                theme === "dark-purple" ? "selected" : ""
+              }`}
+              onClick={() => setTheme("dark-purple")}
+            >
+              <span className="theme-preview" />
+              <strong>Dark Purple</strong>
+              <small>Premium dark interface</small>
+            </button>
+
+            <button
+              type="button"
+              className={`theme-card black-gold ${
+                theme === "black-gold" ? "selected" : ""
+              }`}
+              onClick={() => setTheme("black-gold")}
+            >
+              <span className="theme-preview" />
+              <strong>Black & Gold</strong>
+              <small>Luxury premium interface</small>
+            </button>
+
+            <button
+              type="button"
+              className={`theme-card cyan-futuristic ${
+                theme === "cyan-futuristic" ? "selected" : ""
+              }`}
+              onClick={() => setTheme("cyan-futuristic")}
+            >
+              <span className="theme-preview" />
+              <strong>Cyan Futuristic</strong>
+              <small>Modern technology interface</small>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <h3>Security & Passwords</h3>
+        <p>
+          Login and Transaction passwords are separate.
+          Keep both passwords private and secure.
+        </p>
+
+        {message && (
+          <div className="success-box">
+            {message}
+          </div>
+        )}
+
+        {error && (
+          <div className="error-box">
+            {error}
+          </div>
+        )}
+
+        <form onSubmit={submitPasswordSettings}>
+          <h4>Login Password</h4>
+
+          <label>Current Login Password</label>
+          <input
+            type="password"
+            placeholder="Enter current login password"
+            value={form.oldLoginPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                oldLoginPassword: e.target.value,
+              })
+            }
+          />
+
+          <label>New Login Password</label>
+          <input
+            type="password"
+            placeholder="Enter new login password"
+            value={form.newLoginPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                newLoginPassword: e.target.value,
+              })
+            }
+          />
+
+          {form.newLoginPassword && (
+            <div className="password-strength-card">
+              <div className="password-strength-head">
+                <span>Password Strength</span>
+                <strong>
+                  {getPasswordStrength(form.newLoginPassword).label}
+                </strong>
+              </div>
+
+              <div className="password-strength-bars">
+                {[1, 2, 3, 4, 5, 6].map((bar) => (
+                  <span
+                    key={bar}
+                    className={
+                      bar <=
+                      getPasswordStrength(form.newLoginPassword).score
+                        ? "active"
+                        : ""
+                    }
+                  />
+                ))}
+              </div>
+
+              <small>
+                Use at least 8 characters with uppercase, lowercase, numbers and symbols.
+              </small>
+            </div>
+          )}
+
+          <label>Confirm New Login Password</label>
+          <input
+            type="password"
+            placeholder="Confirm new login password"
+            value={form.confirmLoginPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                confirmLoginPassword: e.target.value,
+              })
+            }
+          />
+
+
+          <h4>Transaction Password</h4>
+
+          <div className="info-box">
+            If you are creating a Transaction Password for the first time,
+            leave the Current Transaction Password field empty.
+          </div>
+
+          <label>Current Transaction Password</label>
+
+          <input
+            type="password"
+            placeholder="Enter current transaction password"
+            value={form.oldTransactionPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                oldTransactionPassword:
+                  e.target.value,
+              })
+            }
+          />
+
+          <label>New Transaction Password</label>
+
+          <input
+            type="password"
+            placeholder="Create new transaction password"
+            value={form.newTransactionPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                newTransactionPassword:
+                  e.target.value,
+              })
+            }
+          />
+
+          {form.newTransactionPassword && (
+            <div className="password-strength-card">
+              <div className="password-strength-head">
+                <span>Password Strength</span>
+                <strong>
+                  {getPasswordStrength(form.newTransactionPassword).label}
+                </strong>
+              </div>
+
+              <div className="password-strength-bars">
+                {[1, 2, 3, 4, 5, 6].map((bar) => (
+                  <span
+                    key={bar}
+                    className={
+                      bar <=
+                      getPasswordStrength(form.newTransactionPassword).score
+                        ? "active"
+                        : ""
+                    }
+                  />
+                ))}
+              </div>
+
+              <small>
+                Keep your Transaction Password different from your
+                Login Password.
+              </small>
+            </div>
+          )}
+
+          <label>Confirm New Transaction Password</label>
+
+          <input
+            type="password"
+            placeholder="Confirm new transaction password"
+            value={form.confirmTransactionPassword}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                confirmTransactionPassword:
+                  e.target.value,
+              })
+            }
+          />
+
+
+          <button
+            className="primary-btn"
+            disabled={loading}
+          >
+            {loading
+              ? "Saving..."
+              : "Save Password Changes"}
+          </button>
+        </form>
+      </div>
+
+      <div className="panel-card settings-feature-card">
+        <div className="settings-section-title">
+          <div className="settings-feature-icon">🛡️</div>
+          <div>
+            <h3>Security Overview</h3>
+            <p>Review the security status of your Tradenex account.</p>
+          </div>
+        </div>
+
+        <div className="security-status-grid">
+          <div className="security-status-item">
+            <span>Login Password</span>
+            <strong className="status-good">Protected</strong>
+          </div>
+
+          <div className="security-status-item">
+            <span>Transaction Password</span>
+            <strong className="status-good">Protected</strong>
+          </div>
+
+          <div className="security-status-item">
+            <span>Password Security</span>
+            <strong className="status-good">Strong Rules</strong>
+          </div>
+
+          <div className="security-status-item">
+            <span>Session Security</span>
+            <strong className="status-good">Protected</strong>
+          </div>        </div>
+
+      </div>
+
+      <div className="panel-card settings-feature-card">
+        <div className="settings-section-title">
+          <div className="settings-feature-icon">🔔</div>
+          <div>
+            <h3>Notification Preferences</h3>
+            <p>Choose which account notifications you want to receive.</p>
+          </div>
+        </div>
+
+        <div className="settings-toggle-list">
+          {[
+            ["login", "Login Alerts", "Get notified about account logins."],
+            ["deposit", "Deposit Alerts", "Get notified about deposit activity."],
+            ["withdrawal", "Withdrawal Alerts", "Get notified about withdrawal activity."],
+            ["transaction", "Transaction Alerts", "Get notified about important transactions."],
+          ].map(([key, title, description]) => (
+            <label className="settings-toggle-row" key={key}>
+              <span>
+                <strong>{title}</strong>
+                <small>{description}</small>
+              </span>
+
+              <input
+                type="checkbox"
+                checked={Boolean(notificationPrefs[key])}
+                onChange={(e) =>
+                  saveNotificationPrefs({
+                    ...notificationPrefs,
+                    [key]: e.target.checked,
+                  })
+                }
+              />
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel-card settings-feature-card">
+        <div className="settings-section-title">
+          <div className="settings-feature-icon">⚙️</div>
+          <div>
+            <h3>Account Preferences</h3>
+            <p>Customize how account information is displayed.</p>
+          </div>
+        </div>
+
+        <div className="settings-preference-grid">
+          <div>
+            <label>Display Currency</label>
+            <select
+              value={accountPrefs.currency}
+              onChange={(e) =>
+                saveAccountPrefs({
+                  ...accountPrefs,
+                  currency: e.target.value,
+                })
+              }
+            >
+              <option value="USD">USD — US Dollar</option>
+              <option value="INR">INR — Indian Rupee</option>
+              <option value="USDT">USDT — Tether</option>
+            </select>
+          </div>
+
+          <div>
+            <label>Date Format</label>
+            <select
+              value={accountPrefs.dateFormat}
+              onChange={(e) =>
+                saveAccountPrefs({
+                  ...accountPrefs,
+                  dateFormat: e.target.value,
+                })
+              }
+            >
+              <option value="DD/MM/YYYY">DD/MM/YYYY</option>
+              <option value="MM/DD/YYYY">MM/DD/YYYY</option>
+              <option value="YYYY-MM-DD">YYYY-MM-DD</option>
+            </select>
+          </div>
+        </div>
+
+        <label className="settings-toggle-row">
+          <span>
+            <strong>Auto Refresh</strong>
+            <small>Keep account data updated automatically when supported.</small>
+          </span>
+
+          <input
+            type="checkbox"
+            checked={Boolean(accountPrefs.autoRefresh)}
+            onChange={(e) =>
+              saveAccountPrefs({
+                ...accountPrefs,
+                autoRefresh: e.target.checked,
+              })
+            }
+          />
+        </label>
+      </div>
+
+      <div className="panel-card settings-feature-card">
+        <div className="settings-section-title">
+          <div className="settings-feature-icon">🚨</div>
+          <div>
+            <h3>Security Actions</h3>
+            <p>Quick actions for protecting your account.</p>
+          </div>
+        </div>
+
+        <div className="security-action-grid">
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => {
+              localStorage.removeItem("tradenex_token");
+              localStorage.removeItem("tradenex_user");
+              window.location.reload();
+            }}
+          >
+            Log Out Current Session
+          </button>
+
+          <button
+            type="button"
+            className="secondary-btn"
+            onClick={() => {
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              });
+            }}
+          >
+            Review Security Settings
+          </button>
+        </div>
+      </div>
+
+      <div className="panel-card">
+        <div className="info-box">
+          <strong>Security Notice</strong>
+          <br />
+          Your Login Password and Transaction Password
+          are separate.
+          <br />
+          Withdrawals require your Transaction Password.
+        </div>
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
+   SUPPORT
+===================================================== */
+
+function Support() {
+  const [form, setForm] =
+    useState({
+      category: "General",
+      subject: "",
+      message: "",
+    });
+
+  const [message, setMessage] =
+    useState("");
+
+  const [error, setError] =
+    useState("");
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [tickets, setTickets] =
+    useState([]);
+
+  const [loadingTickets, setLoadingTickets] =
+    useState(true);
+
+  async function loadTickets() {
+    try {
+      setLoadingTickets(true);
+
+      const data = await api(
+        "/support"
+      );
+
+      setTickets(
+        Array.isArray(data.support)
+          ? data.support
+          : []
+      );
+    } catch (err) {
+      console.error(
+        "Support history error:",
+        err
+      );
+    } finally {
+      setLoadingTickets(false);
+    }
+  }
+
+  useEffect(() => {
+    loadTickets();
+  }, []);
+
+  async function submit(e) {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+    setLoading(true);
+
+    try {
+      const data = await api(
+        "/support",
+        {
+          method: "POST",
+          body: JSON.stringify(form),
+        }
+      );
+
+      setMessage(data.message);
+
+      setForm({
+        category: "General",
+        subject: "",
+        message: "",
+      });
+
+      await loadTickets();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <>
+      <div className="page-title">
+        <small>SUPPORT</small>
+
+        <h2>Support</h2>
+
+        <p>
+          Contact Tradenex support.
+        </p>
+      </div>
+
+      {message && (
+        <div className="success-box">
+          {message}
+        </div>
+      )}
+
+      {error && (
+        <div className="error-box">
+          {error}
+        </div>
+      )}
+
+      <div className="panel-card">
+        <form onSubmit={submit}>
+          <label>
+            Category
+          </label>
+
+          <select
+            value={form.category}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                category: e.target.value,
+              })
+            }
+          >
+            <option>General</option>
+            <option>Deposit</option>
+            <option>Withdrawal</option>
+            <option>Account</option>
+            <option>Technical</option>
+          </select>
+
+          <label>
+            Subject
+          </label>
+
+          <input
+            placeholder="Subject"
+            value={form.subject}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                subject: e.target.value,
+              })
+            }
+            required
+          />
+
+          <label>
+            Message
+          </label>
+
+          <textarea
+            rows="7"
+            placeholder="Write your message"
+            value={form.message}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                message: e.target.value,
+              })
+            }
+            required
+          />
+
+          <button
+            className="primary-btn"
+            disabled={loading}
+          >
+            {loading
+              ? "Sending..."
+              : "Submit Support Request"}
+          </button>
+        </form>
+      </div>
+
+      <div className="panel-card">
+        <div className="page-title">
+          <small>HISTORY</small>
+          <h2>My Support Tickets</h2>
+        </div>
+
+        {loadingTickets ? (
+          <p>Loading support tickets...</p>
+        ) : !tickets.length ? (
+          <p>No support tickets yet.</p>
+        ) : (
+          tickets.map((ticket) => (
+            <div
+              key={ticket.id}
+              className="support-card"
+              style={{
+                marginBottom: "16px",
+              }}
+            >
+              <div>
+                <strong>
+                  {ticket.subject}
+                </strong>
+
+                <div>
+                  <small>
+                    {ticket.category} ·{" "}
+                    {ticket.status}
+                  </small>
+                </div>
+              </div>
+
+              <p>
+                {ticket.message}
+              </p>
+
+              {Array.isArray(ticket.replies) &&
+                ticket.replies.length > 0 && (
+                  <div
+                    style={{
+                      marginTop: "12px",
+                    }}
+                  >
+                    {ticket.replies.map(
+                      (item) => (
+                        <div
+                          key={item.id}
+                          className="panel-card"
+                        >
+                          <strong>
+                            {item.sender ===
+                            "admin"
+                              ? "Admin Reply"
+                              : "Your Reply"}
+                          </strong>
+
+                          <p>
+                            {item.message}
+                          </p>
+
+                          <small>
+                            {item.createdAt
+                              ? new Date(
+                                  item.createdAt
+                                ).toLocaleString()
+                              : ""}
+                          </small>
+                        </div>
+                      )
+                    )}
+                  </div>
+                )}
+            </div>
+          ))
+        )}
+      </div>
+    </>
+  );
+}
+
+/* =====================================================
+   FAQ
+===================================================== */
+
+function FAQ() {
+  const items = [
+    [
+      "Referral code क्या है?",
+      "हर user को registration के बाद एक unique referral code मिलता है।",
+    ],
+    [
+      "Referral reward कैसे मिलेगा?",
+      "जब कोई नया user आपके referral code से registration करता है तो referral आपके account में जुड़ता है और reward मिलता है।",
+    ],
+    [
+      "Referral reward withdrawal कब होगा?",
+      "Referral reward withdrawal के लिए minimum 3 successful referrals चाहिए।",
+    ],
+    [
+      "Transaction password क्या है?",
+      "यह withdrawal के समय इस्तेमाल होने वाला अलग password है। इसे Settings से पहली बार बनाया जा सकता है।",
+    ],
+    [
+      "Login password भूल गया तो?",
+      "Login page पर Forgot Password से registered email के जरिए password reset कर सकते हैं।",
+    ],
+  ];
+
+  return (
+    <>
+      <div className="page-title">
+        <small>FAQ</small>
+
+        <h2>
+          Frequently Asked
+          Questions
+        </h2>
+      </div>
+
+      <div className="panel-card">
+        {items.map(
+          ([question, answer]) => (
+            <details
+              key={question}
+              className="faq-item"
+            >
+              <summary>
+                {question}
+              </summary>
+
+              <p>{answer}</p>
+            </details>
+          )
+        )}
+      </div>
+    </>
+  );
+}
+
+
+/* =====================================================
+   LANDING PAGE
+===================================================== */
+
+function LandingPage({ onLogin }) {
+  return (
+    <div className="landing-page">
+
+      <nav className="landing-nav">
+        <div className="landing-logo">
+          <div className="landing-logo-mark">
+            <img src="/tradenex-premium-logo.png" alt="Tradenex" className="tradenex-mark-img" />
+          </div>
+
+          <div>
+            <strong>TRADENEX</strong>
+            <small>SMART TRADING PLATFORM</small>
+          </div>
+        </div>
+
+        <div className="landing-nav-buttons">
+          <button
+            className="landing-login-btn"
+            onClick={onLogin}
+          >
+            Login
+          </button>
+
+          <button
+            className="landing-register-btn"
+            onClick={onLogin}
+          >
+            Create Account
+          </button>
+        </div>
+      </nav>
+
+      <section className="landing-hero">
+        <div className="hero-content">
+          <div className="hero-badge">
+            <span></span>
+            NEXT GENERATION TRADING
+          </div>
+
+          <h1>
+            Trade Smarter.
+            <br />
+            <span>Grow With Confidence.</span>
+          </h1>
+
+          <p>
+            Experience a simple, powerful and modern
+            platform designed to help you manage your
+            trading journey with confidence.
+          </p>
+
+          <div className="hero-buttons">
+            <button
+              className="hero-primary-btn"
+              onClick={onLogin}
+            >
+              Get Started
+              <span>→</span>
+            </button>
+
+            <button
+              className="hero-secondary-btn"
+              onClick={onLogin}
+            >
+              Login to Account
+            </button>
+          </div>
+
+          <div className="hero-trust">
+            <div>
+              <strong>Secure</strong>
+              <small>Account Protection</small>
+            </div>
+
+            <div>
+              <strong>Fast</strong>
+              <small>Easy Transactions</small>
+            </div>
+
+            <div>
+              <strong>24/7</strong>
+              <small>Support</small>
+            </div>
+          </div>
+        </div>
+
+        <div className="hero-visual">
+
+          <div className="floating-orbit orbit-one"></div>
+          <div className="floating-orbit orbit-two"></div>
+
+          <div className="hero-logo-card">
+            <div className="big-tradenex-logo">
+              <img src="/tradenex-premium-logo.png" alt="Tradenex" className="tradenex-logo-img" />
+            </div>
+
+            <strong>TRADENEX</strong>
+            <small>SMART • SECURE • SIMPLE</small>
+
+            <div className="mini-chart">
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+              <i></i>
+            </div>
+          </div>
+        </div>
+
+      </section>
+
+      <section className="landing-stats">
+
+        <div>
+          <span>⚡</span>
+          <strong>Fast</strong>
+          <small>Easy Platform</small>
+        </div>
+
+        <div>
+          <span>🔐</span>
+          <strong>Secure</strong>
+          <small>Protected Account</small>
+        </div>
+
+        <div>
+          <span>💳</span>
+          <strong>Simple</strong>
+          <small>Deposit & Withdraw</small>
+        </div>
+
+        <div>
+          <span>🎧</span>
+          <strong>Support</strong>
+          <small>We're Here To Help</small>
+        </div>
+
+      </section>
+
+      <section className="landing-why">
+
+        <div className="landing-section-title">
+          <small>WHY TRADENEX</small>
+
+          <h2>
+            Everything You Need
+            <br />
+            In One Platform
+          </h2>
+
+          <p>
+            Manage your account, wallet and transactions
+            from one simple dashboard.
+          </p>
+        </div>
+
+        <div className="why-grid">
+
+          <div className="why-card">
+            <div>◈</div>
+            <h3>Modern Platform</h3>
+            <p>
+              A clean and easy-to-use experience
+              designed for modern users.
+            </p>
+          </div>
+
+          <div className="why-card">
+            <div>🔒</div>
+            <h3>Account Security</h3>
+            <p>
+              Your account and transaction access
+              are protected with secure controls.
+            </p>
+          </div>
+
+          <div className="why-card">
+            <div>↗</div>
+            <h3>Easy Transactions</h3>
+            <p>
+              Manage deposits, withdrawals and
+              transaction history with ease.
+            </p>
+          </div>
+
+          <div className="why-card">
+            <div>♧</div>
+            <h3>Referral Program</h3>
+            <p>
+              Invite friends and manage your
+              referral activity from your dashboard.
+            </p>
+          </div>
+
+        </div>
+      </section>
+
+      <section className="landing-cta">
+
+        <div className="cta-inner">
+
+          <div>
+            <small>START YOUR JOURNEY</small>
+
+            <h2>
+              Ready to get started?
+            </h2>
+
+            <p>
+              Create your Tradenex account and
+              explore your personal trading dashboard.
+            </p>
+          </div>
+
+          <button
+            onClick={onLogin}
+            className="cta-button"
+          >
+            Enter Tradenex
+            <span>→</span>
+          </button>
+
+        </div>
+      </section>
+
+      <footer className="landing-footer">
+        <div className="footer-logo">
+          <img src="/tradenex-premium-logo.png" alt="Tradenex" className="sidebar-logo-img" />
+          <strong>TRADENEX</strong>
+        </div>
+
+        <small>
+          © {new Date().getFullYear()} Tradenex.
+          All rights reserved.
+        </small>
+      </footer>
+
+    </div>
+  );
+}
+
+
+/* =====================================================
+   APP
+===================================================== */
+
+
+function compareVersions(a, b) {
+  const pa = String(a).split(".").map(Number);
+  const pb = String(b).split(".").map(Number);
+  for (let i = 0; i < Math.max(pa.length, pb.length); i++) {
+    const x = pa[i] || 0;
+    const y = pb[i] || 0;
+    if (x > y) return 1;
+    if (x < y) return -1;
+  }
+  return 0;
+}
+
+export default function App() {
+  const [user, setUser] =
+    useState(null);
+
+  const [theme, setTheme] =
+    useState(() => localStorage.getItem("tradenex_theme") || "modern-blue");
+
+  useEffect(() => {
+    document.documentElement.setAttribute("data-tradenex-theme", theme);
+    localStorage.setItem("tradenex_theme", theme);
+  }, [theme]);
+
+  const [showLanding, setShowLanding] =
+    useState(true);
+
+  const [data, setData] =
+    useState({
+      transactions: [],
+      deposits: [],
+      withdrawals: [],
+      referrals: [],
+    });
+
+  const [page, setPage] =
+    useState("dashboard");
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  const [sidebarOpen, setSidebarOpen] =
+    useState(false);
+  const [updateInfo, setUpdateInfo] =
+    useState(null);
+  const [offer, setOffer] = useState(null);
+  const [offerPopupVisible, setOfferPopupVisible] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadOffer() {
+      try {
+        const response = await fetch(`${API}/offer?t=${Date.now()}`, {
+          cache: "no-store"
+        });
+
+        if (!response.ok) return;
+
+        const result = await response.json();
+
+        if (!cancelled && result?.success && result?.offer?.enabled) {
+          setOffer(result.offer);
+        }
+      } catch (e) {
+        console.log("Offer check skipped:", e);
+      }
+    }
+
+    loadOffer();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+
+
+  async function loadUser() {
+    try {
+      const token =
+        localStorage.getItem(
+          "tradenex_token"
+        );
+
+      if (!token) {
+        setUser(null);
+        setLoading(false);
+        return;
+      }
+
+      const result =
+        await api("/me");
+
+      setUser(result.user);
+
+      setData({
+        transactions:
+          result.transactions ||
+          [],
+
+        deposits:
+          result.deposits ||
+          [],
+
+        withdrawals:
+          result.withdrawals ||
+          [],
+
+        referrals:
+          result.referrals ||
+          [],
+
+          totalDeposit: Number(result.user?.totalDeposit || 0),
+          walletBalance: Number(result.user?.walletBalance ?? result.user?.balance ?? 0),
+          totalWithdrawal: Number(result.user?.totalWithdrawal ?? result.user?.totalWithdrawals ?? 0),
+          referralReward: Number(result.user?.referralReward || 0),
+
+      });
+
+      localStorage.setItem(
+        "tradenex_user",
+        JSON.stringify(
+          result.user
+        )
+      );
+    } catch (err) {
+      console.error(err);
+
+      localStorage.removeItem(
+        "tradenex_token"
+      );
+
+      localStorage.removeItem(
+        "tradenex_user"
+      );
+
+      setUser(null);
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function checkForUpdate() {
+      try {
+        const platform = CapacitorApp.getInfo
+          ? await CapacitorApp.getInfo()
+          : null;
+
+        if (!platform || platform.platform === "web") return;
+
+        const response = await fetch(
+          "https://tradenex.onrender.com/version.json?t=" + Date.now(),
+          { cache: "no-store" }
+        );
+
+        if (!response.ok) return;
+
+        const latest = await response.json();
+
+        if (
+          !cancelled &&
+          latest?.version &&
+          compareVersions(latest.version, platform.version) > 0
+        ) {
+          setUpdateInfo({
+            version: latest.version,
+            url: latest.url,
+            message:
+              latest.message ||
+              "A new version of Tradenex is available."
+          });
+        }
+      } catch (e) {
+        console.log("Update check skipped:", e);
+      }
+    }
+
+    checkForUpdate();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    loadUser();
+
+    const listener = (event) => {
+      if (event.detail) {
+        setPage(event.detail);
+        setSidebarOpen(false);
+      }
+    };
+
+    window.addEventListener(
+      "tradenex-page",
+      listener
+    );
+
+    return () => {
+      window.removeEventListener(
+        "tradenex-page",
+        listener
+      );
+    };
+  }, []);
+
+  async function logout() {
+    try {
+      await api("/logout", {
+        method: "POST",
+      });
+    } catch (e) {
+      console.log(e);
+    }
+
+    localStorage.removeItem(
+      "tradenex_token"
+    );
+
+    localStorage.removeItem(
+      "tradenex_user"
+    );
+
+    setUser(null);
+    setPage("dashboard");
+    setSidebarOpen(false);
+  }
+
+  if (loading) {
+    return (
+      <div className="loading-page">
+        <div>
+          <h2>Tradenex</h2>
+          <p>
+            Loading...
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    if (showLanding) {
+      return (
+        <LandingPage
+          onLogin={() => setShowLanding(false)}
+        />
+      );
+    }
+
+    return (
+      <LoginPage
+        onLogin={(loggedUser) => {
+          setUser(loggedUser);
+          loadUser();
+        }}
+      />
+    );
+  }
+
+  const menu = [
+    [
+      "dashboard",
+      "⌂",
+      "Dashboard",
+    ],
+    [
+      "wallet",
+      "▣",
+      "Wallet",
+    ],
+    [
+      "deposit",
+      "↓",
+      "Deposit",
+    ],
+    [
+      "withdraw",
+      "↗",
+      "Withdraw",
+    ],
+    [
+      "transactions",
+      "⇄",
+      "Transactions",
+    ],
+    [
+      "statement",
+      "📄",
+      "My Statement",
+    ],
+    [
+      "live-trading",
+      "📈",
+      "Live Trading",
+    ],
+    [
+      "performance",
+      "↗",
+      "Performance",
+    ],
+    [
+      "referrals",
+      "♧",
+      "Referrals",
+    ],
+    [
+      "profile",
+      "♙",
+      "Profile",
+    ],
+    [
+      "settings",
+      "⚙",
+      "Settings",
+    ],
+    [
+      "support",
+      "?",
+      "Support",
+    ],
+    [
+      "faq",
+      "?",
+      "FAQ",
+    ],
+  ];
+
+  function openPage(key) {
+    setPage(key);
+    setSidebarOpen(false);
+  }
+
+  return (
+    <div className="app-shell">
+
+      {offer?.enabled && offerPopupVisible && (
+        <div className="offer-popup-overlay">
+          <div className="offer-popup">
+            <button
+              className="offer-popup-close"
+              onClick={() => setOfferPopupVisible(false)}
+              aria-label="Close"
+            >
+              ×
+            </button>
+
+            <div className="offer-popup-icon">🎁</div>
+
+            <h2>{offer.title || "Special Offer"}</h2>
+
+            <p>
+              {offer.message || "A special offer is available for you."}
+            </p>
+
+            {offer.buttonUrl ? (
+              <a
+                className="offer-popup-button"
+                href={offer.buttonUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                {offer.buttonText || "View Offer"}
+              </a>
+            ) : (
+              <button
+                className="offer-popup-button"
+                onClick={() => setOfferPopupVisible(false)}
+              >
+                {offer.buttonText || "Got It"}
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* MOBILE OVERLAY */}
+
+      {sidebarOpen && (
+        <div
+          className="sidebar-overlay"
+          onClick={() =>
+            setSidebarOpen(false)
+          }
+        />
+      )}
+
+      {/* SIDEBAR */}
+
+      <aside
+        className={
+          sidebarOpen
+            ? "sidebar sidebar-open"
+            : "sidebar"
+        }
+      >
+        <div className="mobile-sidebar-close">
+          <button
+            onClick={() =>
+              setSidebarOpen(false)
+            }
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="logo">
+          <img src="/tradenex-premium-logo.png" alt="Tradenex" className="sidebar-logo-img" />
+
+          <b>Tradenex</b>
+
+          <small>
+            USER PANEL
+          </small>
+        </div>
+
+        <div className="menu-title">
+          MAIN MENU
+        </div>
+
+        {menu.map(
+          ([key, icon, label]) => (
+            <button
+              key={key}
+              className={
+                page === key
+                  ? "menu-item active"
+                  : "menu-item"
+              }
+              onClick={() =>
+                openPage(key)
+              }
+            >
+              <span>
+                {icon}
+              </span>
+
+              <b>{label}</b>
+            </button>
+          )
+        )}
+
+        <div className="menu-title">
+          ACCOUNT
+        </div>
+
+        <button
+          className="menu-item"
+          onClick={logout}
+        >
+          <span>↪</span>
+          <b>Logout</b>
+        </button>
+
+        <div className="sidebar-bottom">
+          <strong>
+            TRADENEX
+          </strong>
+
+          <small>
+            Secure User Portal
+          </small>
+        </div>
+      </aside>
+
+      {/* MAIN */}
+
+      <main className="main-content">
+        <header className="topbar">
+          <div className="topbar-left">
+            <button
+              className="hamburger-btn"
+              onClick={() =>
+                setSidebarOpen(true)
+              }
+              aria-label="Open menu"
+            >
+              ☰
+            </button>
+
+            <div>
+              <h3>
+                {
+                  menu.find(
+                    (x) =>
+                      x[0] === page
+                  )?.[2]
+                }
+              </h3>
+
+              <small>
+                Tradenex User
+                Dashboard
+              </small>
+            </div>
+          </div>
+
+          <div className="top-user">
+            <span className="notification">
+              🔔
+            </span>
+
+            <div>
+              <strong>
+                {user.name ||
+                  "User"}
+              </strong>
+
+              <small>
+                {user.email}
+              </small>
+            </div>
+
+            <button
+              onClick={logout}
+              className="logout-btn"
+            >
+              Logout
+            </button>
+          </div>
+        </header>
+
+        <section className="content">
+          {error && (
+            <div className="error-box">
+              {error}
+            </div>
+          )}
+
+          {page ===
+            "dashboard" && (
+            <Dashboard
+              user={user}
+              data={data}
+              go={openPage}
+              offer={offer}
+              setOffer={setOffer}
+            />
+          )}
+
+          {page === "wallet" && (
+            <Wallet user={user} data={data} go={openPage} />
+          )}
+
+          {page ===
+            "deposit" && (
+            <Deposit
+              onDone={loadUser}
+            />
+          )}
+
+          {page ===
+            "withdraw" && (
+            <Withdraw
+              user={user}
+              onDone={loadUser}
+            />
+          )}
+
+          {page ===
+            "transactions" && (
+            <Transactions
+              data={data}
+            />
+          )}
+
+          {page ===
+            "statement" && (
+            <MyStatement
+              user={user}
+              data={data}
+            />
+          )}
+
+          {page ===
+            "live-trading" && (
+            <LiveTrading
+              user={user}
+              data={data}
+            />
+          )}
+
+          {page ===
+            "performance" && (
+            <Performance
+              user={user}
+            />
+          )}
+
+          {page ===
+            "referrals" && (
+            <Referrals
+              user={user}
+              data={data}
+            />
+          )}
+
+          {page === "profile" && (
+            <Profile
+              user={user}
+              refresh={loadUser}
+              go={openPage}
+            />
+          )}
+
+          {page ===
+            "settings" && (
+            <Settings user={user} theme={theme} setTheme={setTheme} />
+          )}
+
+          {page === "support" && (
+            <Support />
+          )}
+
+          {page === "faq" && (
+            <FAQ />
+          )}
+        </section>
+      </main>
+    </div>
+  );
+}
