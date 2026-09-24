@@ -1085,6 +1085,49 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
           <p>Trade&nbsp;&nbsp;•&nbsp;&nbsp;Grow&nbsp;&nbsp;•&nbsp;&nbsp;Succeed</p>
         </div>
         <div className="hero-badge">A Smarter Way to Invest</div>
+
+          <div className="dashboard-user-id" style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "10px",
+            marginTop: "14px",
+            padding: "10px 14px",
+            borderRadius: "12px",
+            background: "rgba(255,255,255,0.08)",
+            border: "1px solid rgba(255,255,255,0.15)",
+            width: "fit-content"
+          }}>
+            <span style={{fontSize: "12px", opacity: 0.75}}>USER ID</span>
+            <strong style={{fontSize: "14px"}}>
+              {user?.id || user?.userId || "-"}
+            </strong>
+            <button
+              type="button"
+              onClick={async () => {
+                const id = user?.id || user?.userId || "";
+                if (!id) return;
+                try {
+                  await navigator.clipboard.writeText(String(id));
+                } catch {
+                  const el = document.createElement("textarea");
+                  el.value = String(id);
+                  document.body.appendChild(el);
+                  el.select();
+                  document.execCommand("copy");
+                  el.remove();
+                }
+              }}
+              style={{
+                border: "0",
+                borderRadius: "8px",
+                padding: "6px 10px",
+                cursor: "pointer",
+                fontWeight: "700"
+              }}
+            >
+              📋 Copy
+            </button>
+          </div>
       </div>
 
       {offer?.enabled && (
