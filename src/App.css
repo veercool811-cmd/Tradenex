@@ -12194,3 +12194,114 @@ body,
     font-size: 11px !important;
   }
 }
+
+/* TradeNex Premium Candlestick Chart */
+.tn-candle-wrap {
+  background: #071522;
+  border-bottom: 1px solid #172b3d;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.tn-candle-toolbar {
+  min-height: 48px;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  padding: 7px 12px;
+  flex-wrap: wrap;
+  border-bottom: 1px solid rgba(105,145,175,.12);
+  background: linear-gradient(110deg,#091827,#0b1929);
+}
+
+.tn-chart-label {
+  color: #e6f0fa;
+  font-size: 10px;
+  font-weight: 800;
+  margin-right: 8px;
+  letter-spacing: 1px;
+}
+
+.tn-candle-toolbar button {
+  border: 1px solid transparent;
+  border-radius: 6px;
+  padding: 7px 9px;
+  background: transparent;
+  color: #8298ad;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background .18s ease, color .18s ease;
+}
+
+.tn-candle-toolbar button:hover {
+  color: #fff;
+  background: #172b3d;
+}
+
+.tn-candle-toolbar button.active {
+  color: #fff;
+  background: linear-gradient(135deg,#1769e0,#6945d8);
+  box-shadow: 0 3px 12px rgba(40,100,230,.25);
+}
+
+.tn-chart-status {
+  margin-left: auto;
+  color: #16c784;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.tn-candle-host {
+  width: 100%;
+  height: 385px;
+  min-width: 0;
+  background:
+    radial-gradient(ellipse at 75% 0%,rgba(38,95,180,.10),transparent 55%),
+    #071522;
+  touch-action: pan-y;
+}
+
+.tn-chart-hint {
+  min-height: 30px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  color: #688198;
+  font-size: 8px;
+  letter-spacing: .5px;
+  border-top: 1px solid rgba(105,145,175,.10);
+}
+
+@media (max-width: 600px) {
+  .tn-candle-toolbar {
+    gap: 2px;
+    padding: 7px;
+  }
+
+  .tn-chart-label {
+    margin-right: 3px;
+  }
+
+  .tn-candle-toolbar button {
+    padding: 7px 6px;
+    font-size: 9px;
+  }
+
+  .tn-chart-status {
+    width: 100%;
+    margin: 3px 0 0;
+  }
+
+  .tn-candle-host {
+    height: 330px;
+  }
+
+  .tn-chart-hint {
+    font-size: 7px;
+    padding: 0 7px;
+  }
+}

@@ -5,8 +5,10 @@ import React, {
   useEffect,
   useMemo,
   useState,
+  useRef,
 } from "react";
 
+import { createChart, CandlestickSeries } from "lightweight-charts";
 import "./App.css";
 import { loadMSG91 } from "./msg91";
 
@@ -3009,6 +3011,171 @@ function Transactions({
   );
 }
 
+
+function TradingCandleChart({ symbol }) {
+  const hostRef = useRef(null);
+  const [interval, setInterval] = useState("1m");
+  const [status, setStatus] = useState("Loading candles…");
+
+  useEffect(() => {
+    const host = hostRef.current;
+    if (!host) return;
+
+    let chart;
+    let candleSeries;
+    let socket;
+    let alive = true;
+
+    const load = async () => {
+      try {
+        setStatus("Loading candles…");
+
+        chart = createChart(host, {
+          width: host.clientWidth,
+          height: host.clientHeight,
+          layout: {
+            background: { color: "#071522" },
+            textColor: "#8ca3b8",
+            fontFamily: "Arial, sans-serif",
+          },
+          grid: {
+            vertLines: { color: "rgba(105,145,175,0.08)" },
+            horzLines: { color: "rgba(105,145,175,0.10)" },
+          },
+          rightPriceScale: {
+            borderColor: "#1b3042",
+          },
+          timeScale: {
+            borderColor: "#1b3042",
+            timeVisible: true,
+            secondsVisible: false,
+            rightOffset: 8,
+            barSpacing: 8,
+            minBarSpacing: 2,
+          },
+          crosshair: { mode: 0 },
+          handleScroll: true,
+          handleScale: true,
+        });
+
+        candleSeries = chart.addSeries(CandlestickSeries, {
+          upColor: "#16c784",
+          downColor: "#ea3943",
+          borderUpColor: "#16c784",
+          borderDownColor: "#ea3943",
+          wickUpColor: "#16c784",
+          wickDownColor: "#ea3943",
+          priceLineVisible: true,
+          lastValueVisible: true,
+        });
+
+        const response = await fetch(
+          `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=300`
+        );
+
+        if (!response.ok) {
+          throw new Error("Candle data unavailable");
+        }
+
+        const rows = await response.json();
+        if (!alive) return;
+
+        const candles = rows.map((row) => ({
+          time: Math.floor(Number(row[0]) / 1000),
+          open: Number(row[1]),
+          high: Number(row[2]),
+          low: Number(row[3]),
+          close: Number(row[4]),
+        }));
+
+        candleSeries.setData(candles);
+        chart.timeScale().fitContent();
+        setStatus("LIVE CANDLES");
+
+        socket = new WebSocket(
+          `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`
+        );
+
+        socket.onmessage = (event) => {
+          try {
+            const message = JSON.parse(event.data);
+            const k = message.k;
+
+            if (!k || !alive) return;
+
+            candleSeries.update({
+              time: Math.floor(Number(k.t) / 1000),
+              open: Number(k.o),
+              high: Number(k.h),
+              low: Number(k.l),
+              close: Number(k.c),
+            });
+          } catch {}
+        };
+
+        socket.onerror = () => {
+          if (alive) setStatus("Live connection interrupted");
+        };
+      } catch (error) {
+        if (alive) setStatus("Unable to load market candles");
+        console.error("TradeNex candle chart:", error);
+      }
+    };
+
+    load();
+
+    const observer = new ResizeObserver(() => {
+      if (chart && host) {
+        chart.applyOptions({
+          width: host.clientWidth,
+          height: host.clientHeight,
+        });
+      }
+    });
+
+    observer.observe(host);
+
+    return () => {
+      alive = false;
+      observer.disconnect();
+
+      if (socket) {
+        try { socket.close(); } catch {}
+      }
+
+      if (chart) chart.remove();
+    };
+  }, [symbol, interval]);
+
+  return (
+    <div className="tn-candle-wrap">
+      <div className="tn-candle-toolbar">
+        <span className="tn-chart-label">CHART</span>
+
+        {["1m", "5m", "15m", "1h", "4h", "1d"].map((time) => (
+          <button
+            key={time}
+            className={interval === time ? "active" : ""}
+            onClick={() => setInterval(time)}
+          >
+            {time.toUpperCase()}
+          </button>
+        ))}
+
+        <span className="tn-chart-status">{status}</span>
+      </div>
+
+      <div className="tn-candle-host" ref={hostRef} />
+
+      <div className="tn-chart-hint">
+        <span>↔ DRAG TO MOVE</span>
+        <span>＋ / − ZOOM</span>
+        <span>LIVE BINANCE DATA</span>
+      </div>
+    </div>
+  );
+}
+
 /* =====================================================
    LIVE TRADING
 ===================================================== */
@@ -3301,48 +3468,7 @@ function LiveTrading({ user, data }) {
 
         <div className="trading-main">
           <div className="trading-chart-panel">
-            <div className="chart-toolbar">
-              <span>Chart</span>
-              <button className="active">1m</button>
-              <button>5m</button>
-              <button>15m</button>
-              <button>1H</button>
-              <button>4H</button>
-              <button>1D</button>
-            </div>
-
-            <div className="binance-chart">
-              <div className="chart-grid">
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-                <span />
-              </div>
-
-              <svg viewBox="0 0 1000 360" preserveAspectRatio="none">
-                {chartPath && (
-                  <>
-                    <path
-                      d={`${chartPath} L 1000 360 L 0 360 Z`}
-                      className="chart-fill"
-                    />
-                    <path
-                      d={chartPath}
-                      className="chart-line"
-                      fill="none"
-                    />
-                  </>
-                )}
-              </svg>
-
-              {!currentPrice && (
-                <div className="chart-loading">
-                  Connecting to live market…
-                </div>
-              )}
-            </div>
+            <TradingCandleChart symbol={selected} />
 
             <div className="chart-bottom">
               <span>LIVE DATA</span>

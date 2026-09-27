@@ -1,6 +1,6 @@
 {
-  "version": "1.2",
-  "url": "https://tradenex-api.onrender.com/Tradenex-User-Latest.apk",
+  "version": "1.4",
+  "url": "https://tradenex.onrender.com/Tradenex-User-Latest.apk",
   "mandatory": true,
-  "message": "A new version of Tradenex is available. Please update to continue."
+  "message": "A new version of Tradenex Pro is available. Please update to continue."
 }
