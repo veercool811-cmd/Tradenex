@@ -675,7 +675,7 @@ function creditReferralCommissions(users, deposit) {
 
   if (
     !depositAmount ||
-    depositAmount <= 0 ||
+    depositAmount < REFERRAL_MIN_DEPOSIT ||
     !depositUserId ||
     !depositId
   ) {
