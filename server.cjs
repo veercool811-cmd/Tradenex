@@ -587,7 +587,7 @@ function updateReferralMilestones(users, deposit) {
   const depositUserId = String(deposit.userId || "").trim();
 
   if (
-    depositAmount < REFERRAL_MIN_DEPOSIT ||
+    depositAmount <= 0 ||
     !depositUserId
   ) {
     return [];
@@ -623,7 +623,10 @@ function updateReferralMilestones(users, deposit) {
   referral.qualifyingVolume =
     number(referral.qualifyingVolume) + depositAmount;
 
-  referral.qualifying = true;
+  // A referral becomes qualifying when their COMBINED
+  // approved deposit volume reaches the minimum.
+  referral.qualifying =
+    number(referral.qualifyingVolume) >= REFERRAL_MIN_DEPOSIT;
 
   /*
     Combined volume across ALL qualifying referrals.
@@ -874,11 +877,13 @@ function backfillReferralData(users, deposits) {
 
   /*
     Recalculate historical qualifying volume.
-    Only approved deposits >= the qualifying minimum count.
+    ALL approved deposits count toward the referral's
+    combined volume. A referral becomes qualifying when
+    their combined volume reaches the minimum.
   */
   for (const deposit of approvedDeposits) {
     const amount = number(deposit.amount);
-    if (amount < REFERRAL_MIN_DEPOSIT) continue;
+    if (amount <= 0) continue;
 
     const depositUserId = String(deposit.userId || "").trim();
 
@@ -901,7 +906,8 @@ function backfillReferralData(users, deposits) {
     referral.qualifyingVolume =
       number(referral.qualifyingVolume) + amount;
 
-    referral.qualifying = true;
+    referral.qualifying =
+      number(referral.qualifyingVolume) >= REFERRAL_MIN_DEPOSIT;
   }
 
   /*
