@@ -1186,6 +1186,22 @@ function publicUser(user) {
         user.pendingDeposit
       ),
 
+    // Offer / promotional bonus ledger
+    promotionalBonus:
+      number(user.promotionalBonus),
+
+    withdrawablePrincipal:
+      number(
+        user.withdrawablePrincipal ??
+        user.totalDeposit
+      ),
+
+    offerName:
+      user.offerName || "",
+
+    offerStartedAt:
+      user.offerStartedAt || "",
+
     profit:
       number(user.profit),
 
@@ -1839,6 +1855,16 @@ app.post(
 
         pendingDeposit: 0,
 
+        // Promotional offer ledger
+        promotionalBonus: 0,
+
+        // Actual deposited principal that is eligible for principal withdrawal
+        withdrawablePrincipal: 0,
+
+        offerName: "",
+
+        offerStartedAt: "",
+
         profit: 0,
 
         referralCode:
@@ -2347,12 +2373,39 @@ app.put(
     try {
       const body = req.body || {};
 
+      const depositThreshold = Number(body.depositThreshold);
+      const bonusAmount = Number(body.bonusAmount);
+
       const offer = {
         enabled: Boolean(body.enabled),
+
+        // Existing popup fields
         title: clean(body.title).slice(0, 120),
         message: clean(body.message).slice(0, 1000),
         buttonText: clean(body.buttonText).slice(0, 50),
         buttonUrl: clean(body.buttonUrl).slice(0, 500),
+
+        // Promotional bonus configuration
+        bonusEnabled: Boolean(body.bonusEnabled),
+        depositThreshold:
+          Number.isFinite(depositThreshold) && depositThreshold > 0
+            ? depositThreshold
+            : 0,
+
+        bonusAmount:
+          Number.isFinite(bonusAmount) && bonusAmount > 0
+            ? bonusAmount
+            : 0,
+
+        bonusType:
+          body.bonusType === "fixed"
+            ? "fixed"
+            : "fixed",
+
+        // Offer disclosure / terms
+        termsText: clean(body.termsText).slice(0, 10000),
+        termsPdfUrl: clean(body.termsPdfUrl).slice(0, 1000),
+
         updatedAt: now()
       };
 
@@ -5083,7 +5136,7 @@ app.post(
 
 app.post(
   "/api/admin/deposits/:id/approve",
-  (req, res) => {
+  async (req, res) => {
     const deposits =
       read(
         DEPOSITS_FILE
@@ -5149,30 +5202,127 @@ app.post(
         deposit.amount
       );
 
-    users[userIndex]
-      .balance =
+    /*
+      APPROVED DEPOSIT
+      Actual deposit and promotional bonus are kept separately.
+
+      Important:
+      - Actual deposit increases totalDeposit.
+      - Promotional bonus is locked principal.
+      - Existing users are not retroactively changed here.
+      - One deposit can receive the offer only once.
+    */
+
+    const user = users[userIndex];
+
+    const previousTotalDeposit =
+      number(user.totalDeposit);
+
+    user.balance =
+      number(user.balance) + amount;
+
+    user.totalDeposit =
+      previousTotalDeposit + amount;
+
+    user.withdrawablePrincipal =
       number(
-        users[userIndex]
-          .balance
+        user.withdrawablePrincipal ??
+        previousTotalDeposit
       ) + amount;
 
-    users[userIndex]
-      .totalDeposit =
-      number(
-        users[userIndex]
-          .totalDeposit
-      ) + amount;
-
-    users[userIndex]
-      .pendingDeposit =
+    user.pendingDeposit =
       Math.max(
         0,
-
-        number(
-          users[userIndex]
-            .pendingDeposit
-        ) - amount
+        number(user.pendingDeposit) - amount
       );
+
+    /*
+      ACTIVE PROMOTIONAL OFFER
+      The offer is loaded from PostgreSQL app_data.
+      Bonus is applied only to an approved deposit.
+    */
+    let appliedBonus = 0;
+
+    try {
+      const offerResult = await pool.query(
+        "SELECT data FROM app_data WHERE key = $1",
+        ["active_offer"]
+      );
+
+      const offer =
+        offerResult.rows[0]?.data || {};
+
+      const threshold =
+        Number(offer.depositThreshold);
+
+      const configuredBonus =
+        Number(offer.bonusAmount);
+
+      const offerEnabled =
+        offer.enabled === true &&
+        offer.bonusEnabled === true;
+
+      /*
+        Prevent duplicate bonus if this deposit
+        has already been marked with an offer.
+      */
+      if (
+        offerEnabled &&
+        Number.isFinite(threshold) &&
+        threshold > 0 &&
+        Number.isFinite(configuredBonus) &&
+        configuredBonus > 0 &&
+        amount >= threshold &&
+        !deposit.offerApplied
+      ) {
+        appliedBonus = configuredBonus;
+
+        user.promotionalBonus =
+          number(user.promotionalBonus) +
+          appliedBonus;
+
+        /*
+          Bonus increases displayed balance,
+          but NOT withdrawable principal.
+        */
+        user.balance =
+          number(user.balance) +
+          appliedBonus;
+
+        user.offerName =
+          offer.title ||
+          `${threshold} USDT Deposit Offer`;
+
+        user.offerStartedAt =
+          now();
+
+        deposit.offerApplied = true;
+        deposit.offerName =
+          offer.title || "Promotional Offer";
+        deposit.offerDepositThreshold =
+          threshold;
+        deposit.offerBonus =
+          appliedBonus;
+        deposit.offerAppliedAt =
+          now();
+      } else {
+        deposit.offerApplied = false;
+        deposit.offerBonus = 0;
+      }
+    } catch (offerError) {
+      console.error(
+        "OFFER BONUS APPLY ERROR:",
+        offerError
+      );
+
+      /*
+        Deposit approval itself must not fail
+        merely because the optional offer
+        configuration cannot be read.
+      */
+      deposit.offerApplied = false;
+      deposit.offerBonus = 0;
+    }
 
     deposit.status =
       "Approved";
@@ -5898,8 +6048,14 @@ async function applyDailyProfits() {
     let expectedProfit = 0;
 
     for (const deposit of approvedDeposits) {
-      const amount = number(deposit.amount);
-      if (amount <= 0) continue;
+      const depositAmount = number(deposit.amount);
+      const promotionalBonus = number(deposit.offerBonus);
+
+      if (depositAmount <= 0) continue;
+
+      // Profit base = approved deposit + promotional bonus
+      // Promotional bonus remains locked and is NOT added to withdrawablePrincipal.
+      const amount = depositAmount + Math.max(0, promotionalBonus);
 
       const startDate = new Date(deposit.approvedAt);
       const startDay = new Date(
