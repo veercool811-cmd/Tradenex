@@ -1633,6 +1633,11 @@ function Wallet({ user, data = {}, go }) {
     data?.referralReward
   );
 
+  const promotionalBonus = num(
+    user?.promotionalBonus ??
+    data?.promotionalBonus
+  );
+
   const withdrawal = num(
     user?.totalWithdrawal ??
     user?.totalWithdrawals ??
@@ -1729,6 +1734,15 @@ function Wallet({ user, data = {}, go }) {
             <small>Referral Reward</small>
             <strong>${referral.toFixed(2)}</strong>
             <em>{referrals} referral{referrals === 1 ? "" : "s"}</em>
+          </div>
+        </div>
+
+        <div className="wallet-stat wallet-purple">
+          <div className="wallet-stat-icon">🎁</div>
+          <div>
+            <small>Promotional Bonus</small>
+            <strong>${promotionalBonus.toFixed(2)}</strong>
+            <em>🔒 Locked Bonus</em>
           </div>
         </div>
 
