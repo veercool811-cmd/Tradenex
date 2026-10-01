@@ -1179,6 +1179,111 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
         </section>
       )}
 
+      {(Number(user?.promotionalBonus || 0) > 0 || offer?.enabled) && (
+        <section className="transaction-panel" style={{ marginTop: "18px" }}>
+          <div className="transaction-head">
+            <div>
+              <h2>🎁 Promotional Bonus</h2>
+              <p>Offer bonus is shown separately from your deposited amount.</p>
+            </div>
+          </div>
+
+          {Number(user?.promotionalBonus || 0) > 0 && (
+            <div style={{
+              padding: "18px",
+              borderRadius: "16px",
+              marginBottom: "14px",
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.10)"
+            }}>
+              <div style={{ fontSize: "13px", opacity: 0.7 }}>
+                {user?.offerName || "Promotional Offer"}
+              </div>
+
+              <div style={{
+                fontSize: "30px",
+                fontWeight: 800,
+                marginTop: "5px"
+              }}>
+                ${Number(user.promotionalBonus || 0).toFixed(2)} USDT
+              </div>
+
+              <div style={{
+                marginTop: "8px",
+                fontSize: "13px",
+                opacity: 0.75
+              }}>
+                🔒 Promotional Bonus — separate from your deposited principal
+              </div>
+
+              {user?.offerStartedAt && (
+                <div style={{
+                  marginTop: "5px",
+                  fontSize: "12px",
+                  opacity: 0.55
+                }}>
+                  Offer applied: {new Date(user.offerStartedAt).toLocaleString()}
+                </div>
+              )}
+            </div>
+          )}
+
+          {offer?.enabled && (
+            <div style={{
+              padding: "18px",
+              borderRadius: "16px",
+              background: "rgba(255,255,255,0.03)",
+              border: "1px solid rgba(255,255,255,0.08)"
+            }}>
+              <h3 style={{ marginTop: 0 }}>
+                {offer.title || "Current Promotional Offer"}
+              </h3>
+
+              <p>{offer.message || "A promotional offer is currently active."}</p>
+
+              {offer.bonusEnabled && (
+                <div style={{ marginTop: "10px", fontWeight: 700 }}>
+                  Deposit ${Number(offer.depositThreshold || 0).toFixed(2)}
+                  {" → "}
+                  Bonus ${Number(offer.bonusAmount || 0).toFixed(2)} USDT
+                </div>
+              )}
+
+              {offer.termsText && (
+                <div style={{
+                  marginTop: "15px",
+                  padding: "14px",
+                  borderRadius: "12px",
+                  background: "rgba(0,0,0,0.18)",
+                  fontSize: "13px",
+                  lineHeight: 1.6,
+                  whiteSpace: "pre-wrap"
+                }}>
+                  <strong>Terms & Conditions</strong>
+                  <div style={{ marginTop: "8px" }}>
+                    {offer.termsText}
+                  </div>
+                </div>
+              )}
+
+              <a
+                href={offer.termsPdfUrl || "/Tradenex-Promotional-Offer-Terms.pdf"}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="live-offer-button"
+                style={{
+                  display: "inline-block",
+                  marginTop: "14px",
+                  textDecoration: "none"
+                }}
+              >
+                📄 View Offer T&C PDF
+              </a>
+            </div>
+          )}
+        </section>
+      )}
+
       {/* =====================================================
           LIVE MARKET
       ===================================================== */}
