@@ -1737,12 +1737,147 @@ function Wallet({ user, data = {}, go }) {
           </div>
         </div>
 
-        <div className="wallet-stat wallet-purple">
-          <div className="wallet-stat-icon">🎁</div>
-          <div>
-            <small>Promotional Bonus</small>
-            <strong>${promotionalBonus.toFixed(2)}</strong>
-            <em>🔒 Locked Bonus</em>
+        {/* ================= PROMOTIONAL BONUS CARD ================= */}
+        <div
+          style={{
+            position: "relative",
+            minHeight: "185px",
+            padding: "22px",
+            borderRadius: "20px",
+            overflow: "hidden",
+            color: "#fff",
+            background:
+              "linear-gradient(135deg, #24115f 0%, #5b2bbf 48%, #8d55e9 100%)",
+            boxShadow: "0 12px 30px rgba(91,43,191,0.30)",
+            border: "1px solid rgba(255,255,255,0.18)"
+          }}
+        >
+          <div
+            style={{
+              position: "absolute",
+              width: "180px",
+              height: "180px",
+              borderRadius: "50%",
+              right: "-65px",
+              top: "-80px",
+              background: "rgba(255,255,255,0.10)"
+            }}
+          />
+
+          <div
+            style={{
+              position: "relative",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "flex-start"
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "11px",
+                  letterSpacing: "2px",
+                  opacity: 0.75,
+                  fontWeight: 700
+                }}
+              >
+                TRADENEX
+              </div>
+
+              <div
+                style={{
+                  marginTop: "7px",
+                  fontSize: "15px",
+                  fontWeight: 700,
+                  letterSpacing: "0.5px"
+                }}
+              >
+                PROMOTIONAL BONUS
+              </div>
+            </div>
+
+            <div style={{ fontSize: "30px" }}>💳</div>
+          </div>
+
+          <div
+            style={{
+              position: "relative",
+              marginTop: "22px",
+              display: "flex",
+              alignItems: "center",
+              gap: "12px"
+            }}
+          >
+            <div>
+              <div
+                style={{
+                  fontSize: "11px",
+                  opacity: 0.7,
+                  marginBottom: "4px"
+                }}
+              >
+                BONUS BALANCE
+              </div>
+
+              <strong
+                style={{
+                  fontSize: "28px",
+                  letterSpacing: "0.5px"
+                }}
+              >
+                {promotionalBonus > 0
+                  ? "$" + promotionalBonus.toFixed(2)
+                  : "$0.00"}
+              </strong>
+            </div>
+
+            <button
+              type="button"
+              onClick={(e) => {
+                const el = e.currentTarget.previousElementSibling?.querySelector("strong");
+                if (!el) return;
+
+                const visible = el.dataset.visible !== "false";
+                el.dataset.visible = visible ? "false" : "true";
+                el.textContent = visible
+                  ? "••••••••"
+                  : (promotionalBonus > 0
+                      ? "$" + promotionalBonus.toFixed(2)
+                      : "$0.00");
+              }}
+              aria-label="Show or hide promotional bonus"
+              style={{
+                marginTop: "18px",
+                width: "38px",
+                height: "38px",
+                borderRadius: "50%",
+                border: "1px solid rgba(255,255,255,0.25)",
+                background: "rgba(255,255,255,0.12)",
+                color: "#fff",
+                cursor: "pointer",
+                fontSize: "18px",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center"
+              }}
+            >
+              👁️
+            </button>
+          </div>
+
+          <div
+            style={{
+              position: "relative",
+              marginTop: "14px",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              fontSize: "11px",
+              opacity: 0.72
+            }}
+          >
+            <span>🔒 LOCKED BONUS</span>
+            <span>USDT</span>
           </div>
         </div>
 
