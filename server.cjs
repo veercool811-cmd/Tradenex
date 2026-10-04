@@ -991,6 +991,13 @@ function extractVerifiedIndianMobile(value) {
       "phoneNumber",
       "mobile_number",
       "phone_number",
+      "identifier",
+      "identifierValue",
+      "contact",
+      "contactNumber",
+      "recipient",
+      "recipientNumber",
+      "number",
     ];
 
     for (const key of preferredKeys) {
