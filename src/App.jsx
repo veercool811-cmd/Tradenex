@@ -85,7 +85,14 @@ function LoginPage({ onLogin }) {
   const [forgot, setForgot] =
     useState({
       type: "login",
-      email: "",
+      phone: "",
+      otp: "",
+      reqId: "",
+      accessToken: "",
+      otpSent: false,
+      otpVerified: false,
+      sendingOtp: false,
+      verifyingOtp: false,
       newPassword: "",
       confirmPassword: "",
     });
@@ -442,10 +449,224 @@ function LoginPage({ onLogin }) {
     }
   }
 
+  async function handleSendForgotOtp() {
+    clearMessages();
+
+    const phone = String(forgot.phone || "").replace(/\D/g, "");
+
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setError("Valid 10-digit Indian mobile number डालें.");
+      return;
+    }
+
+    setForgot((prev) => ({
+      ...prev,
+      sendingOtp: true,
+      otpSent: false,
+      otpVerified: false,
+      otp: "",
+      reqId: "",
+      accessToken: "",
+    }));
+
+    try {
+      await loadMSG91();
+
+      if (typeof window.sendOtp !== "function") {
+        throw new Error("MSG91 OTP service अभी तैयार नहीं है.");
+      }
+
+      window.sendOtp(
+        "91" + phone,
+        (data) => {
+          const reqId =
+            data?.reqId ||
+            data?.requestId ||
+            "";
+
+          setForgot((prev) => ({
+            ...prev,
+            sendingOtp: false,
+            otpSent: true,
+            reqId,
+          }));
+
+          setMessage(
+            "OTP आपके registered mobile number पर भेज दिया गया है."
+          );
+        },
+        (error) => {
+          setForgot((prev) => ({
+            ...prev,
+            sendingOtp: false,
+          }));
+
+          setError(
+            error?.message ||
+              "OTP भेजने में समस्या हुई."
+          );
+        }
+      );
+    } catch (err) {
+      setForgot((prev) => ({
+        ...prev,
+        sendingOtp: false,
+      }));
+
+      setError(err.message);
+    }
+  }
+
+  async function handleVerifyForgotOtp() {
+    clearMessages();
+
+    const phone = String(forgot.phone || "").replace(/\D/g, "");
+    const otp = String(forgot.otp || "").trim();
+
+    if (!/^[6-9]\d{9}$/.test(phone)) {
+      setError("Valid 10-digit Indian mobile number डालें.");
+      return;
+    }
+
+    if (!/^\d{4,8}$/.test(otp)) {
+      setError("Valid OTP डालें.");
+      return;
+    }
+
+    setForgot((prev) => ({
+      ...prev,
+      verifyingOtp: true,
+    }));
+
+    try {
+      await loadMSG91();
+
+      if (typeof window.verifyOtp !== "function") {
+        throw new Error(
+          "MSG91 OTP verification service अभी तैयार नहीं है."
+        );
+      }
+
+      window.verifyOtp(
+        otp,
+        async (data) => {
+          function findMSG91Token(value) {
+            if (!value) return "";
+
+            if (typeof value === "string") {
+              const text = value.trim();
+
+              if (
+                /^eyJ[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(text)
+              ) {
+                return text;
+              }
+
+              return "";
+            }
+
+            if (typeof value !== "object") return "";
+
+            const preferredKeys = [
+              "accessToken",
+              "access_token",
+              "token",
+              "jwt",
+              "jwtToken",
+              "jwt_token",
+            ];
+
+            for (const key of preferredKeys) {
+              const found = findMSG91Token(value[key]);
+              if (found) return found;
+            }
+
+            for (const key of Object.keys(value)) {
+              const found = findMSG91Token(value[key]);
+              if (found) return found;
+            }
+
+            return "";
+          }
+
+          const accessToken = findMSG91Token(data);
+
+          if (!accessToken) {
+            setForgot((prev) => ({
+              ...prev,
+              verifyingOtp: false,
+            }));
+
+            setError(
+              "MSG91 ने verification token नहीं दिया."
+            );
+            return;
+          }
+
+          try {
+            const verified = await api(
+              "/auth/verify-mobile",
+              {
+                method: "POST",
+                body: JSON.stringify({
+                  phone,
+                  accessToken,
+                }),
+              }
+            );
+
+            setForgot((prev) => ({
+              ...prev,
+              verifyingOtp: false,
+              otpVerified: true,
+              accessToken,
+            }));
+
+            setMessage(
+              verified.message ||
+                "Mobile number verified successfully."
+            );
+          } catch (err) {
+            setForgot((prev) => ({
+              ...prev,
+              verifyingOtp: false,
+            }));
+
+            setError(err.message);
+          }
+        },
+        (error) => {
+          setForgot((prev) => ({
+            ...prev,
+            verifyingOtp: false,
+          }));
+
+          setError(
+            error?.message ||
+              "OTP गलत या expired है."
+          );
+        },
+        forgot.reqId || undefined
+      );
+    } catch (err) {
+      setForgot((prev) => ({
+        ...prev,
+        verifyingOtp: false,
+      }));
+
+      setError(err.message);
+    }
+  }
+
   async function handleForgot(e) {
     e.preventDefault();
 
     clearMessages();
+
+    if (!forgot.otpVerified || !forgot.accessToken) {
+      setError("पहले OTP verify करें.");
+      return;
+    }
 
     if (
       forgot.newPassword !==
@@ -457,27 +678,52 @@ function LoginPage({ onLogin }) {
       return;
     }
 
+    if (forgot.newPassword.length < 6) {
+      setError(
+        "Password minimum 6 characters होना चाहिए."
+      );
+      return;
+    }
+
     setLoading(true);
 
     try {
+      const phone = String(
+        forgot.phone || ""
+      ).replace(/\D/g, "");
+
       const data = await api(
-        "/forgot-password",
+        "/password-reset/confirm",
         {
           method: "POST",
           body: JSON.stringify({
             type: forgot.type,
-            email: forgot.email,
+            phone,
+            accessToken:
+              forgot.accessToken,
             newPassword:
               forgot.newPassword,
+            confirmPassword:
+              forgot.confirmPassword,
           }),
         }
       );
 
-      setMessage(data.message);
+      setMessage(
+        data.message ||
+          "Password reset successfully."
+      );
 
       setForgot({
         type: "login",
-        email: "",
+        phone: "",
+        otp: "",
+        reqId: "",
+        accessToken: "",
+        otpSent: false,
+        otpVerified: false,
+        sendingOtp: false,
+        verifyingOtp: false,
         newPassword: "",
         confirmPassword: "",
       });
@@ -489,8 +735,6 @@ function LoginPage({ onLogin }) {
       setLoading(false);
     }
   }
-
-
 
   return (
     <div className="auth-page">
@@ -896,7 +1140,7 @@ function LoginPage({ onLogin }) {
             <h1>Reset Password</h1>
 
             <p className="auth-subtitle">
-              Reset your Tradenex password
+              Reset your Tradenex password securely with OTP
             </p>
 
             {message && (
@@ -911,12 +1155,8 @@ function LoginPage({ onLogin }) {
               </div>
             )}
 
-            <form
-              onSubmit={handleForgot}
-            >
-              <label>
-                Password Type
-              </label>
+            <form onSubmit={handleForgot}>
+              <label>Password Type</label>
 
               <select
                 value={forgot.type}
@@ -924,82 +1164,155 @@ function LoginPage({ onLogin }) {
                   setForgot({
                     ...forgot,
                     type: e.target.value,
+                    otpVerified: false,
+                    accessToken: "",
                   })
                 }
               >
                 <option value="login">
                   Login Password
                 </option>
-
                 <option value="transaction">
                   Transaction Password
                 </option>
               </select>
 
-              <label>Email</label>
-
-              <input
-                type="email"
-                placeholder="Registered email"
-                value={forgot.email}
-                onChange={(e) =>
-                  setForgot({
-                    ...forgot,
-                    email:
-                      e.target.value,
-                  })
-                }
-                required
-              />
-
               <label>
-                New Password
+                Registered Mobile Number
               </label>
 
               <input
-                type="password"
-                placeholder="New password"
-                value={
-                  forgot.newPassword
-                }
+                type="tel"
+                inputMode="numeric"
+                maxLength="10"
+                placeholder="Enter registered mobile number"
+                value={forgot.phone}
                 onChange={(e) =>
                   setForgot({
                     ...forgot,
-                    newPassword:
-                      e.target.value,
+                    phone: e.target.value.replace(/\D/g, ""),
+                    otpSent: false,
+                    otpVerified: false,
+                    otp: "",
+                    reqId: "",
+                    accessToken: "",
                   })
                 }
                 required
               />
 
-              <label>
-                Confirm New Password
-              </label>
+              {!forgot.otpVerified && (
+                <>
+                  <button
+                    type="button"
+                    className="secondary-btn"
+                    onClick={handleSendForgotOtp}
+                    disabled={
+                      forgot.sendingOtp ||
+                      !forgot.phone
+                    }
+                  >
+                    {forgot.sendingOtp
+                      ? "Sending OTP..."
+                      : forgot.otpSent
+                      ? "Resend OTP"
+                      : "Send OTP"}
+                  </button>
 
-              <input
-                type="password"
-                placeholder="Confirm new password"
-                value={
-                  forgot.confirmPassword
-                }
-                onChange={(e) =>
-                  setForgot({
-                    ...forgot,
-                    confirmPassword:
-                      e.target.value,
-                  })
-                }
-                required
-              />
+                  {forgot.otpSent && (
+                    <div style={{ marginTop: "10px" }}>
+                      <label>Enter OTP</label>
 
-              <button
-                className="primary-btn"
-                disabled={loading}
-              >
-                {loading
-                  ? "Please wait..."
-                  : "Reset Password"}
-              </button>
+                      <input
+                        type="text"
+                        inputMode="numeric"
+                        maxLength="8"
+                        placeholder="Enter OTP"
+                        value={forgot.otp}
+                        onChange={(e) =>
+                          setForgot({
+                            ...forgot,
+                            otp: e.target.value.replace(
+                              /\D/g,
+                              ""
+                            ),
+                          })
+                        }
+                        required
+                      />
+
+                      <button
+                        type="button"
+                        className="secondary-btn"
+                        onClick={handleVerifyForgotOtp}
+                        disabled={
+                          forgot.verifyingOtp ||
+                          !forgot.otp
+                        }
+                        style={{ marginTop: "8px" }}
+                      >
+                        {forgot.verifyingOtp
+                          ? "Verifying..."
+                          : "Verify OTP"}
+                      </button>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {forgot.otpVerified && (
+                <>
+                  <div
+                    style={{
+                      marginTop: "10px",
+                      marginBottom: "10px",
+                      fontWeight: "600",
+                    }}
+                  >
+                    ✓ Mobile number verified
+                  </div>
+
+                  <label>New Password</label>
+
+                  <input
+                    type="password"
+                    placeholder="New password"
+                    value={forgot.newPassword}
+                    onChange={(e) =>
+                      setForgot({
+                        ...forgot,
+                        newPassword: e.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <label>Confirm New Password</label>
+
+                  <input
+                    type="password"
+                    placeholder="Confirm new password"
+                    value={forgot.confirmPassword}
+                    onChange={(e) =>
+                      setForgot({
+                        ...forgot,
+                        confirmPassword: e.target.value,
+                      })
+                    }
+                    required
+                  />
+
+                  <button
+                    className="primary-btn"
+                    disabled={loading}
+                    type="submit"
+                  >
+                    {loading
+                      ? "Resetting..."
+                      : "Reset Password"}
+                  </button>
+                </>
+              )}
             </form>
 
             <button
