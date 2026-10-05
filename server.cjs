@@ -4359,6 +4359,10 @@ app.get(
         read(
           USERS_FILE
         );
+      const deposits = read(DEPOSITS_FILE);
+      if (syncWithdrawablePrincipal(users, deposits)) {
+        write(USERS_FILE, users);
+      }
 
       const result =
         users.map(
