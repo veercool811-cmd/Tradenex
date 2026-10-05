@@ -1550,6 +1550,8 @@ app.get(
    MSG91 MOBILE VERIFICATION
 ===================================================== */
 
+const passwordResetAuthorizations = new Map();
+
 app.post(
   "/api/auth/verify-mobile",
   async (req, res) => {
@@ -1595,10 +1597,23 @@ app.post(
         });
       }
 
+      const resetToken =
+        crypto.randomBytes(32).toString("hex");
+
+      passwordResetAuthorizations.set(
+        hash(resetToken),
+        {
+          phone,
+          expiresAt:
+            Date.now() + 10 * 60 * 1000,
+        }
+      );
+
       return res.json({
         success: true,
         verified: true,
         phone: "+91" + phone,
+        resetToken,
         message:
           "Mobile number verified successfully.",
       });
@@ -3456,35 +3471,40 @@ app.post(
       }
 
       /*
-        Verify the MSG91 access token server-side.
-        Do not trust the frontend's OTP result alone.
-      */
-      const verification =
-        await verifyMSG91AccessToken(accessToken);
+        MSG91 OTP was already verified by
+        /api/auth/verify-mobile.
 
-      if (!verification.success) {
+        Do not verify the same MSG91 access token again.
+        Use the short-lived one-time reset authorization
+        created by the mobile verification endpoint.
+      */
+      const resetKey = hash(accessToken);
+
+      const authorization =
+        passwordResetAuthorizations.get(resetKey);
+
+      if (!authorization) {
         return res.status(401).json({
           success: false,
           message:
-            verification.message ||
-            "OTP verification failed.",
+            "OTP verification expired. Please verify OTP again.",
         });
       }
 
-      /*
-        SECURITY:
-        The phone supplied by the browser is NOT trusted.
-        MSG91 must confirm the same mobile number.
-      */
-      const verifiedPhone =
-        normalizeIndianMobile(
-          verification.verifiedPhone
-        );
-
       if (
-        !verifiedPhone ||
-        verifiedPhone !== phone
+        !authorization.expiresAt ||
+        authorization.expiresAt < Date.now()
       ) {
+        passwordResetAuthorizations.delete(resetKey);
+
+        return res.status(401).json({
+          success: false,
+          message:
+            "OTP verification expired. Please verify OTP again.",
+        });
+      }
+
+      if (authorization.phone !== phone) {
         return res.status(401).json({
           success: false,
           message:
