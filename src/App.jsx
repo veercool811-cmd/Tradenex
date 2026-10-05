@@ -89,6 +89,7 @@ function LoginPage({ onLogin }) {
       otp: "",
       reqId: "",
       accessToken: "",
+      resetToken: "",
       otpSent: false,
       otpVerified: false,
       sendingOtp: false,
@@ -620,6 +621,7 @@ function LoginPage({ onLogin }) {
               verifyingOtp: false,
               otpVerified: true,
               accessToken,
+              resetToken: verified.resetToken || "",
             }));
 
             setMessage(
@@ -663,7 +665,7 @@ function LoginPage({ onLogin }) {
 
     clearMessages();
 
-    if (!forgot.otpVerified || !forgot.accessToken) {
+    if (!forgot.otpVerified || !forgot.resetToken) {
       setError("पहले OTP verify करें.");
       return;
     }
@@ -700,7 +702,7 @@ function LoginPage({ onLogin }) {
             type: forgot.type,
             phone,
             accessToken:
-              forgot.accessToken,
+              forgot.resetToken,
             newPassword:
               forgot.newPassword,
             confirmPassword:
