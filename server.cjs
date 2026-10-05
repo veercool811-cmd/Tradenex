@@ -5846,6 +5846,101 @@ app.post(
 );
 
 /* =====================================================
+   ADMIN REVERSE APPROVED WITHDRAWAL
+   Used only when an approved withdrawal was NOT actually paid.
+===================================================== */
+app.post(
+  "/api/admin/withdrawals/:id/reverse",
+  (req, res) => {
+    const withdrawals = read(WITHDRAWALS_FILE);
+
+    const index = withdrawals.findIndex(
+      (w) => w.id === req.params.id
+    );
+
+    if (index === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "Withdrawal not found.",
+      });
+    }
+
+    const withdrawal = withdrawals[index];
+
+    if (withdrawal.status !== "Approved") {
+      return res.status(400).json({
+        success: false,
+        message: "Only an approved withdrawal can be reversed.",
+      });
+    }
+
+    if (withdrawal.reversedAt) {
+      return res.status(400).json({
+        success: false,
+        message: "Withdrawal already reversed.",
+      });
+    }
+
+    const users = read(USERS_FILE);
+    const userIndex = users.findIndex(
+      (u) => u.id === withdrawal.userId
+    );
+
+    if (userIndex === -1) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found.",
+      });
+    }
+
+    const user = users[userIndex];
+    const amount = number(withdrawal.amount);
+    const source = withdrawal.source || "balance";
+
+    if (amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid withdrawal amount.",
+      });
+    }
+
+    if (source === "profit") {
+      user.profit = number(user.profit) + amount;
+      user.balance = number(user.balance) + amount;
+    } else if (source === "referralReward") {
+      user.referralReward =
+        number(user.referralReward) + amount;
+    } else if (source === "balance") {
+      user.balance = number(user.balance) + amount;
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid withdrawal source.",
+      });
+    }
+
+    withdrawal.status = "Rejected";
+    withdrawal.reversedAt = now();
+    withdrawal.reversalReason =
+      "Approved by mistake; payment was not sent.";
+
+    write(USERS_FILE, users);
+    write(WITHDRAWALS_FILE, withdrawals);
+
+    updateTransaction(
+      withdrawal.id,
+      "Rejected"
+    );
+
+    res.json({
+      success: true,
+      message: "Approved withdrawal reversed and rejected.",
+      withdrawal,
+    });
+  }
+);
+
+/* =====================================================
    ADMIN REJECT WITHDRAWAL
 ===================================================== */
 
