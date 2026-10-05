@@ -4447,6 +4447,19 @@ app.put(
       if (req.body?.aadhaar !== undefined)
         user.aadhaar = String(req.body.aadhaar).trim();
 
+      if (req.body?.promotionalBonus !== undefined) {
+        const bonus = Number(req.body.promotionalBonus);
+
+        if (!Number.isFinite(bonus) || bonus < 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid promotional bonus.",
+          });
+        }
+
+        user.promotionalBonus = bonus;
+      }
+
       write(USERS_FILE, users);
 
       res.json({
