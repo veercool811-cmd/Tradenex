@@ -575,6 +575,43 @@ function number(value) {
     : 0;
 }
 
+function syncWithdrawablePrincipal(users, deposits) {
+  if (!Array.isArray(users) || !Array.isArray(deposits)) return false;
+
+  const nowMs = Date.now();
+  let changed = false;
+
+  for (const user of users) {
+    const approvedDeposits = deposits.filter(
+      (d) => d.userId === user.id && d.status === "Approved" && d.approvedAt
+    );
+
+    let unlockedPrincipal = 0;
+
+    for (const deposit of approvedDeposits) {
+      const amount = Math.max(0, number(deposit.amount));
+      const approvedMs = new Date(deposit.approvedAt).getTime();
+
+      if (!Number.isFinite(approvedMs) || amount <= 0) continue;
+
+      const unlockMs = approvedMs + 30 * 24 * 60 * 60 * 1000;
+
+      if (nowMs >= unlockMs) {
+        unlockedPrincipal += amount;
+      }
+    }
+
+    const oldValue = number(user.withdrawablePrincipal);
+
+    if (Math.abs(oldValue - unlockedPrincipal) > 0.000001) {
+      user.withdrawablePrincipal = unlockedPrincipal;
+      changed = true;
+    }
+  }
+
+  return changed;
+}
+
 /* =====================================================
    MULTI-LEVEL REFERRAL COMMISSION
    L1 10% | L2 2% | L3 1% | L4 1% | L5 1%
@@ -2591,6 +2628,17 @@ app.get(
   "/api/me",
   auth,
   (req, res) => {
+    const users = read(USERS_FILE);
+    const depositsAll = read(DEPOSITS_FILE);
+    const userIndex = users.findIndex((u) => u.id === req.user.id);
+
+    if (userIndex !== -1) {
+      if (syncWithdrawablePrincipal(users, depositsAll)) {
+        write(USERS_FILE, users);
+        req.user = users[userIndex];
+      }
+    }
+
     const user =
       req.user;
 
@@ -6298,6 +6346,14 @@ initPersistentStorage()
       "REFERRAL HISTORICAL BACKFILL:",
       JSON.stringify(referralBackfillResult)
     );
+
+    const principalUsers = read(USERS_FILE);
+    const principalDeposits = read(DEPOSITS_FILE);
+
+    if (syncWithdrawablePrincipal(principalUsers, principalDeposits)) {
+      write(USERS_FILE, principalUsers);
+      console.log("30-DAY PRINCIPAL LOCK SYNCED.");
+    }
 
     await applyDailyProfits();
     app.listen(
