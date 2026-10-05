@@ -6299,17 +6299,42 @@ async function applyDailyProfits() {
       expectedProfit += amount * 0.004 * days;
     }
 
-    const currentProfit = number(user.profit);
-    const missingProfit = expectedProfit - currentProfit;
+    const withdrawals = read(WITHDRAWALS_FILE);
 
-    if (missingProfit > 0.000001) {
-      user.balance = number(user.balance) + missingProfit;
-      user.profit = expectedProfit;
+    const approvedProfitWithdrawals = withdrawals
+      .filter(
+        (w) =>
+          w.userId === user.id &&
+          w.source === "profit" &&
+          w.status === "Approved"
+      )
+      .reduce(
+        (sum, w) => sum + Math.max(0, number(w.amount)),
+        0
+      );
+
+    const expectedNetProfit = Math.max(
+      0,
+      expectedProfit - approvedProfitWithdrawals
+    );
+
+    const currentProfit = number(user.profit);
+    const profitAdjustment = expectedNetProfit - currentProfit;
+
+    if (Math.abs(profitAdjustment) > 0.000001) {
+      user.balance =
+        number(user.balance) + profitAdjustment;
+
+      user.profit =
+        expectedNetProfit;
+
       changed = true;
+
       console.log(
-        "DAILY PROFIT CATCH-UP:",
+        "DAILY PROFIT RECONCILIATION:",
         user.id,
-        "$" + missingProfit.toFixed(2)
+        "$" + profitAdjustment.toFixed(2),
+        "net profit = $" + expectedNetProfit.toFixed(2)
       );
     }
 
