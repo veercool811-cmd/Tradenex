@@ -6091,15 +6091,46 @@ async function applyDailyProfits() {
 
     let expectedProfit = 0;
 
+    /*
+      Profit base:
+      - Each approved deposit uses its recorded offerBonus.
+      - If an older/manual promotional bonus exists on the user
+        but was never recorded on a deposit, apply only the missing
+        portion once to the earliest approved deposit.
+      - This does NOT add the bonus to balance or withdrawablePrincipal.
+    */
+    const userPromotionalBonus =
+      Math.max(0, number(user.promotionalBonus));
+
+    const recordedOfferBonus =
+      approvedDeposits.reduce(
+        (sum, d) => sum + Math.max(0, number(d.offerBonus)),
+        0
+      );
+
+    let legacyBonusRemaining = Math.max(
+      0,
+      userPromotionalBonus - recordedOfferBonus
+    );
+
     for (const deposit of approvedDeposits) {
       const depositAmount = number(deposit.amount);
-      const promotionalBonus = number(deposit.offerBonus);
+      let promotionalBonus = Math.max(
+        0,
+        number(deposit.offerBonus)
+      );
 
       if (depositAmount <= 0) continue;
 
+      if (legacyBonusRemaining > 0) {
+        promotionalBonus += legacyBonusRemaining;
+        legacyBonusRemaining = 0;
+      }
+
       // Profit base = approved deposit + promotional bonus
       // Promotional bonus remains locked and is NOT added to withdrawablePrincipal.
-      const amount = depositAmount + Math.max(0, promotionalBonus);
+      const amount =
+        depositAmount + promotionalBonus;
 
       const startDate = new Date(deposit.approvedAt);
       const startDay = new Date(
