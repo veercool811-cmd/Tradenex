@@ -1053,8 +1053,12 @@ async function verifyMSG91AccessToken(accessToken) {
       method: "POST",
       headers: {
         authkey: authKey,
-        "access-token": token,
+        "Content-Type": "application/json",
+        accept: "application/json",
       },
+      body: JSON.stringify({
+        "access-token": token,
+      }),
     }
   );
 
