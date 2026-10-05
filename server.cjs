@@ -5758,6 +5758,12 @@ app.post(
         number(
           user.profit
         ) - amount;
+
+      // Profit withdrawal is also paid from the user's current balance.
+      user.balance =
+        number(
+          user.balance
+        ) - amount;
     } else if (
       source ===
       "referralReward"
