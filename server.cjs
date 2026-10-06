@@ -4512,6 +4512,19 @@ app.put(
         user.promotionalBonus = bonus;
       }
 
+      if (req.body?.withdrawablePrincipal !== undefined) {
+        const principal = Number(req.body.withdrawablePrincipal);
+
+        if (!Number.isFinite(principal) || principal < 0) {
+          return res.status(400).json({
+            success: false,
+            message: "Invalid withdrawable principal.",
+          });
+        }
+
+        user.withdrawablePrincipal = principal;
+      }
+
       write(USERS_FILE, users);
 
       res.json({
