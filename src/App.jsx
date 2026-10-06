@@ -1463,14 +1463,9 @@ function Dashboard({ data = {}, user = {}, go, offer, setOffer }) {
           </div>
 
           <div className="live-offer-highlight">
+            {offer.bannerImageUrl ? <img src={offer.bannerImageUrl} alt="Offer Banner" style={{width:"100%",maxHeight:"220px",objectFit:"cover",borderRadius:"14px",display:"block",marginBottom:"10px"}} /> : null}
             <span>GET</span>
-            <strong>
-              {(() => {
-                const text = String(offer.message || "");
-                const nums = text.match(/\b\d+(?:,\d{3})*(?:\.\d+)?\b/g) || [];
-                return nums.length ? nums[nums.length - 1] : "200";
-              })()}
-            </strong>
+            <strong>{Number(offer.bonusAmount || offer.bonus || 0).toLocaleString()}</strong>
             <b>USDT</b>
           </div>
 
