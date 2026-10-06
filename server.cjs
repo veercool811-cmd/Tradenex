@@ -6222,6 +6222,47 @@ app.use(
   }
 );
 
+
+function backfillSumitraOfferData() {
+  const users = read(USERS_FILE);
+  const deposits = read(DEPOSITS_FILE);
+  const userId = "USR_1790175271333_683ec44c";
+
+  const user = users.find(u => String(u.id) === userId);
+  if (!user || !Array.isArray(deposits)) return;
+
+  let changed = false;
+
+  for (const d of deposits) {
+    if (String(d.userId) !== userId || d.status !== "Approved") continue;
+
+    const amount = number(d.amount);
+
+    if (amount === 1000 && d.approvedAt === "2026-09-23T14:58:16.874Z") {
+      d.offerApplied = true;
+      d.offerBonus = 500;
+      d.offerName = d.offerName || "Historical Promotional Offer";
+      d.offerDepositThreshold = 1000;
+      changed = true;
+    }
+
+    if (amount === 2999 && d.approvedAt === "2026-09-30T16:28:11.819Z") {
+      d.offerApplied = true;
+      d.offerBonus = 2999;
+      d.offerName = d.offerName || "Historical Promotional Offer";
+      d.offerDepositThreshold = 2999;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    user.promotionalBonus = 3499;
+    write(DEPOSITS_FILE, deposits);
+    write(USERS_FILE, users);
+    console.log("SUMITRA HISTORICAL OFFERS BACKFILLED.");
+  }
+}
+
 async function applyDailyProfits() {
   const users = read(USERS_FILE);
   const deposits = read(DEPOSITS_FILE);
@@ -6384,6 +6425,7 @@ initPersistentStorage()
       console.log("30-DAY PRINCIPAL LOCK SYNCED.");
     }
 
+    backfillSumitraOfferData();
     await applyDailyProfits();
     app.listen(
       PORT,
