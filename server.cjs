@@ -2447,6 +2447,7 @@ app.put(
         message: clean(body.message).slice(0, 1000),
         buttonText: clean(body.buttonText).slice(0, 50),
         buttonUrl: clean(body.buttonUrl).slice(0, 500),
+        bannerImageUrl: clean(body.bannerImageUrl).slice(0, 1000),
 
         // Promotional bonus configuration
         bonusEnabled: Boolean(body.bonusEnabled),
